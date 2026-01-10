@@ -70,7 +70,7 @@ const CourseMap = () => {
     </div>
   </div>
 ))}
-        ))}
+
       </div>
     </div>
   );
