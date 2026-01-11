@@ -5,33 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Khmer Mastery</title>
-
-    <script>
-      // Если браузер поддерживает Service Workers
-      if ('serviceWorker' in navigator) {
-        // Находим все регистрации и удаляем их
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-            console.log('Старый Service Worker удален');
-          }
-          // Если нашли старого работника — перезагружаем страницу начисто
-          if(registrations.length > 0) {
-             window.location.reload();
-          }
-        });
-      }
-
-      // Чистим кэш хранилища
-      if ('caches' in window) {
-        caches.keys().then((names) => {
-          names.forEach((name) => {
-            caches.delete(name);
-          });
-        });
-      }
-    </script>
-    </head>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
