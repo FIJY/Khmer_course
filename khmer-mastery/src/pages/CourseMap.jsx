@@ -26,78 +26,103 @@ export default function CourseMap() {
   useEffect(() => { fetchProgress(); }, []);
 
   const fetchProgress = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { navigate('/login'); return; }
-    const { data } = await supabase.from('user_progress').select('lesson_id').eq('user_id', user.id).eq('is_completed', true);
-    if (data) setCompletedLessons(data.map(item => Number(item.lesson_id)));
-    setLoading(false);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { navigate('/login'); return; }
+      const { data } = await supabase.from('user_progress').select('lesson_id').eq('user_id', user.id).eq('is_completed', true);
+      if (data) setCompletedLessons(data.map(item => Number(item.lesson_id)));
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400">⏳</div>;
 
   return (
     <div className="min-h-screen bg-black text-white pb-32 font-sans">
+      {/* Header */}
       <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/50 backdrop-blur-md sticky top-0 z-20">
         <h1 className="text-3xl font-bold tracking-tight uppercase italic">Course <span className="text-cyan-400">Map</span></h1>
         <div className="bg-gray-900 px-4 py-2 rounded-full flex items-center gap-2 border border-white/10">
           <Gem size={18} className="text-emerald-500 fill-emerald-500/20" />
-          <span className="font-black text-sm">{completedLessons.length * 10}</span>
+          <span className="font-black text-sm text-gray-300">{completedLessons.length * 10}</span>
         </div>
       </div>
 
       <div className="max-w-xl mx-auto p-6 space-y-10 mt-6">
-        {chapters.map((chapter) => (
-          <div key={chapter.id} className="space-y-4">
-            <div className="bg-gray-900/40 border border-white/5 rounded-[2.5rem] p-6 group">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter">{chapter.title}</h3>
-                  <p className="text-gray-500 text-xs font-medium mt-1">{chapter.desc}</p>
-                </div>
-                <button
-                  onClick={() => navigate(`/lesson/${chapter.id}/preview`)}
-                  className="p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl text-cyan-400 hover:bg-cyan-500 hover:text-black transition-all"
-                >
-                  <BookOpen size={20} />
-                </button>
-              </div>
+        {chapters.map((chapter) => {
+          // ЛОГИКА: Считаем главу пройденной, если ВСЕ её подуроки есть в списке завершенных
+          const isChapterFullDone = chapter.subLessons.length > 0
+            ? chapter.subLessons.every(sub => completedLessons.includes(sub.id))
+            : completedLessons.includes(chapter.id);
 
-              {chapter.subLessons.length > 0 && (
-                <div className="grid grid-cols-1 gap-2 mt-4 pt-4 border-t border-white/5">
-                  {chapter.subLessons.map((sub) => {
-                    const isDone = completedLessons.includes(sub.id);
-                    return (
-                      <button
-                        key={sub.id}
-                        onClick={() => navigate(`/lesson/${sub.id}`)}
-                        className={`flex items-center justify-between p-4 rounded-2xl transition-all border
-                          ${isDone
-                            ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400'
-                            : 'bg-black/40 border-white/5 text-gray-400 hover:border-cyan-500/30'}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2
-                            ${isDone ? 'border-emerald-400 bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.4)]' : 'border-gray-800'}`}>
-                            {isDone ? <Check size={14} strokeWidth={4} /> : <Play size={12} fill="currentColor" />}
-                          </div>
-                          <span className="text-[11px] font-black uppercase tracking-widest">{sub.title}</span>
-                        </div>
-                        <ChevronRight size={16} className={isDone ? 'text-emerald-500' : 'opacity-20'} />
-                      </button>
-                    );
-                  })}
+          return (
+            <div key={chapter.id} className="space-y-4">
+              <div className={`bg-gray-900/40 border rounded-[2.5rem] p-6 transition-all
+                ${isChapterFullDone ? 'border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.05)]' : 'border-white/5'}`}>
+
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h3 className={`text-2xl font-black uppercase tracking-tighter ${isChapterFullDone ? 'text-emerald-400' : 'text-white'}`}>
+                      {chapter.title}
+                    </h3>
+                    <p className="text-gray-500 text-xs font-medium mt-1">{chapter.desc}</p>
+                  </div>
+
+                  {/* ИКОНКА КНИЖЕЧКИ / ГАЛОЧКИ */}
+                  <button
+                    onClick={() => navigate(`/lesson/${chapter.id}/preview`)}
+                    className={`p-4 rounded-2xl border transition-all shadow-lg
+                      ${isChapterFullDone
+                        ? 'bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/20'
+                        : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400'}`}
+                  >
+                    {isChapterFullDone ? <Check size={20} strokeWidth={3} /> : <BookOpen size={20} />}
+                  </button>
                 </div>
-              )}
+
+                {chapter.subLessons.length > 0 && (
+                  <div className="grid grid-cols-1 gap-2 mt-4 pt-4 border-t border-white/5">
+                    {chapter.subLessons.map((sub) => {
+                      const isDone = completedLessons.includes(sub.id);
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => navigate(`/lesson/${sub.id}`)}
+                          className={`flex items-center justify-between p-4 rounded-2xl transition-all border
+                            ${isDone
+                              ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
+                              : 'bg-black/40 border-white/5 text-gray-400 hover:border-cyan-500/30'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2
+                              ${isDone ? 'border-emerald-400 bg-emerald-500 text-white' : 'border-gray-800'}`}>
+                              {isDone ? <Check size={14} strokeWidth={4} /> : <Play size={12} fill="currentColor" />}
+                            </div>
+                            <span className="text-[11px] font-black uppercase tracking-widest">{sub.title}</span>
+                          </div>
+                          <ChevronRight size={16} className={isDone ? 'text-emerald-500' : 'opacity-20'} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Footer Nav */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-xl border-t border-white/5 px-10 py-5 flex justify-between items-center z-50 max-w-lg mx-auto rounded-t-[2.5rem]">
-        <button onClick={() => navigate('/map')} className="text-cyan-400 flex flex-col items-center gap-1"><MapIcon size={24} /><span className="text-[10px] font-black uppercase">Map</span></button>
-        <button onClick={() => navigate('/vocab')} className="text-gray-500 flex flex-col items-center gap-1"><BookText size={24} /><span className="text-[10px] font-black uppercase">Vocab</span></button>
-        <button onClick={() => navigate('/profile')} className="text-gray-500 flex flex-col items-center gap-1 hover:text-white transition-colors"><User size={24} /><span className="text-[10px] font-black uppercase">Profile</span></button>
+        <button onClick={() => navigate('/map')} className="text-cyan-400 flex flex-col items-center gap-1">
+          <MapIcon size={24} /><span className="text-[10px] font-black uppercase">Map</span>
+        </button>
+        <button onClick={() => navigate('/vocab')} className="text-gray-500 flex flex-col items-center gap-1 hover:text-white transition-colors">
+          <BookText size={24} /><span className="text-[10px] font-black uppercase">Vocab</span>
+        </button>
+        <button onClick={() => navigate('/profile')} className="text-gray-500 flex flex-col items-center gap-1 hover:text-white transition-colors">
+          <User size={24} /><span className="text-[10px] font-black uppercase">Profile</span>
+        </button>
       </div>
     </div>
   );
