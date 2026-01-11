@@ -1,3 +1,42 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Подключаем современный шрифт Inter (популярный в финтехе и дорогих SaaS) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+
+:root {
+  /* Тот самый Electric Cyan для всего приложения */
+  --brand-cyan: #22d3ee;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #000000; /* Глубокий черный */
+  color: #ffffff;
+  font-family: 'Inter', sans-serif; /* Дорогой современный шрифт */
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  /* Убрали display: flex и centering, чтобы компоненты сами управляли версткой */
+}
+
+/* Стили для 3D переворота карточек (оставляем, они нужны для плеера) */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Глобальное сглаживание для всех кнопок */
+button {
+  font-family: 'Inter', sans-serif;
+}
