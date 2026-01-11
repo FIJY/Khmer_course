@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import { supabase } from '../supabaseClient';
 import { Volume2, ArrowRight, CheckCircle, Home, BookOpen, HelpCircle, RotateCcw } from 'lucide-react';
+import { updateSRSItem } from '../services/srsService';
+
 
 export default function LessonPlayer() {
   const { id } = useParams();
@@ -146,5 +148,28 @@ export default function LessonPlayer() {
         .rotate-y-180 { transform: rotateY(180deg); }
       `}} />
     </div>
+  const handleNext = async (quality = 3) => {
+    // Если это карточка или квиз — сохраняем прогресс в SRS
+    const currentItem = items[step];
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
+      // quality: 5 для правильного квиза, 3 для просмотра карточки
+      await updateSRSItem(user.id, currentItem.id, quality);
+    }
+
+    setIsFlipped(false);
+    if (step < items.length - 1) {
+      setStep(step + 1);
+    } else {
+      // ... логика завершения урока
+    }
+  };
+
+  // В КВИЗЕ при правильном ответе вызывай:
+  // onClick={() => {
+  //   if (opt === current.correct_answer) handleNext(5); // 5 = отлично
+  //   else alert("❌ Try again!");
+  // }}
   );
 }
