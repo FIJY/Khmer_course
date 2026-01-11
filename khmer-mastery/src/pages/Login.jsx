@@ -7,119 +7,99 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState(null); // Сохраняем сессию локально
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Если пользователь уже вошел — сразу кидаем на карту
+  // ПРОВЕРЯЕМ СЕССИЮ, НО НЕ ДЕЛАЕМ АВТО-ПЕРЕХОД
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate('/map');
+      if (session) setSession(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate('/map');
+      if (session) setSession(session);
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // 1. Пробуем войти
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) {
-      setError(error.message);
-    }
-    // Если ошибок нет, useEffect выше сам перекинет на карту
+    if (error) setError(error.message);
     setLoading(false);
+    // После входа кнопка "Перейти к карте" появится сама
   };
 
   const handleSignUp = async () => {
     setLoading(true);
     setError(null);
-
-    // 2. Регистрируемся
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      // В зависимости от настроек Supabase, это может сразу залогинить
-      alert('Регистрация успешна! Если вход не произошел автоматически, проверьте почту.');
-    }
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) setError(error.message);
+    else alert('Проверьте почту или входите сразу (если подтверждение отключено)');
     setLoading(false);
   };
 
+  // ЕСЛИ МЫ ЗАЛОГИНЕНЫ — ПОКАЗЫВАЕМ БЕЗОПАСНЫЙ ЭКРАН
+  if (session) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 text-white">
+        <h2 className="text-2xl text-emerald-400 mb-4">Вы уже вошли!</h2>
+        <p className="text-gray-400 mb-8 text-center">Бесконечный цикл остановлен. Нажмите кнопку ниже.</p>
+        <button
+          onClick={() => navigate('/map')}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-8 rounded-xl shadow-lg w-full max-w-xs"
+        >
+          ПЕРЕЙТИ К КАРТЕ ВРУЧНУЮ
+        </button>
+      </div>
+    );
+  }
+
+  // ОБЫЧНАЯ ФОРМА ВХОДА
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-8 border border-gray-700">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-emerald-400">Вход</h2>
-          <p className="text-gray-400 mt-2">Продолжите обучение кхмерскому</p>
         </div>
 
-        {error && (
-          <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded mb-4 text-sm">
-            {error}
-          </div>
-        )}
+        {error && <div className="text-red-500 bg-red-900/20 p-3 rounded mb-4 text-sm">{error}</div>}
 
         <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label className="block text-gray-400 text-sm mb-2">Email</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 text-gray-500" size={20} />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-gray-900 text-white pl-10 pr-4 py-3 rounded-lg border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
-                placeholder="vasha@pochta.com"
-                required
-              />
-            </div>
+          <div className="relative">
+            <Mail className="absolute left-3 top-3 text-gray-500" size={20} />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-gray-900 text-white pl-10 pr-4 py-3 rounded-lg border border-gray-700"
+              placeholder="Email"
+            />
           </div>
-
-          <div>
-            <label className="block text-gray-400 text-sm mb-2">Пароль</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 text-gray-500" size={20} />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-gray-900 text-white pl-10 pr-4 py-3 rounded-lg border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+          <div className="relative">
+            <Lock className="absolute left-3 top-3 text-gray-500" size={20} />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-gray-900 text-white pl-10 pr-4 py-3 rounded-lg border border-gray-700"
+              placeholder="Пароль"
+            />
           </div>
-
           <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg transition-all flex justify-center items-center disabled:opacity-50"
-            >
-              {loading ? <Loader className="animate-spin" /> : 'Войти'}
+            <button type="submit" disabled={loading} className="flex-1 bg-emerald-500 text-white font-bold py-3 rounded-lg">
+              {loading ? <Loader className="animate-spin mx-auto" /> : 'Войти'}
             </button>
-
-            <button
-              type="button"
-              onClick={handleSignUp}
-              disabled={loading}
-              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-all disabled:opacity-50"
-            >
+            <button type="button" onClick={handleSignUp} disabled={loading} className="flex-1 bg-gray-700 text-white font-bold py-3 rounded-lg">
               Создать
             </button>
           </div>
