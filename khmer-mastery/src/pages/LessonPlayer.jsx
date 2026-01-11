@@ -2,125 +2,107 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import { supabase } from '../supabaseClient';
-import { Volume2, ArrowRight, CheckCircle, Home } from 'lucide-react';
+import { Volume2, ArrowRight, CheckCircle, Home, BookOpen, HelpCircle } from 'lucide-react';
 
 export default function LessonPlayer() {
   const { id } = useParams();
   const navigate = useNavigate();
-
+  const [items, setItems] = useState([]);
   const [step, setStep] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-
-  const lessonData = {
-    // ID 1: Greetings & Politeness
-    1: [
-      { khmer: "Suosdey", russian: "Привет" },
-      { khmer: "Jumreap Sua", russian: "Здравствуйте (вежливо)" },
-      { khmer: "Arkoun", russian: "Спасибо" },
-      { khmer: "Min ey te", russian: "Не за что" }
-    ],
-    // ID 2: I Want... (Essential Needs)
-    2: [
-      { khmer: "Knhom jong ban...", russian: "Я хочу... (получить)" },
-      { khmer: "Knhom jong tow...", russian: "Я хочу поехать в..." },
-      { khmer: "Ban te?", russian: "Можно? (вопрос)" },
-      { khmer: "Chhnganh", russian: "Вкусно" }
-    ],
-    // ID 3: Money & Numbers
-    3: [
-      { khmer: "Mouy, Pii, Bei", russian: "1, 2, 3" },
-      { khmer: "Boun, Pram", russian: "4, 5" },
-      { khmer: "Tlay punman?", russian: "Сколько стоит?" },
-      { khmer: "Tlay nah!", russian: "Очень дорого!" }
-    ],
-    // ID 4: Survival Requests
-    4: [
-      { khmer: "Chhob", russian: "Остановитесь" },
-      { khmer: "Som tow nih", russian: "Пожалуйста, сюда" },
-      { khmer: "Chuoy phong!", russian: "Помогите!" },
-      { khmer: "Bot chhveing", russian: "Поверните налево" }
-    ]
-  };
-
-  const words = lessonData[id] || lessonData[1];
-  const currentWord = words[step];
-  const isLastStep = step >= words.length;
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isLastStep) {
-      setShowConfetti(true);
-      const saveProgress = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('user_progress').upsert({
-            user_id: user.id,
-            lesson_id: id,
-            is_completed: true,
-            updated_at: new Date()
-          }, { onConflict: 'user_id, lesson_id' });
-        }
-      };
-      saveProgress();
-      setTimeout(() => setShowConfetti(false), 6000);
-    }
-  }, [isLastStep, id]);
+    const fetchContent = async () => {
+      const { data } = await supabase
+        .from('lesson_items')
+        .select('*')
+        .eq('lesson_id', id)
+        .order('order_index', { ascending: true });
+      if (data) setItems(data);
+      setLoading(false);
+    };
+    fetchContent();
+  }, [id]);
 
-  const playAudio = () => {
-    const utterance = new SpeechSynthesisUtterance(currentWord.khmer);
-    utterance.lang = 'km-KH';
-    utterance.rate = 0.8;
-    window.speechSynthesis.speak(utterance);
+  const handleNext = async () => {
+    if (step < items.length - 1) {
+      setStep(step + 1);
+    } else {
+      setShowConfetti(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('user_progress').upsert({
+          user_id: user.id, lesson_id: id, is_completed: true, updated_at: new Date()
+        }, { onConflict: 'user_id, lesson_id' });
+      }
+      setTimeout(() => navigate('/map'), 5000);
+    }
   };
 
-  if (isLastStep) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-6 text-center">
-        {showConfetti && <Confetti numberOfPieces={200} recycle={false} />}
-        <div className="bg-emerald-600 p-6 rounded-full mb-6 shadow-xl animate-bounce">
-          <CheckCircle size={64} color="white" />
-        </div>
-        <h1 className="text-4xl font-bold text-emerald-400 mb-2">Excellent!</h1>
-        <p className="text-gray-400 mb-8 text-lg">You've unlocked the next survival skill.</p>
-        <button
-          onClick={() => navigate('/map')}
-          className="w-full max-w-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2"
-        >
-          <Home size={20} /> Back to Map
-        </button>
-      </div>
-    );
-  }
+  const playAudio = (file) => {
+    if (!file) return;
+    const audio = new Audio(`/sounds/${file}`);
+    audio.play().catch(e => console.log("Audio not found, using TTS"));
+  };
+
+  if (loading) return <div className="h-screen bg-gray-900 flex items-center justify-center text-emerald-400">Loading Content...</div>;
+
+  const current = items[step]?.data;
+  const type = items[step]?.type;
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900 text-white">
-      <div className="w-full bg-gray-800 h-3">
-        <div
-          className="bg-emerald-500 h-full transition-all duration-700 ease-out"
-          style={{ width: `${(step / words.length) * 100}%` }}
-        ></div>
+    <div className="h-screen flex flex-col bg-gray-900 text-white overflow-hidden">
+      {showConfetti && <Confetti />}
+
+      {/* Progress Bar */}
+      <div className="w-full h-1 bg-gray-800">
+        <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-        <span className="text-emerald-500 font-mono mb-4 tracking-widest text-sm uppercase">Vocabulary Training</span>
-        <h2 className="text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400">
-          {currentWord.khmer}
-        </h2>
-        <p className="text-2xl text-emerald-400/80 mb-12 font-light italic">{currentWord.russian}</p>
+      <div className="flex-1 flex flex-col items-center justify-center p-6">
+        {type === 'theory' && (
+          <div className="max-w-sm w-full bg-gray-800 p-8 rounded-3xl border border-emerald-500/20 shadow-2xl">
+            <BookOpen className="text-emerald-400 mb-4" size={40} />
+            <h2 className="text-2xl font-bold mb-4">{current.title}</h2>
+            <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{current.text}</p>
+          </div>
+        )}
 
-        <button
-          onClick={playAudio}
-          className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center border-2 border-emerald-500/30 hover:border-emerald-500 transition-all shadow-2xl active:scale-90"
-        >
-          <Volume2 size={40} className="text-emerald-400" />
-        </button>
+        {type === 'vocab_card' && (
+          <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
+            <h2 className="text-6xl font-bold mb-4 text-white">{current.back}</h2>
+            <p className="text-2xl text-emerald-400 mb-8 font-mono tracking-tighter">{current.pronunciation}</p>
+            <p className="text-xl text-gray-500 mb-12 uppercase tracking-widest">{current.front}</p>
+            <button onClick={() => playAudio(current.audio)} className="p-8 bg-gray-800 rounded-full border border-gray-700 hover:border-emerald-500 transition-all">
+              <Volume2 size={40} className="text-emerald-400" />
+            </button>
+          </div>
+        )}
+
+        {type === 'quiz' && (
+          <div className="max-w-sm w-full space-y-4">
+            <div className="flex items-center gap-2 text-yellow-500 mb-4"><HelpCircle /> <span className="text-xs font-bold uppercase">Quick Quiz</span></div>
+            <h2 className="text-xl font-bold mb-6">{current.question}</h2>
+            {current.options.map((opt, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  if (opt === current.correct_answer) handleNext();
+                  else alert("Try again!");
+                }}
+                className="w-full p-4 bg-gray-800 border border-gray-700 rounded-2xl text-left hover:bg-gray-700 transition-all"
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="p-8">
-        <button
-          onClick={() => setStep(s => s + 1)}
-          className="w-full bg-emerald-600 py-5 rounded-2xl text-xl font-bold shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-transform"
-        >
-          Continue <ArrowRight size={24} />
+        <button onClick={handleNext} className="w-full py-5 bg-emerald-600 rounded-2xl font-black text-xl flex items-center justify-center gap-2 shadow-2xl active:scale-95 transition-transform">
+          {step === items.length - 1 ? 'FINISH' : 'CONTINUE'} <ArrowRight />
         </button>
       </div>
     </div>
