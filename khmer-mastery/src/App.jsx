@@ -8,7 +8,7 @@ import Welcome from './pages/Welcome';
 export default function App() {
   return (
     <Router>
-      <div className="bg-gray-900 min-h-screen text-white">
+      <div className="bg-gray-900 min-h-screen text-white font-sans">
         <Routes>
           <Route path="/" element={<Welcome />} />
           <Route path="/login" element={<Login />} />
