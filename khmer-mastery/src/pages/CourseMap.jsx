@@ -48,11 +48,11 @@ export default function CourseMap() {
     <div className="min-h-screen bg-black text-white pb-32">
       {/* Header Bar */}
       <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5 p-4 flex justify-between items-center">
-        <h1 className="text-xl font-black tracking-tighter">COURSE <span className="text-emerald-400">MAP</span></h1>
+        <h1 className="text-xl font-black tracking-tighter uppercase">Course <span className="text-emerald-400">Map</span></h1>
         <div className="flex items-center gap-4">
           <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-2">
             <Gem size={16} className="text-emerald-400" />
-            <span className="text-sm font-bold text-emerald-400">120</span>
+            <span className="text-sm font-bold text-emerald-400">0</span>
           </div>
           <button onClick={() => supabase.auth.signOut().then(() => navigate('/login'))}>
             <LogOut size={20} className="text-gray-500 hover:text-white transition-colors" />
@@ -62,7 +62,7 @@ export default function CourseMap() {
 
       {/* Lesson Path */}
       <div className="max-w-md mx-auto px-6 pt-12">
-        <div className="text-xs font-black text-gray-600 uppercase tracking-[0.3em] mb-10 text-center">Survival Block</div>
+        <div className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] mb-10 text-center">Survival Block</div>
 
         <div className="space-y-12">
           {lessons.map((lesson, index) => {
@@ -84,13 +84,45 @@ export default function CourseMap() {
                 >
                   {isCompleted ? <Check size={32} strokeWidth={3} /> : isUnlocked ? <Play size={32} fill="currentColor" className="ml-1" /> : <Lock size={28} className="text-gray-600" />}
 
-                  {/* Connecting Line (except last) */}
+                  {/* Connecting Line */}
                   {index !== lessons.length - 1 && (
                     <div className={`absolute top-20 left-1/2 -translate-x-1/2 w-1 h-12 ${isCompleted ? 'bg-emerald-500/50' : 'bg-gray-800'}`} />
                   )}
                 </button>
 
-                {/* Info Card */}
+                {/* Info Card - ЗДЕСЬ БЫЛА ОШИБКА */}
                 <div className={`flex-1 p-5 rounded-2xl border transition-all
                   ${isUnlocked
                     ? 'bg-gray-900/50 border-white/10 group-hover:border-emerald-500/50'
+                    : 'bg-transparent border-white/5 opacity-40'}`}>
+                  <h3 className={`font-bold text-lg ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>
+                    {lesson.title}
+                  </h3>
+                  <p className="text-gray-500 text-sm mt-1 leading-tight font-medium">
+                    {lesson.desc}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom Navigation Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/5 px-8 py-4 flex justify-between items-center max-w-lg mx-auto rounded-t-[2.5rem]">
+        <button className="flex flex-col items-center gap-1 text-emerald-400">
+          <MapIcon size={24} />
+          <span className="text-[10px] font-black uppercase tracking-widest">Map</span>
+        </button>
+        <button className="flex flex-col items-center gap-1 text-gray-600 hover:text-gray-400 transition-colors">
+          <BookText size={24} />
+          <span className="text-[10px] font-black uppercase tracking-widest">Vocab</span>
+        </button>
+        <button className="flex flex-col items-center gap-1 text-gray-600 hover:text-gray-400 transition-colors">
+          <User size={24} />
+          <span className="text-[10px] font-black uppercase tracking-widest">Profile</span>
+        </button>
+      </div>
+    </div>
+  );
+}
