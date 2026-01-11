@@ -2,20 +2,20 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './index.css'
 
-// МЫ ОТКЛЮЧИЛИ ВСЁ: App, Router, Supabase.
+// Временно не загружаем само приложение
 // import App from './App.jsx'
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-
-root.render(
-  <div style={{ padding: 20, background: 'white', color: 'black' }}>
-    <h1>ЭТАП 1: ПРОВЕРКА ЖЕЛЕЗА</h1>
-    <p>Если вы это читаете на телефоне, значит:</p>
-    <ul>
-      <li>Vite собрал проект правильно.</li>
-      <li>Браузер телефона исправен.</li>
-      <li>Проблема была в App.jsx или Supabase.</li>
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'white', color: 'black', padding: 20 }}>
+    <h1 style={{ fontSize: 30, marginBottom: 20 }}>СИСТЕМА ВОССТАНОВЛЕНА</h1>
+    <p>Если вы видите этот текст на Айфоне:</p>
+    <ul style={{ textAlign: 'left', marginTop: 10 }}>
+      <li>✅ Сервер работает</li>
+      <li>✅ Vite (сборщик) работает</li>
+      <li>✅ Браузер телефона исправен</li>
     </ul>
-    <p>Время сборки: {new Date().toLocaleTimeString()}</p>
+    <p style={{ marginTop: 20, color: 'blue' }}>
+      Значит, проблема была в коде App.jsx (бесконечный редирект).
+    </p>
   </div>
-);
+)
