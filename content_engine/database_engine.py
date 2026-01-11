@@ -40,10 +40,7 @@ async def generate_audio(text, filename):
 
 
 async def seed_lesson(lesson_id, title, desc, content_list):
-    """Универсальная функция загрузки подуроков"""
     print(f"🚀 Processing Lesson {lesson_id}: {title}...")
-
-    # Теперь 'supabase' определен глобально и будет виден здесь
     supabase.table("lessons").upsert({"id": lesson_id, "title": title, "description": desc}).execute()
     supabase.table("lesson_items").delete().eq("lesson_id", lesson_id).execute()
 
@@ -52,25 +49,25 @@ async def seed_lesson(lesson_id, title, desc, content_list):
             khmer = item['data'].get('back') or item['data'].get('correct_answer')
             english = item['data'].get('front') or "Quiz Answer"
 
-            clean_khmer = khmer.split(' (')[0].strip()
-            audio_name = f"{clean_khmer}.mp3"
+            # Безопасное имя файла (на английском), чтобы звук не пропадал
+            clean_name = english.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_')
+            audio_name = f"{clean_name}.mp3"
 
-            await generate_audio(clean_khmer, audio_name)
+            await generate_audio(khmer, audio_name)
 
             dict_entry = {
-                "khmer": clean_khmer,
+                "khmer": khmer.split(' (')[0].strip(),
                 "english": english,
                 "pronunciation": item['data'].get('pronunciation', ''),
-                "item_type": get_item_type(clean_khmer, english)
+                "item_type": get_item_type(khmer, english)
             }
+            # Получаем новый UUID из словаря
             res = supabase.table("dictionary").upsert(dict_entry, on_conflict="khmer").execute()
 
+            # ВАЖНО: сохраняем всё в data, чтобы карточки не пустели
             item['data']['dictionary_id'] = res.data[0]['id']
             item['data']['audio'] = audio_name
 
         supabase.table("lesson_items").insert({
-            "lesson_id": lesson_id,
-            "type": item['type'],
-            "order_index": idx,
-            "data": item['data']
+            "lesson_id": lesson_id, "type": item['type'], "order_index": idx, "data": item['data']
         }).execute()
