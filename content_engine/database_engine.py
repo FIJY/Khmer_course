@@ -49,8 +49,14 @@ async def seed_lesson(lesson_id, title, desc, content_list):
             khmer = item['data'].get('back') or item['data'].get('correct_answer')
             english = item['data'].get('front') or "Quiz Answer"
 
-            # Безопасное имя файла (на английском), чтобы звук не пропадал
-            clean_name = english.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_')
+            # Внутри функции seed_lesson в database_engine.py
+
+            # Очищаем имя файла от знаков вопроса и других символов, которые запрещены в Windows
+            clean_name = english.lower().replace(' ', '_').replace('?', '').replace('!', '').replace(':', '')
+            # Также убираем скобки и кавычки
+            for char in "()'/\"":
+                clean_name = clean_name.replace(char, '')
+
             audio_name = f"{clean_name}.mp3"
 
             await generate_audio(khmer, audio_name)
