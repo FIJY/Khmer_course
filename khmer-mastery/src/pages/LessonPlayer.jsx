@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import { supabase } from '../supabaseClient';
-import { Volume2, ArrowRight, CheckCircle, Home, BookOpen, HelpCircle, RotateCcw } from 'lucide-react';
-import { updateSRSItem } from '../services/srsService'; // Импортируем наш новый сервис
+import { Volume2, ArrowRight, BookOpen, HelpCircle, RotateCcw } from 'lucide-react';
+import { updateSRSItem } from '../services/srsService';
 
 export default function LessonPlayer() {
   const { id } = useParams();
@@ -27,23 +27,16 @@ export default function LessonPlayer() {
     fetchContent();
   }, [id]);
 
-  // ГЛАВНОЕ ИСПРАВЛЕНИЕ: Функция теперь находится в правильном месте (до return)
   const handleNext = async (quality = 3) => {
     const currentItem = items[step];
-
-    // Пытаемся сохранить прогресс в SRS, если это карточка или квиз
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
-        // Вызываем сервис повторений
         await updateSRSItem(user.id, currentItem.id, quality);
       }
-    } catch (err) {
-      console.error("SRS Error:", err);
-    }
+    } catch (err) { console.error(err); }
 
     setIsFlipped(false);
-
     if (step < items.length - 1) {
       setStep(step + 1);
     } else {
@@ -51,106 +44,71 @@ export default function LessonPlayer() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from('user_progress').upsert({
-          user_id: user.id,
-          lesson_id: id,
-          is_completed: true,
-          updated_at: new Date()
+          user_id: user.id, lesson_id: id, is_completed: true, updated_at: new Date()
         }, { onConflict: 'user_id, lesson_id' });
       }
       setTimeout(() => navigate('/map'), 5000);
     }
   };
 
-  const playAudio = (file) => {
-    if (!file) return;
-    const audio = new Audio(`/sounds/${file}`);
-    audio.play().catch(e => console.log("Audio file missing"));
-  };
-
-  if (loading) return <div className="h-screen bg-gray-900 flex items-center justify-center text-emerald-400">Loading...</div>;
+  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400">Loading...</div>;
 
   const current = items[step]?.data;
   const type = items[step]?.type;
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900 text-white overflow-hidden font-sans">
+    <div className="h-screen flex flex-col bg-black text-white overflow-hidden font-sans">
       {showConfetti && <Confetti numberOfPieces={300} recycle={false} />}
 
-      {/* Прогресс */}
-      <div className="w-full h-1.5 bg-gray-800">
-        <div className="h-full bg-emerald-500 transition-all duration-500 shadow-[0_0_10px_#10b981]"
-             style={{ width: `${((step + 1) / items.length) * 100}%` }} />
+      {/* Progress Bar in Cyan */}
+      <div className="w-full h-1.5 bg-gray-900">
+        <div className="h-full bg-cyan-500 shadow-[0_0_10px_#22d3ee] transition-all duration-500" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-
-        {/* ТЕОРИЯ */}
+        {/* Card and Theory styling with Cyan borders */}
         {type === 'theory' && (
-          <div className="max-w-sm w-full bg-gray-800 p-8 rounded-[2rem] border-2 border-emerald-500/20 shadow-2xl animate-in slide-in-from-bottom-4">
-            <div className="bg-emerald-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-6">
-              <BookOpen className="text-emerald-400" size={28} />
-            </div>
-            <h2 className="text-2xl font-bold mb-4 text-white">{current.title}</h2>
-            <p className="text-gray-300 leading-relaxed text-lg whitespace-pre-wrap">{current.text}</p>
+          <div className="max-w-sm w-full bg-gray-900 p-8 rounded-[2rem] border border-white/5">
+            <BookOpen className="text-cyan-400 mb-6" size={28} />
+            <h2 className="text-2xl font-bold mb-4">{current.title}</h2>
+            <p className="text-gray-400 leading-relaxed whitespace-pre-wrap">{current.text}</p>
           </div>
         )}
 
-        {/* ПЕРЕВОРАЧИВАЮЩАЯСЯ КАРТОЧКА */}
         {type === 'vocab_card' && (
           <div className="perspective-1000 w-full max-w-sm h-80 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
             <div className={`relative w-full h-full transition-all duration-500 preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-              <div className="absolute inset-0 backface-hidden bg-gray-800 rounded-[2.5rem] border-2 border-gray-700 flex flex-col items-center justify-center p-8 shadow-2xl">
-                <span className="text-emerald-500/40 font-mono text-xs uppercase tracking-[0.3em] mb-4">English</span>
-                <h2 className="text-4xl font-bold text-center text-white">{current.front}</h2>
-                <div className="mt-8 text-gray-500 flex items-center gap-2 text-sm uppercase font-bold tracking-widest">
-                  <RotateCcw size={16} /> Tap to flip
-                </div>
+              <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[2.5rem] border border-white/10 flex flex-col items-center justify-center p-8">
+                <span className="text-gray-600 font-bold text-[10px] uppercase tracking-widest mb-4">English</span>
+                <h2 className="text-4xl font-bold text-center">{current.front}</h2>
               </div>
-              <div className="absolute inset-0 backface-hidden rotate-y-180 bg-gray-800 rounded-[2.5rem] border-2 border-emerald-500/50 flex flex-col items-center justify-center p-8 shadow-emerald-500/10 shadow-2xl">
-                <span className="text-emerald-500 font-mono text-xs uppercase tracking-[0.3em] mb-4">Khmer</span>
-                <h2 className="text-5xl font-bold text-center text-white mb-2">{current.back}</h2>
-                <p className="text-xl text-emerald-400 font-medium mb-10">{current.pronunciation}</p>
-                <button
-                  onClick={(e) => { e.stopPropagation(); playAudio(current.audio); }}
-                  className="p-5 bg-emerald-500 rounded-full hover:bg-emerald-400 transition-colors shadow-lg active:scale-90"
-                >
-                  <Volume2 size={32} className="text-white" />
+              <div className="absolute inset-0 backface-hidden rotate-y-180 bg-gray-900 rounded-[2.5rem] border border-cyan-500/30 flex flex-col items-center justify-center p-8">
+                <span className="text-cyan-400 font-bold text-[10px] uppercase tracking-widest mb-4">Khmer</span>
+                <h2 className="text-5xl font-bold text-center mb-2">{current.back}</h2>
+                <p className="text-xl text-cyan-400 font-medium mb-10">{current.pronunciation}</p>
+                <button onClick={(e) => { e.stopPropagation(); new Audio(`/sounds/${current.audio}`).play(); }} className="p-5 bg-cyan-500 rounded-full text-black shadow-lg">
+                  <Volume2 size={32} />
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* КВИЗ */}
         {type === 'quiz' && (
-          <div className="max-w-sm w-full space-y-4 animate-in fade-in">
-            <div className="flex items-center gap-3 text-yellow-500 mb-6 bg-yellow-500/10 w-fit px-4 py-1 rounded-full">
-              <HelpCircle size={18}/> <span className="text-[10px] font-black uppercase tracking-tighter">Knowledge Check</span>
-            </div>
-            <h2 className="text-2xl font-bold mb-8 leading-tight">{current.question}</h2>
-            {current.options.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => {
-                  // Качество 5 для правильного ответа
-                  if (opt === current.correct_answer) handleNext(5);
-                  else alert("❌ Try again!");
-                }}
-                className="w-full p-5 bg-gray-800 border-2 border-gray-700 rounded-2xl text-left hover:border-emerald-500 hover:bg-gray-750 transition-all text-lg font-medium active:scale-95"
-              >
-                {opt}
-              </button>
-            ))}
+          <div className="max-w-sm w-full space-y-4">
+             <h2 className="text-2xl font-bold mb-8">{current.question}</h2>
+             {current.options.map((opt, i) => (
+               <button key={i} onClick={() => opt === current.correct_answer ? handleNext(5) : alert("Try again!")} className="w-full p-5 bg-gray-900 border border-white/5 rounded-2xl text-left hover:border-cyan-500 transition-all text-lg font-medium">
+                 {opt}
+               </button>
+             ))}
           </div>
         )}
       </div>
 
-      <div className="p-8 bg-gray-900">
-        <button
-          onClick={() => handleNext(3)} // Качество 3 по умолчанию (просто просмотрел)
-          className="w-full py-5 bg-emerald-600 rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-transform"
-        >
-          {step === items.length - 1 ? 'FINISH LESSON' : 'NEXT STEP'} <ArrowRight size={24} />
+      <div className="p-8">
+        <button onClick={() => handleNext(3)} className="w-full py-5 bg-cyan-600 hover:bg-cyan-500 text-black rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all uppercase tracking-widest">
+          {step === items.length - 1 ? 'Finish' : 'Next'} <ArrowRight size={24} />
         </button>
       </div>
 
