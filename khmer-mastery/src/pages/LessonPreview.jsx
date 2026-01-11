@@ -16,24 +16,12 @@ export default function LessonPreview() {
 
   const fetchLessonData = async () => {
     try {
-      // 1. Получаем заголовок и слова
-      const { data: lessonData } = await supabase
-        .from('lessons')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      // 2. Получаем все элементы (теорию), чтобы показать её целиком
-      const { data: itemData } = await supabase
-        .from('lesson_items')
-        .select('*')
-        .eq('lesson_id', id)
-        .order('order_index', { ascending: true });
-
+      const { data: lessonData } = await supabase.from('lessons').select('*').eq('id', id).single();
+      const { data: itemData } = await supabase.from('lesson_items').select('*').eq('lesson_id', id).order('order_index', { ascending: true });
       setLesson(lessonData);
       setItems(itemData || []);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error loading lesson preview:', error);
     } finally {
       setLoading(false);
     }
@@ -45,62 +33,55 @@ export default function LessonPreview() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-32 font-sans">
-      {/* Header */}
-      <div className="p-6 border-b border-white/5 bg-black/50 backdrop-blur-md sticky top-0 z-20 flex items-center gap-4">
+      <div className="p-6 border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-20 flex items-center gap-4">
         <button onClick={() => navigate('/map')} className="text-gray-500 hover:text-white transition-colors">
           <ChevronLeft size={28} />
         </button>
-        <h1 className="text-2xl font-bold tracking-tight">Lesson Preview</h1>
+        <h1 className="text-xl font-bold tracking-tight">Lesson Overview</h1>
       </div>
 
-      <div className="max-w-2xl mx-auto p-6 space-y-12">
-        {/* Lesson Title Section */}
-        <section>
-          <h2 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">
+      <div className="max-w-3xl mx-auto p-6 space-y-12">
+        <header>
+          <h2 className="text-5xl font-black mb-3 tracking-tighter uppercase italic text-white leading-none">
             {lesson?.title}
           </h2>
-          <p className="text-gray-500 font-medium">Read the guide below before starting your practice.</p>
+          <p className="text-gray-600 font-bold text-[10px] uppercase tracking-widest">Survival Guide • Module {id}</p>
+        </header>
+
+        {/* Теория в виде компактных карточек */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {theoryBlocks.map((block, idx) => (
+            <div key={idx} className="bg-gray-900/20 border border-white/5 p-6 rounded-[2rem]">
+              <h4 className="text-cyan-400 text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2">
+                <BookOpen size={12} /> {block.data.title}
+              </h4>
+              <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap italic opacity-90">
+                {block.data.text}
+              </p>
+            </div>
+          ))}
         </section>
 
-        {/* THEORY SECTION: Собираем всю теорию в один блок */}
-        <section className="space-y-6">
-          <div className="flex items-center gap-2 text-cyan-400 mb-4">
-            <BookOpen size={20} />
-            <h3 className="text-sm font-black uppercase tracking-[0.2em]">Grammar & Rules</h3>
-          </div>
-
-          <div className="space-y-8">
-            {theoryBlocks.map((block, idx) => (
-              <div key={idx} className="bg-gray-900/30 border-l-4 border-cyan-500 p-6 rounded-r-3xl">
-                <h4 className="text-lg font-bold mb-2 text-white">{block.data.title}</h4>
-                <p className="text-gray-400 leading-relaxed whitespace-pre-wrap">{block.data.text}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* VOCABULARY SECTION: Все слова этого урока */}
-        <section className="space-y-6">
-          <div className="flex items-center gap-2 text-cyan-400 mb-4">
-            <Info size={20} />
-            <h3 className="text-sm font-black uppercase tracking-[0.2em]">Key Vocabulary</h3>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3">
+        {/* Словарь в 2 колонки */}
+        <section>
+          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-700 mb-6 flex items-center gap-2">
+            <Info size={14} /> Vocabulary Bank
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {lesson?.vocabulary?.map((word, idx) => (
-              <div key={idx} className="flex items-center justify-between p-5 bg-gray-900/50 border border-white/5 rounded-3xl">
-                <div>
-                  <div className="flex items-baseline gap-3 mb-1">
-                    <span className="text-xl font-bold text-white">{word.khmer}</span>
-                    <span className="text-cyan-400 text-sm font-medium">{word.pronunciation}</span>
+              <div key={idx} className="flex items-center justify-between p-4 bg-gray-900/30 border border-white/5 rounded-2xl hover:border-cyan-500/20 transition-all">
+                <div className="overflow-hidden">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-bold truncate">{word.khmer}</span>
+                    <span className="text-cyan-500 text-[10px] font-bold uppercase tracking-widest">{word.pronunciation}</span>
                   </div>
-                  <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">{word.english}</p>
+                  <p className="text-gray-600 text-[9px] font-black uppercase tracking-tighter truncate">{word.english}</p>
                 </div>
                 <button
                   onClick={() => new Audio(`/sounds/${word.audio}`).play()}
-                  className="w-12 h-12 rounded-full bg-cyan-500/10 text-cyan-400 flex items-center justify-center hover:bg-cyan-500 hover:text-black transition-all"
+                  className="p-3 bg-cyan-500/10 text-cyan-400 rounded-full hover:bg-cyan-500 hover:text-black transition-all"
                 >
-                  <Volume2 size={20} />
+                  <Volume2 size={16} />
                 </button>
               </div>
             ))}
@@ -108,13 +89,13 @@ export default function LessonPreview() {
         </section>
       </div>
 
-      {/* FIXED FOOTER: Start Practice */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-black/80 backdrop-blur-xl border-t border-white/5 z-30">
+      {/* Футер с кнопкой старта */}
+      <div className="fixed bottom-8 left-6 right-6 max-w-xl mx-auto z-40">
         <button
           onClick={() => navigate(`/lesson/${id}`)}
-          className="max-w-xl mx-auto w-full py-5 bg-cyan-500 text-black rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-3 transition-transform active:scale-95"
+          className="w-full py-5 bg-cyan-500 text-black rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-cyan-500/20 flex items-center justify-center gap-3 active:scale-95 transition-transform"
         >
-          <Play size={18} fill="currentColor" /> Start Interactive Session
+          <Play size={16} fill="currentColor" /> Start Practice Mode
         </button>
       </div>
     </div>

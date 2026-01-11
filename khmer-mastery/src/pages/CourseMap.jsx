@@ -32,7 +32,7 @@ export default function CourseMap() {
 
       if (data) setCompletedLessons(data.map(item => Number(item.lesson_id)));
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error loading progress:', error);
     } finally {
       setLoading(false);
     }
@@ -50,17 +50,17 @@ export default function CourseMap() {
         <h1 className="text-3xl font-bold tracking-tight">Course Map</h1>
         <div className="flex items-center gap-4">
           <div className="bg-gray-900 px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/10">
-            <Gem size={18} className="text-emerald-400 fill-emerald-400/20" />
-            <span className="font-bold text-sm">{completedLessons.length * 10}</span>
+            <Gem size={18} className="text-emerald-500 fill-emerald-500/20" />
+            <span className="font-bold text-sm text-gray-300">{completedLessons.length * 10}</span>
           </div>
           <button onClick={() => supabase.auth.signOut().then(() => navigate('/login'))}>
-            <LogOut size={20} className="text-gray-500 hover:text-white" />
+            <LogOut size={20} className="text-gray-500 hover:text-white transition-colors" />
           </button>
         </div>
       </div>
 
       <div className="max-w-xl mx-auto p-6 space-y-8 mt-4">
-        <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-600 mb-6">Survival Block</h2>
+        <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-700 mb-6">Survival Block</h2>
 
         <div className="space-y-4">
           {lessons.map((lesson, index) => {
@@ -72,27 +72,27 @@ export default function CourseMap() {
                 key={lesson.id}
                 onClick={() => isUnlocked && navigate(`/lesson/${lesson.id}/preview`)}
                 className={`flex items-center gap-5 p-1 rounded-3xl transition-all cursor-pointer group
-                  ${isUnlocked ? 'hover:translate-x-1' : 'opacity-40 cursor-not-allowed'}`}
+                  ${isUnlocked ? 'hover:translate-x-1' : 'opacity-30 cursor-not-allowed'}`}
               >
-                {/* Status Icon - ТЕПЕРЬ С ЗЕЛЕНЫМ ДЛЯ ПРОЙДЕННЫХ */}
+                {/* Иконка статуса: Холодный зеленый для пройденных */}
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center border-4 shrink-0 shadow-lg transition-transform group-active:scale-90
                   ${isCompleted
-                    ? 'bg-emerald-600 border-emerald-400 text-white shadow-emerald-500/20'
+                    ? 'bg-emerald-600 border-emerald-400 text-white shadow-emerald-500/10'
                     : isUnlocked
                       ? 'bg-black border-cyan-500 text-cyan-500 shadow-cyan-500/20'
                       : 'bg-gray-900 border-gray-800 text-gray-700'}`}>
                   {isCompleted ? <Check size={32} strokeWidth={3} /> : <Play size={28} fill={isUnlocked ? "currentColor" : "none"} className="ml-1" />}
                 </div>
 
-                {/* Card Info */}
+                {/* Карточка: Текст остается белым, меняется только рамка */}
                 <div className={`flex-1 py-5 px-6 rounded-[2rem] border flex items-center justify-between transition-colors
                   ${isCompleted
-                    ? 'bg-emerald-950/20 border-emerald-500/20 group-hover:bg-emerald-900/30'
+                    ? 'bg-gray-900/40 border-emerald-500/20'
                     : isUnlocked
                       ? 'bg-gray-900/40 border-white/5 group-hover:bg-gray-900/60'
                       : 'bg-transparent border-white/5'}`}>
                   <div>
-                    <h3 className={`text-xl font-bold mb-1 ${isCompleted ? 'text-emerald-400' : 'text-white'}`}>{lesson.title}</h3>
+                    <h3 className="text-xl font-bold mb-1 text-white">{lesson.title}</h3>
                     <p className="text-gray-500 text-sm font-medium">{lesson.desc}</p>
                   </div>
                   {isUnlocked && <ChevronRight size={20} className={`${isCompleted ? 'text-emerald-500' : 'text-gray-700'} group-hover:text-cyan-400`} />}
@@ -103,19 +103,19 @@ export default function CourseMap() {
         </div>
       </div>
 
-      {/* Bottom Nav */}
+      {/* Нижнее меню */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-xl border-t border-white/5 px-10 py-5 flex justify-between items-center z-50 max-w-lg mx-auto rounded-t-[2.5rem]">
         <button onClick={() => navigate('/map')} className="flex flex-col items-center gap-1.5 text-cyan-400">
           <MapIcon size={24} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Map</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Map</span>
         </button>
         <button onClick={() => navigate('/vocab')} className="flex flex-col items-center gap-1.5 text-gray-500 hover:text-gray-300">
           <BookText size={24} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Vocab</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Vocab</span>
         </button>
         <button onClick={() => navigate('/profile')} className="flex flex-col items-center gap-1.5 text-gray-500 hover:text-gray-300">
           <User size={24} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Profile</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Profile</span>
         </button>
       </div>
     </div>
