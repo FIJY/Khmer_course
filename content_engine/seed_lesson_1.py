@@ -1,7 +1,7 @@
 import asyncio
 from database_engine import seed_lesson
 
-# Данные для всей первой главы (1.1 и 1.2 + новые фразы)
+# Глобальный конфиг главы: Собираем 1.1 и 1.2 в один запуск
 CHAPTER_1_DATA = {
     101: {
         "title": "Lesson 1.1: Greetings & Sampeah",
@@ -18,7 +18,7 @@ CHAPTER_1_DATA = {
                 "data": {
                     "question": "Which greeting is used for elders and teachers?",
                     "options": ["ជំរាបសួរ (Choum Reap Sour)", "សួស្តី (Sues-dey)"],
-                    "correct_answer": "ជំរាបсួរ (Choum Reap Sour)",
+                    "correct_answer": "ជំរាបសួរ (Choum Reap Sour)",
                     "explanation": "Formal greeting (Choum Reap Sour) is a sign of deep respect."
                 }
             }
@@ -52,8 +52,9 @@ CHAPTER_1_DATA = {
 async def main():
     print("🌟 Starting Comprehensive Chapter 1 Import...")
     for lesson_id, info in CHAPTER_1_DATA.items():
+        # Используем твой движок database_engine
         await seed_lesson(lesson_id, info["title"], info["desc"], info["content"])
-    print("🚀 All sub-lessons for Chapter 1 are synced and audio is generated!")
+    print("🚀 All sub-lessons for Chapter 1 are synced!")
 
 if __name__ == "__main__":
     asyncio.run(main())

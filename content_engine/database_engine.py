@@ -13,7 +13,7 @@ url = os.getenv("VITE_SUPABASE_URL")
 key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 supabase = create_client(url, key)
 
-# Настройки аудио
+# Настройки ауди
 VOICE = "km-KH-PisethNeural"
 SPEED = "-10%"
 AUDIO_DIR = Path("C:/Projects/KhmerCourse/khmer-mastery/public/sounds")
