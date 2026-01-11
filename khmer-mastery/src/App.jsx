@@ -4,9 +4,15 @@ import Login from './pages/Login';
 import CourseMap from './pages/CourseMap';
 import LessonPlayer from './pages/LessonPlayer';
 import Welcome from './pages/Welcome';
-import Vocab from './pages/Vocab'; // Импортируем новый словарь
+import Vocab from './pages/Vocab';
+import LessonPreview from './pages/LessonPreview'; // Импортируем новую страницу
 
-const Profile = () => <div className="p-10 text-center text-gray-500">User Profile Coming Soon...</div>;
+// Заглушка для профиля
+const Profile = () => (
+  <div className="min-h-screen bg-black flex items-center justify-center text-gray-500">
+    Profile Stats Coming Soon...
+  </div>
+);
 
 export default function App() {
   return (
@@ -16,8 +22,13 @@ export default function App() {
           <Route path="/" element={<Welcome />} />
           <Route path="/login" element={<Login />} />
           <Route path="/map" element={<CourseMap />} />
-          <Route path="/vocab" element={<Vocab />} /> {/* Реальный маршрут */}
+          <Route path="/vocab" element={<Vocab />} />
           <Route path="/profile" element={<Profile />} />
+
+          {/* Сначала идем на ПРЕВЬЮ (учебник) */}
+          <Route path="/lesson/:id/preview" element={<LessonPreview />} />
+
+          {/* Оттуда переходим в ПЛЕЕР (интерактив) */}
           <Route path="/lesson/:id" element={<LessonPlayer />} />
         </Routes>
       </div>
