@@ -9,10 +9,10 @@ export default function CourseMap() {
   const [completedLessons, setCompletedLessons] = useState([]);
 
   const lessons = [
-    { id: 1, title: 'Greetings & Politeness', desc: 'Etiquette basics and first phrases.' },
-    { id: 2, title: 'I Want... (Essential Needs)', desc: 'Desire verbs and food basics.' },
-    { id: 3, title: 'Money & Numbers (Ultimate)', desc: 'Master numbers 0-99,999 and currency.' },
-    { id: 4, title: 'Survival Requests & Navigation', desc: 'Transport and emergency help.' },
+    { id: 1, title: 'Lesson 1: Greetings & Politeness', desc: 'Etiquette basics and first phrases.' },
+    { id: 2, title: 'Lesson 2: I Want... (Essential Needs)', desc: 'Desire verbs and basic products (no chicken!).' },
+    { id: 3, title: 'Lesson 3: Money & Numbers (Ultimate)', desc: 'Master numbers 0-99,999 and currency.' },
+    { id: 4, title: 'Lesson 4: Survival Requests & Navigation', desc: 'Transport and emergency help.' },
   ];
 
   useEffect(() => {
@@ -32,75 +32,67 @@ export default function CourseMap() {
 
       if (data) setCompletedLessons(data.map(item => Number(item.lesson_id)));
     } catch (error) {
-      console.error('Error loading progress:', error);
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+    <div className="min-h-screen bg-black flex items-center justify-center text-cyan-400">
+      <div className="animate-spin text-4xl">⏳</div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-black text-white pb-32">
-      {/* Header Bar */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5 p-4 flex justify-between items-center">
-        <h1 className="text-xl font-black tracking-tighter uppercase">Course <span className="text-emerald-400">Map</span></h1>
+    <div className="min-h-screen bg-black text-white pb-32 font-sans">
+      {/* Header */}
+      <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/50 backdrop-blur-md sticky top-0 z-20">
+        <h1 className="text-3xl font-bold tracking-tight">Course Map</h1>
         <div className="flex items-center gap-4">
-          <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-2">
-            <Gem size={16} className="text-emerald-400" />
-            <span className="text-sm font-bold text-emerald-400">0</span>
+          <div className="bg-gray-900 px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/10 shadow-lg">
+            <Gem size={18} className="text-cyan-400 fill-cyan-400/20" />
+            <span className="font-bold text-sm">0</span>
           </div>
           <button onClick={() => supabase.auth.signOut().then(() => navigate('/login'))}>
-            <LogOut size={20} className="text-gray-500 hover:text-white transition-colors" />
+            <LogOut size={20} className="text-gray-500 hover:text-white" />
           </button>
         </div>
       </div>
 
-      {/* Lesson Path */}
-      <div className="max-w-md mx-auto px-6 pt-12">
-        <div className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] mb-10 text-center">Survival Block</div>
+      {/* Content */}
+      <div className="max-w-xl mx-auto p-6 space-y-8 mt-4">
+        <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-600 mb-6">Survival</h2>
 
-        <div className="space-y-12">
+        <div className="space-y-4">
           {lessons.map((lesson, index) => {
             const isCompleted = completedLessons.includes(lesson.id);
             const isUnlocked = index === 0 || completedLessons.includes(lessons[index - 1].id);
 
             return (
-              <div key={lesson.id} className="flex items-center gap-6 group">
-                {/* Circle Icon */}
-                <button
-                  disabled={!isUnlocked}
-                  onClick={() => navigate(`/lesson/${lesson.id}`)}
-                  className={`relative shrink-0 w-20 h-20 rounded-full flex items-center justify-center border-4 transition-all transform active:scale-90
-                    ${isCompleted
-                      ? 'bg-emerald-500 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]'
-                      : isUnlocked
-                        ? 'bg-black border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                        : 'bg-gray-900 border-gray-800 opacity-50'}`}
-                >
-                  {isCompleted ? <Check size={32} strokeWidth={3} /> : isUnlocked ? <Play size={32} fill="currentColor" className="ml-1" /> : <Lock size={28} className="text-gray-600" />}
+              <div
+                key={lesson.id}
+                onClick={() => isUnlocked && navigate(`/lesson/${lesson.id}`)}
+                className={`flex items-center gap-5 p-1 rounded-3xl transition-all cursor-pointer group
+                  ${isUnlocked ? 'hover:translate-x-1' : 'opacity-50 cursor-not-allowed'}`}
+              >
+                {/* Play Button Icon */}
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center border-4 shrink-0 shadow-lg transition-transform group-active:scale-90
+                  ${isCompleted
+                    ? 'bg-cyan-500 border-cyan-300 text-white'
+                    : isUnlocked
+                      ? 'bg-black border-cyan-500 text-cyan-500 shadow-cyan-500/20'
+                      : 'bg-gray-900 border-gray-800 text-gray-700'}`}>
+                  {isCompleted ? <Check size={32} strokeWidth={3} /> : <Play size={28} fill={isUnlocked ? "currentColor" : "none"} className="ml-1" />}
+                </div>
 
-                  {/* Connecting Line */}
-                  {index !== lessons.length - 1 && (
-                    <div className={`absolute top-20 left-1/2 -translate-x-1/2 w-1 h-12 ${isCompleted ? 'bg-emerald-500/50' : 'bg-gray-800'}`} />
-                  )}
-                </button>
-
-                {/* Info Card - ЗДЕСЬ БЫЛА ОШИБКА */}
-                <div className={`flex-1 p-5 rounded-2xl border transition-all
+                {/* Text Content */}
+                <div className={`flex-1 py-4 px-6 rounded-[2rem] border transition-colors
                   ${isUnlocked
-                    ? 'bg-gray-900/50 border-white/10 group-hover:border-emerald-500/50'
-                    : 'bg-transparent border-white/5 opacity-40'}`}>
-                  <h3 className={`font-bold text-lg ${isUnlocked ? 'text-white' : 'text-gray-500'}`}>
-                    {lesson.title}
-                  </h3>
-                  <p className="text-gray-500 text-sm mt-1 leading-tight font-medium">
-                    {lesson.desc}
-                  </p>
+                    ? 'bg-gray-900/40 border-white/5 group-hover:bg-gray-900/60'
+                    : 'bg-transparent border-white/5'}`}>
+                  <h3 className="text-xl font-bold mb-1">{lesson.title}</h3>
+                  <p className="text-gray-500 text-sm font-medium">{lesson.desc}</p>
                 </div>
               </div>
             );
@@ -108,17 +100,17 @@ export default function CourseMap() {
         </div>
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/5 px-8 py-4 flex justify-between items-center max-w-lg mx-auto rounded-t-[2.5rem]">
-        <button className="flex flex-col items-center gap-1 text-emerald-400">
+      {/* Bottom Nav */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-xl border-t border-white/5 px-10 py-5 flex justify-between items-center z-50">
+        <button onClick={() => navigate('/map')} className="flex flex-col items-center gap-1.5 text-cyan-400">
           <MapIcon size={24} />
           <span className="text-[10px] font-black uppercase tracking-widest">Map</span>
         </button>
-        <button className="flex flex-col items-center gap-1 text-gray-600 hover:text-gray-400 transition-colors">
+        <button onClick={() => navigate('/vocab')} className="flex flex-col items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-colors">
           <BookText size={24} />
           <span className="text-[10px] font-black uppercase tracking-widest">Vocab</span>
         </button>
-        <button className="flex flex-col items-center gap-1 text-gray-600 hover:text-gray-400 transition-colors">
+        <button onClick={() => navigate('/profile')} className="flex flex-col items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-colors">
           <User size={24} />
           <span className="text-[10px] font-black uppercase tracking-widest">Profile</span>
         </button>
