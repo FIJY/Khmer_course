@@ -1,10 +1,13 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Map as MapIcon, Book, User } from 'lucide-react';
-// import { supabase } from './lib/supabase'; <--- ЭТУ СТРОКУ УБРАЛИ, ЧТОБЫ НЕ БЫЛО ОШИБОК
+// import { supabase } from './lib/supabase'; <--- Убрали, чтобы не ломало сборку
 import Login from './pages/Login';
 
-import Home from './pages/Home';
+import Home from './pages/Home'; // Убедитесь, что этот файл существует, или замените на Welcome
+// Если Home не существует, раскомментируйте строку ниже и используйте Welcome:
+import Welcome from './pages/Welcome';
+
 import CourseMap from './pages/CourseMap';
 import LessonPlayer from './pages/LessonPlayer';
 
@@ -12,7 +15,8 @@ const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  if (location.pathname === '/' || location.pathname === '/login') return null; // Скрываем меню на логине тоже
+  // Скрываем меню на главной и на странице входа
+  if (location.pathname === '/' || location.pathname === '/login') return null;
 
   const tabs = [
     { id: 'map', icon: <MapIcon size={24} />, label: 'Map', path: '/map' },
@@ -47,7 +51,8 @@ function App() {
         <div className="w-full max-w-md h-full border-x border-gray-800 flex flex-col relative overflow-hidden">
           <div className="flex-1 overflow-y-auto pb-24">
             <Routes>
-              <Route path="/" element={<Home />} />
+              {/* Если Home нет, используйте Welcome */}
+              <Route path="/" element={<Welcome />} />
               <Route path="/login" element={<Login />} />
               <Route path="/map" element={<CourseMap />} />
               <Route path="/lesson/:id" element={<LessonPlayer />} />
