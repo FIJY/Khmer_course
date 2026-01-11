@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import { supabase } from '../supabaseClient';
-import { Volume2, ArrowRight, BookOpen, HelpCircle, RotateCcw } from 'lucide-react';
+import { Volume2, ArrowRight, BookOpen, HelpCircle, RotateCcw, Check, X } from 'lucide-react';
 import { updateSRSItem } from '../services/srsService';
 
 export default function LessonPlayer() {
@@ -13,6 +13,10 @@ export default function LessonPlayer() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // НОВЫЕ СОСТОЯНИЯ ДЛЯ ФИДБЕКА
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [isCorrect, setIsCorrect] = useState(null);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -27,6 +31,12 @@ export default function LessonPlayer() {
     fetchContent();
   }, [id]);
 
+  const playAudio = (file) => {
+    if (!file) return;
+    const audio = new Audio(`/sounds/${file}`);
+    audio.play().catch(e => console.log("Audio missing:", file));
+  };
+
   const handleNext = async (quality = 3) => {
     const currentItem = items[step];
     try {
@@ -36,7 +46,11 @@ export default function LessonPlayer() {
       }
     } catch (err) { console.error(err); }
 
+    // Сбрасываем состояния перед следующим шагом
     setIsFlipped(false);
+    setSelectedOption(null);
+    setIsCorrect(null);
+
     if (step < items.length - 1) {
       setStep(step + 1);
     } else {
@@ -51,6 +65,31 @@ export default function LessonPlayer() {
     }
   };
 
+  // НОВАЯ ЛОГИКА ОБРАБОТКИ ОТВЕТА
+  const handleQuizAnswer = (opt, correct) => {
+    if (selectedOption !== null) return; // Защита от повторных кликов
+
+    const isRight = opt === correct;
+    setSelectedOption(opt);
+    setIsCorrect(isRight);
+
+    // Озвучка: ищем файл в audio_map для выбранного варианта
+    if (items[step].data.audio_map && items[step].data.audio_map[opt]) {
+      playAudio(items[step].data.audio_map[opt]);
+    }
+
+    // Если правильно — ждем и идем дальше. Если нет — даем подумать.
+    if (isRight) {
+      setTimeout(() => handleNext(5), 1500);
+    } else {
+      // Через 2 секунды сбрасываем выбор, чтобы юзер попробовал снова
+      setTimeout(() => {
+        setSelectedOption(null);
+        setIsCorrect(null);
+      }, 2000);
+    }
+  };
+
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400">Loading...</div>;
 
   const current = items[step]?.data;
@@ -60,21 +99,22 @@ export default function LessonPlayer() {
     <div className="h-screen flex flex-col bg-black text-white overflow-hidden font-sans">
       {showConfetti && <Confetti numberOfPieces={300} recycle={false} />}
 
-      {/* Progress Bar in Cyan */}
       <div className="w-full h-1.5 bg-gray-900">
         <div className="h-full bg-cyan-500 shadow-[0_0_10px_#22d3ee] transition-all duration-500" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        {/* Card and Theory styling with Cyan borders */}
+
+        {/* ТЕОРИЯ */}
         {type === 'theory' && (
-          <div className="max-w-sm w-full bg-gray-900 p-8 rounded-[2rem] border border-white/5">
+          <div className="max-w-sm w-full bg-gray-900 p-8 rounded-[2rem] border border-white/5 animate-in fade-in">
             <BookOpen className="text-cyan-400 mb-6" size={28} />
             <h2 className="text-2xl font-bold mb-4">{current.title}</h2>
             <p className="text-gray-400 leading-relaxed whitespace-pre-wrap">{current.text}</p>
           </div>
         )}
 
+        {/* КАРТОЧКА */}
         {type === 'vocab_card' && (
           <div className="perspective-1000 w-full max-w-sm h-80 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
             <div className={`relative w-full h-full transition-all duration-500 preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
@@ -86,7 +126,7 @@ export default function LessonPlayer() {
                 <span className="text-cyan-400 font-bold text-[10px] uppercase tracking-widest mb-4">Khmer</span>
                 <h2 className="text-5xl font-bold text-center mb-2">{current.back}</h2>
                 <p className="text-xl text-cyan-400 font-medium mb-10">{current.pronunciation}</p>
-                <button onClick={(e) => { e.stopPropagation(); new Audio(`/sounds/${current.audio}`).play(); }} className="p-5 bg-cyan-500 rounded-full text-black shadow-lg">
+                <button onClick={(e) => { e.stopPropagation(); playAudio(current.audio); }} className="p-5 bg-cyan-500 rounded-full text-black shadow-lg active:scale-90 transition-transform">
                   <Volume2 size={32} />
                 </button>
               </div>
@@ -94,22 +134,42 @@ export default function LessonPlayer() {
           </div>
         )}
 
+        {/* КВИЗ С ФИДБЕКОМ */}
         {type === 'quiz' && (
-          <div className="max-w-sm w-full space-y-4">
-             <h2 className="text-2xl font-bold mb-8">{current.question}</h2>
-             {current.options.map((opt, i) => (
-               <button key={i} onClick={() => opt === current.correct_answer ? handleNext(5) : alert("Try again!")} className="w-full p-5 bg-gray-900 border border-white/5 rounded-2xl text-left hover:border-cyan-500 transition-all text-lg font-medium">
-                 {opt}
-               </button>
-             ))}
+          <div className="max-w-sm w-full space-y-4 animate-in fade-in">
+             <div className="flex items-center gap-2 text-cyan-500/50 mb-4">
+                <HelpCircle size={16}/>
+                <span className="text-[10px] font-black uppercase tracking-widest">Knowledge Check</span>
+             </div>
+             <h2 className="text-2xl font-bold mb-8 leading-tight">{current.question}</h2>
+             {current.options.map((opt, i) => {
+               const isThisSelected = selectedOption === opt;
+               const buttonStyle = isThisSelected
+                 ? (isCorrect ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-red-500 bg-red-500/10 text-red-400')
+                 : 'border-white/5 bg-gray-900 hover:border-cyan-500/50';
+
+               return (
+                 <button
+                   key={i}
+                   disabled={selectedOption !== null}
+                   onClick={() => handleQuizAnswer(opt, current.correct_answer)}
+                   className={`w-full p-5 border-2 rounded-2xl text-left transition-all text-lg font-medium flex justify-between items-center ${buttonStyle}`}
+                 >
+                   {opt}
+                   {isThisSelected && (isCorrect ? <Check size={20} /> : <X size={20} />)}
+                 </button>
+               );
+             })}
           </div>
         )}
       </div>
 
       <div className="p-8">
-        <button onClick={() => handleNext(3)} className="w-full py-5 bg-cyan-600 hover:bg-cyan-500 text-black rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all uppercase tracking-widest">
-          {step === items.length - 1 ? 'Finish' : 'Next'} <ArrowRight size={24} />
-        </button>
+        {type !== 'quiz' && (
+          <button onClick={() => handleNext(3)} className="w-full py-5 bg-cyan-600 hover:bg-cyan-500 text-black rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all uppercase tracking-widest">
+            {step === items.length - 1 ? 'Finish' : 'Next'} <ArrowRight size={24} />
+          </button>
+        )}
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
