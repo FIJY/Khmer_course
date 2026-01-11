@@ -75,7 +75,7 @@ export default function LessonPlayer() {
   if (loading) {
     return (
       <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic uppercase tracking-widest">
-        Syncing Lesson {id}...
+        Syncing Lesson ...
       </div>
     );
   }
