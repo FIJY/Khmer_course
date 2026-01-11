@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { Mail, Lock, Loader } from 'lucide-react';
+import { Mail, Lock, Loader, ChevronRight } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState(null); // Сохраняем сессию локально
+  const [session, setSession] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // ПРОВЕРЯЕМ СЕССИЮ, НО НЕ ДЕЛАЕМ АВТО-ПЕРЕХОД
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setSession(session);
@@ -29,14 +28,10 @@ export default function Login() {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) setError(error.message);
     setLoading(false);
-    // После входа кнопка "Перейти к карте" появится сама
   };
 
   const handleSignUp = async () => {
@@ -44,63 +39,65 @@ export default function Login() {
     setError(null);
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) setError(error.message);
-    else alert('Проверьте почту или входите сразу (если подтверждение отключено)');
+    else alert('Success! Please check your email to confirm registration.');
     setLoading(false);
   };
 
-  // ЕСЛИ МЫ ЗАЛОГИНЕНЫ — ПОКАЗЫВАЕМ БЕЗОПАСНЫЙ ЭКРАН
   if (session) {
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 text-white">
-        <h2 className="text-2xl text-emerald-400 mb-4">Вы уже вошли!</h2>
-        <p className="text-gray-400 mb-8 text-center">Бесконечный цикл остановлен. Нажмите кнопку ниже.</p>
+        <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6 border border-emerald-500/30">
+            <ChevronRight className="text-emerald-400" size={40} />
+        </div>
+        <h2 className="text-3xl font-bold text-white mb-2">Welcome Back!</h2>
+        <p className="text-gray-400 mb-10 text-center">You are already logged in. Your progress is saved.</p>
         <button
           onClick={() => navigate('/map')}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-8 rounded-xl shadow-lg w-full max-w-xs"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 px-10 rounded-[2rem] shadow-xl w-full max-w-xs transition-all transform active:scale-95 uppercase tracking-widest"
         >
-          ПЕРЕЙТИ К КАРТЕ ВРУЧНУЮ
+          Go to Course Map
         </button>
       </div>
     );
   }
 
-  // ОБЫЧНАЯ ФОРМА ВХОДА
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-gray-800 rounded-xl shadow-2xl p-8 border border-gray-700">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-emerald-400">Вход</h2>
+      <div className="max-w-md w-full bg-gray-800 rounded-[2.5rem] shadow-2xl p-10 border border-gray-700/50">
+        <div className="text-center mb-10">
+          <h2 className="text-4xl font-black text-white tracking-tighter">SIGN <span className="text-emerald-400">IN</span></h2>
+          <p className="text-gray-500 mt-2 font-medium uppercase tracking-widest text-xs">Join the mastery</p>
         </div>
 
-        {error && <div className="text-red-500 bg-red-900/20 p-3 rounded mb-4 text-sm">{error}</div>}
+        {error && <div className="text-red-400 bg-red-900/20 border border-red-900/50 p-4 rounded-xl mb-6 text-sm font-medium">{error}</div>}
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="relative">
-            <Mail className="absolute left-3 top-3 text-gray-500" size={20} />
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="relative group">
+            <Mail className="absolute left-4 top-4 text-gray-500 group-focus-within:text-emerald-400 transition-colors" size={20} />
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-gray-900 text-white pl-10 pr-4 py-3 rounded-lg border border-gray-700"
-              placeholder="Email"
+              className="w-full bg-gray-900/50 text-white pl-12 pr-4 py-4 rounded-2xl border border-gray-700 focus:border-emerald-500 outline-none transition-all"
+              placeholder="Email address"
             />
           </div>
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 text-gray-500" size={20} />
+          <div className="relative group">
+            <Lock className="absolute left-4 top-4 text-gray-500 group-focus-within:text-emerald-400 transition-colors" size={20} />
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-gray-900 text-white pl-10 pr-4 py-3 rounded-lg border border-gray-700"
-              placeholder="Пароль"
+              className="w-full bg-gray-900/50 text-white pl-12 pr-4 py-4 rounded-2xl border border-gray-700 focus:border-emerald-500 outline-none transition-all"
+              placeholder="Password"
             />
           </div>
-          <div className="flex gap-3">
-            <button type="submit" disabled={loading} className="flex-1 bg-emerald-500 text-white font-bold py-3 rounded-lg">
-              {loading ? <Loader className="animate-spin mx-auto" /> : 'Войти'}
+          <div className="flex flex-col gap-3 pt-4">
+            <button type="submit" disabled={loading} className="w-full bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest">
+              {loading ? <Loader className="animate-spin mx-auto" size={24} /> : 'Login'}
             </button>
-            <button type="button" onClick={handleSignUp} disabled={loading} className="flex-1 bg-gray-700 text-white font-bold py-3 rounded-lg">
-              Создать
+            <button type="button" onClick={handleSignUp} disabled={loading} className="w-full bg-transparent text-gray-400 hover:text-white font-bold py-2 transition-all text-sm">
+              New here? <span className="text-emerald-500">Create an account</span>
             </button>
           </div>
         </form>
