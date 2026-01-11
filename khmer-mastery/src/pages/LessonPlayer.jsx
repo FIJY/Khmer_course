@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Volume2, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { ChevronLeft, Volume2, CheckCircle, Loader, TriangleAlert } from 'lucide-react';
 import ReactConfetti from 'react-confetti';
-import { supabase } from '../supabaseClient'; // <--- Подключаем базу данных
+import { supabase } from '../supabaseClient';
 
-// Временная база данных уроков (пока не перенесли в Supabase)
+// 1. Восстановил РАБОЧИЕ ссылки на аудио для Урока 1
 const lessonsData = {
   1: {
     title: "Встреча (Greetings)",
@@ -28,17 +28,27 @@ const LessonPlayer = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const lesson = lessonsData[id] || lessonsData[1];
+  // Безопасное получение урока (если id странный, берем 1-й)
+  const lessonId = parseInt(id) || 1;
+  const lesson = lessonsData[lessonId] || lessonsData[1];
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // <--- Индикатор сохранения
+  const [statusLog, setStatusLog] = useState("Готов к уроку"); // <--- ЛОГ НА ЭКРАНЕ
+  const [isSaving, setIsSaving] = useState(false);
 
   const currentWord = lesson.words[currentIndex];
 
   const playAudio = () => {
+    setStatusLog("Попытка воспроизвести звук...");
     if (currentWord.audio) {
-      new Audio(currentWord.audio).play();
+      const audio = new Audio(currentWord.audio);
+      audio.play()
+        .then(() => setStatusLog("Звук играет"))
+        .catch(err => setStatusLog("Ошибка звука: " + err.message));
+    } else {
+      setStatusLog("Нет аудио для этого слова");
     }
   };
 
@@ -46,65 +56,70 @@ const LessonPlayer = () => {
     setIsFlipped(false);
     if (currentIndex < lesson.words.length - 1) {
       setCurrentIndex(prev => prev + 1);
+      setStatusLog(`Карточка ${currentIndex + 2} из ${lesson.words.length}`);
     } else {
+      setStatusLog("Последняя карта! Запускаю финиш...");
       finishLesson();
     }
   };
 
-  // Функция сохранения в базу данных
   const finishLesson = async () => {
-    setIsCompleted(true);
-    setIsSaving(true);
-
     try {
-      // 1. Узнаем, кто сейчас играет (кто залогинен)
+      setIsCompleted(true); // <--- Сразу меняем экран
+      setIsSaving(true);
+      setStatusLog("Соединяюсь с базой данных...");
+
       const { data: { user } } = await supabase.auth.getUser();
 
-      if (user) {
-        // 2. Отправляем запись в таблицу user_progress
-        const { error } = await supabase
-          .from('user_progress')
-          .upsert({
-            user_id: user.id,
-            lesson_id: id,
-            is_completed: true,
-            score: 100, // Пока ставим максимум, позже сделаем логику
-            updated_at: new Date()
-          }, { onConflict: 'user_id, lesson_id' }); // Если запись уже есть — обновим её
+      if (!user) {
+        setStatusLog("Ошибка: Пользователь не найден (не залогинен?)");
+        return;
+      }
 
-        if (error) console.error('Ошибка сохранения:', error);
-        else console.log('Прогресс сохранен успешно!');
+      setStatusLog(`Пользователь найден: ${user.email}. Сохраняю...`);
+
+      const { error } = await supabase
+        .from('user_progress')
+        .upsert({
+          user_id: user.id,
+          lesson_id: lessonId.toString(),
+          is_completed: true,
+          score: 100,
+          updated_at: new Date()
+        }, { onConflict: 'user_id, lesson_id' });
+
+      if (error) {
+        setStatusLog("ОШИБКА DB: " + error.message);
+        alert("Ошибка сохранения: " + error.message);
+      } else {
+        setStatusLog("УСПЕХ! Данные сохранены в Supabase.");
       }
     } catch (err) {
-      console.error('Сбой сохранения:', err);
+      setStatusLog("КРИТИЧЕСКАЯ ОШИБКА: " + err.message);
+      console.error(err);
     } finally {
       setIsSaving(false);
     }
   };
 
+  // ЭКРАН ПОБЕДЫ
   if (isCompleted) {
     return (
-      <div className="h-screen bg-gray-900 flex flex-col items-center justify-center text-white relative overflow-hidden">
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white relative p-4">
         <ReactConfetti recycle={false} numberOfPieces={500} />
 
-        <div className="z-10 text-center p-8 bg-gray-800 rounded-2xl border border-emerald-500/50 shadow-2xl max-w-sm mx-4">
+        <div className="z-10 w-full max-w-sm bg-gray-800 rounded-2xl border border-emerald-500 p-8 text-center shadow-2xl">
           <CheckCircle className="w-20 h-20 text-emerald-400 mx-auto mb-6" />
           <h2 className="text-3xl font-bold mb-2">Урок пройден!</h2>
-          <p className="text-gray-400 mb-6">Вы выучили {lesson.words.length} новых слов.</p>
 
-          {isSaving ? (
-            <div className="flex justify-center items-center gap-2 text-sm text-emerald-400 mb-6">
-              <Loader className="animate-spin" size={16} /> Сохраняем результат...
-            </div>
-          ) : (
-            <div className="text-sm text-emerald-400 mb-6 font-semibold">
-              ✓ Результат сохранен в облако
-            </div>
-          )}
+          {/* Блок диагностики для вас */}
+          <div className="bg-black/50 p-2 rounded text-xs text-left font-mono text-yellow-300 mb-6 break-words">
+            LOG: {statusLog}
+          </div>
 
           <button
             onClick={() => navigate('/map')}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95"
+            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-xl transition-all"
           >
             Вернуться к Карте
           </button>
@@ -113,20 +128,25 @@ const LessonPlayer = () => {
     );
   }
 
+  // ЭКРАН УРОКА
   return (
-    <div className="h-screen bg-gray-900 text-white flex flex-col">
-      {/* Header */}
+    <div className="h-screen bg-gray-900 text-white flex flex-col relative">
+      {/* ДИАГНОСТИЧЕСКАЯ СТРОКА (Временно) */}
+      <div className="bg-blue-900/50 text-[10px] text-blue-200 text-center py-1">
+        DEBUG: {statusLog} | Index: {currentIndex}
+      </div>
+
       <div className="p-4 flex items-center justify-between border-b border-gray-800">
         <button onClick={() => navigate('/map')} className="p-2 hover:bg-gray-800 rounded-full">
           <ChevronLeft />
         </button>
         <div className="flex-1 text-center pr-10">
           <h2 className="font-bold text-lg">{lesson.title}</h2>
-          <div className="text-xs text-gray-500">{currentIndex + 1} из {lesson.words.length}</div>
+          <div className="text-xs text-gray-500">{currentIndex + 1} / {lesson.words.length}</div>
         </div>
       </div>
 
-      {/* Progress Bar */}
+      {/* Прогресс бар */}
       <div className="h-1 bg-gray-800 w-full">
         <div
           className="h-full bg-emerald-500 transition-all duration-300"
@@ -134,36 +154,32 @@ const LessonPlayer = () => {
         />
       </div>
 
-      {/* Card Area */}
       <div className="flex-1 flex flex-col items-center justify-center p-6" onClick={() => setIsFlipped(!isFlipped)}>
         <div className="w-full max-w-sm aspect-[3/4] perspective-1000 cursor-pointer group">
           <div className={`relative w-full h-full duration-500 preserve-3d transition-transform ${isFlipped ? 'rotate-y-180' : ''}`}>
 
-            {/* Front Side (Khmer) */}
+            {/* Front */}
             <div className="absolute w-full h-full backface-hidden bg-gray-800 rounded-3xl border border-gray-700 flex flex-col items-center justify-center shadow-2xl p-6">
               <span className="text-6xl mb-8 font-bold text-center leading-normal">{currentWord.khmer}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); playAudio(); }}
-                className="p-4 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors"
+                className="p-4 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors active:scale-95"
               >
                 <Volume2 size={32} className="text-emerald-400" />
               </button>
-              <p className="mt-8 text-gray-500 text-sm uppercase tracking-widest">Нажмите, чтобы перевернуть</p>
+              <p className="mt-8 text-gray-500 text-sm uppercase">Нажми для перевода</p>
             </div>
 
-            {/* Back Side (Russian) */}
+            {/* Back */}
             <div className="absolute w-full h-full backface-hidden bg-gray-800 rounded-3xl border border-emerald-500/30 flex flex-col items-center justify-center shadow-2xl rotate-y-180 p-6">
               <h3 className="text-4xl font-bold mb-4 text-emerald-400">{currentWord.phonetics}</h3>
               <p className="text-2xl text-white mb-8">{currentWord.russian}</p>
-              <p className="text-gray-500 text-sm">Транскрипция и перевод</p>
             </div>
-
           </div>
         </div>
       </div>
 
-      {/* Footer Controls */}
-      <div className="p-6 pb-10 bg-gray-900 border-t border-gray-800">
+      <div className="p-6 pb-8 bg-gray-900 border-t border-gray-800">
         <div className="max-w-sm mx-auto flex gap-4">
           <button
             onClick={(e) => { e.stopPropagation(); nextCard(); }}
@@ -173,7 +189,7 @@ const LessonPlayer = () => {
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); nextCard(); }}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
+            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95"
           >
             Знаю
           </button>

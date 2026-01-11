@@ -16,7 +16,7 @@ const Navigation = () => {
   const location = useLocation();
 
   // Скрываем меню на главной и на странице входа
-  if (location.pathname === '/' || location.pathname === '/login') return null;
+  if (location.pathname === '/' || location.pathname === '/login' || location.pathname.startsWith('/lesson')) return null;
 
   const tabs = [
     { id: 'map', icon: <MapIcon size={24} />, label: 'Map', path: '/map' },
