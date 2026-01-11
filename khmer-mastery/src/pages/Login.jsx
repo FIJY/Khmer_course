@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { Mail, Lock, Loader, ChevronRight } from 'lucide-react';
+import { Mail, Lock, Loader, ArrowRight, UserPlus } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -15,92 +15,91 @@ export default function Login() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setSession(session);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) setSession(session);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleAction = async (type) => {
     setLoading(true);
     setError(null);
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = type === 'login'
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password });
 
     if (error) setError(error.message);
-    setLoading(false);
-  };
-
-  const handleSignUp = async () => {
-    setLoading(true);
-    setError(null);
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) setError(error.message);
-    else alert('Success! Please check your email to confirm registration.');
+    else if (type === 'signup') alert('Check your email for confirmation!');
     setLoading(false);
   };
 
   if (session) {
     return (
-      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 text-white">
-        <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6 border border-emerald-500/30">
-            <ChevronRight className="text-emerald-400" size={40} />
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white">
+        <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mb-8 border border-emerald-500/30 animate-pulse">
+            <ArrowRight className="text-emerald-400" size={40} />
         </div>
-        <h2 className="text-3xl font-bold text-white mb-2">Welcome Back!</h2>
-        <p className="text-gray-400 mb-10 text-center">You are already logged in. Your progress is saved.</p>
+        <h2 className="text-4xl font-black mb-2 tracking-tighter">ACCESS GRANTED</h2>
+        <p className="text-gray-500 mb-12 text-center font-medium">Your learning vault is ready.</p>
         <button
           onClick={() => navigate('/map')}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 px-10 rounded-[2rem] shadow-xl w-full max-w-xs transition-all transform active:scale-95 uppercase tracking-widest"
+          className="bg-emerald-500 hover:bg-emerald-400 text-black font-black py-5 px-12 rounded-2xl shadow-2xl w-full max-w-xs transition-all transform active:scale-95 uppercase tracking-[0.2em] text-sm"
         >
-          Go to Course Map
+          Enter Course Map
         </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-gray-800 rounded-[2.5rem] shadow-2xl p-10 border border-gray-700/50">
+    <div className="min-h-screen bg-black flex items-center justify-center p-6">
+      <div className="max-w-md w-full bg-gray-900/40 backdrop-blur-xl rounded-[2.5rem] p-10 border border-white/5 shadow-2xl">
         <div className="text-center mb-10">
-          <h2 className="text-4xl font-black text-white tracking-tighter">SIGN <span className="text-emerald-400">IN</span></h2>
-          <p className="text-gray-500 mt-2 font-medium uppercase tracking-widest text-xs">Join the mastery</p>
+          <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Member <span className="text-emerald-400">Portal</span></h2>
+          <p className="text-gray-600 mt-2 font-bold uppercase tracking-[0.2em] text-[10px]">Verify your credentials</p>
         </div>
 
-        {error && <div className="text-red-400 bg-red-900/20 border border-red-900/50 p-4 rounded-xl mb-6 text-sm font-medium">{error}</div>}
+        {error && <div className="text-red-400 bg-red-900/10 border border-red-500/20 p-4 rounded-xl mb-6 text-xs font-bold text-center">{error}</div>}
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="relative group">
-            <Mail className="absolute left-4 top-4 text-gray-500 group-focus-within:text-emerald-400 transition-colors" size={20} />
+        <div className="space-y-4">
+          <div className="relative">
+            <Mail className="absolute left-5 top-5 text-gray-600" size={18} />
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-gray-900/50 text-white pl-12 pr-4 py-4 rounded-2xl border border-gray-700 focus:border-emerald-500 outline-none transition-all"
+              className="w-full bg-black text-white pl-14 pr-6 py-5 rounded-2xl border border-white/5 focus:border-emerald-500/50 outline-none transition-all font-medium placeholder:text-gray-700"
               placeholder="Email address"
             />
           </div>
-          <div className="relative group">
-            <Lock className="absolute left-4 top-4 text-gray-500 group-focus-within:text-emerald-400 transition-colors" size={20} />
+          <div className="relative">
+            <Lock className="absolute left-5 top-5 text-gray-600" size={18} />
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-gray-900/50 text-white pl-12 pr-4 py-4 rounded-2xl border border-gray-700 focus:border-emerald-500 outline-none transition-all"
-              placeholder="Password"
+              className="w-full bg-black text-white pl-14 pr-6 py-5 rounded-2xl border border-white/5 focus:border-emerald-500/50 outline-none transition-all font-medium placeholder:text-gray-700"
+              placeholder="Secure password"
             />
           </div>
-          <div className="flex flex-col gap-3 pt-4">
-            <button type="submit" disabled={loading} className="w-full bg-emerald-500 hover:bg-emerald-400 text-gray-900 font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest">
-              {loading ? <Loader className="animate-spin mx-auto" size={24} /> : 'Login'}
+
+          <div className="flex flex-col gap-4 pt-6">
+            <button
+              onClick={() => handleAction('login')}
+              disabled={loading}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black py-5 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-[0.2em] text-sm flex items-center justify-center"
+            >
+              {loading ? <Loader className="animate-spin" size={20} /> : 'Authorize Login'}
             </button>
-            <button type="button" onClick={handleSignUp} disabled={loading} className="w-full bg-transparent text-gray-400 hover:text-white font-bold py-2 transition-all text-sm">
-              New here? <span className="text-emerald-500">Create an account</span>
+            <button
+              onClick={() => handleAction('signup')}
+              disabled={loading}
+              className="w-full bg-white/5 hover:bg-white/10 text-gray-400 font-black py-5 rounded-2xl transition-all active:scale-95 uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-2"
+            >
+              <UserPlus size={14} /> Create New Account
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
