@@ -3,15 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import { supabase } from '../supabaseClient';
 import { Volume2, ArrowRight, CheckCircle, Home, BookOpen, HelpCircle, RotateCcw } from 'lucide-react';
-import { updateSRSItem } from '../services/srsService';
-
+import { updateSRSItem } from '../services/srsService'; // Импортируем наш новый сервис
 
 export default function LessonPlayer() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [step, setStep] = useState(0);
-  const [isFlipped, setIsFlipped] = useState(false); // Состояние переворота
+  const [isFlipped, setIsFlipped] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -28,8 +27,23 @@ export default function LessonPlayer() {
     fetchContent();
   }, [id]);
 
-  const handleNext = async () => {
-    setIsFlipped(false); // Сбрасываем карту при переходе
+  // ГЛАВНОЕ ИСПРАВЛЕНИЕ: Функция теперь находится в правильном месте (до return)
+  const handleNext = async (quality = 3) => {
+    const currentItem = items[step];
+
+    // Пытаемся сохранить прогресс в SRS, если это карточка или квиз
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
+        // Вызываем сервис повторений
+        await updateSRSItem(user.id, currentItem.id, quality);
+      }
+    } catch (err) {
+      console.error("SRS Error:", err);
+    }
+
+    setIsFlipped(false);
+
     if (step < items.length - 1) {
       setStep(step + 1);
     } else {
@@ -37,7 +51,10 @@ export default function LessonPlayer() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from('user_progress').upsert({
-          user_id: user.id, lesson_id: id, is_completed: true, updated_at: new Date()
+          user_id: user.id,
+          lesson_id: id,
+          is_completed: true,
+          updated_at: new Date()
         }, { onConflict: 'user_id, lesson_id' });
       }
       setTimeout(() => navigate('/map'), 5000);
@@ -61,7 +78,8 @@ export default function LessonPlayer() {
 
       {/* Прогресс */}
       <div className="w-full h-1.5 bg-gray-800">
-        <div className="h-full bg-emerald-500 transition-all duration-500 shadow-[0_0_10px_#10b981]" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
+        <div className="h-full bg-emerald-500 transition-all duration-500 shadow-[0_0_10px_#10b981]"
+             style={{ width: `${((step + 1) / items.length) * 100}%` }} />
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6">
@@ -81,8 +99,6 @@ export default function LessonPlayer() {
         {type === 'vocab_card' && (
           <div className="perspective-1000 w-full max-w-sm h-80 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
             <div className={`relative w-full h-full transition-all duration-500 preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
-
-              {/* ПЕРЕДНЯЯ СТОРОНА (English/Front) */}
               <div className="absolute inset-0 backface-hidden bg-gray-800 rounded-[2.5rem] border-2 border-gray-700 flex flex-col items-center justify-center p-8 shadow-2xl">
                 <span className="text-emerald-500/40 font-mono text-xs uppercase tracking-[0.3em] mb-4">English</span>
                 <h2 className="text-4xl font-bold text-center text-white">{current.front}</h2>
@@ -90,13 +106,10 @@ export default function LessonPlayer() {
                   <RotateCcw size={16} /> Tap to flip
                 </div>
               </div>
-
-              {/* ЗАДНЯЯ СТОРОНА (Khmer/Back) */}
               <div className="absolute inset-0 backface-hidden rotate-y-180 bg-gray-800 rounded-[2.5rem] border-2 border-emerald-500/50 flex flex-col items-center justify-center p-8 shadow-emerald-500/10 shadow-2xl">
                 <span className="text-emerald-500 font-mono text-xs uppercase tracking-[0.3em] mb-4">Khmer</span>
                 <h2 className="text-5xl font-bold text-center text-white mb-2">{current.back}</h2>
                 <p className="text-xl text-emerald-400 font-medium mb-10">{current.pronunciation}</p>
-
                 <button
                   onClick={(e) => { e.stopPropagation(); playAudio(current.audio); }}
                   className="p-5 bg-emerald-500 rounded-full hover:bg-emerald-400 transition-colors shadow-lg active:scale-90"
@@ -104,7 +117,6 @@ export default function LessonPlayer() {
                   <Volume2 size={32} className="text-white" />
                 </button>
               </div>
-
             </div>
           </div>
         )}
@@ -120,7 +132,8 @@ export default function LessonPlayer() {
               <button
                 key={i}
                 onClick={() => {
-                  if (opt === current.correct_answer) handleNext();
+                  // Качество 5 для правильного ответа
+                  if (opt === current.correct_answer) handleNext(5);
                   else alert("❌ Try again!");
                 }}
                 className="w-full p-5 bg-gray-800 border-2 border-gray-700 rounded-2xl text-left hover:border-emerald-500 hover:bg-gray-750 transition-all text-lg font-medium active:scale-95"
@@ -130,17 +143,17 @@ export default function LessonPlayer() {
             ))}
           </div>
         )}
-
       </div>
 
-      {/* Футер с кнопкой */}
       <div className="p-8 bg-gray-900">
-        <button onClick={handleNext} className="w-full py-5 bg-emerald-600 rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-transform">
+        <button
+          onClick={() => handleNext(3)} // Качество 3 по умолчанию (просто просмотрел)
+          className="w-full py-5 bg-emerald-600 rounded-[1.5rem] font-black text-xl flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-transform"
+        >
           {step === items.length - 1 ? 'FINISH LESSON' : 'NEXT STEP'} <ArrowRight size={24} />
         </button>
       </div>
 
-      {/* CSS для анимации переворота */}
       <style dangerouslySetInnerHTML={{ __html: `
         .perspective-1000 { perspective: 1000px; }
         .preserve-3d { transform-style: preserve-3d; }
@@ -148,28 +161,5 @@ export default function LessonPlayer() {
         .rotate-y-180 { transform: rotateY(180deg); }
       `}} />
     </div>
-  const handleNext = async (quality = 3) => {
-    // Если это карточка или квиз — сохраняем прогресс в SRS
-    const currentItem = items[step];
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
-      // quality: 5 для правильного квиза, 3 для просмотра карточки
-      await updateSRSItem(user.id, currentItem.id, quality);
-    }
-
-    setIsFlipped(false);
-    if (step < items.length - 1) {
-      setStep(step + 1);
-    } else {
-      // ... логика завершения урока
-    }
-  };
-
-  // В КВИЗЕ при правильном ответе вызывай:
-  // onClick={() => {
-  //   if (opt === current.correct_answer) handleNext(5); // 5 = отлично
-  //   else alert("❌ Try again!");
-  // }}
   );
 }
