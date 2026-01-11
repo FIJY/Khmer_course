@@ -1,17 +1,16 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+import React from 'react'
+import ReactDOM from 'react-dom/client'
 
-/* 3D Flip Styles (для карточек) */
-.perspective-1000 {
-  perspective: 1000px;
-}
-.transform-style-3d {
-  transform-style: preserve-3d;
-}
-.backface-hidden {
-  backface-visibility: hidden;
-}
-.rotate-y-180 {
-  transform: rotateY(180deg);
-}
+// Я ОТКЛЮЧИЛ СТИЛИ, ЧТОБЫ ИСКЛЮЧИТЬ ОШИБКУ ФАЙЛА
+// import './index.css' 
+// import App from './App.jsx'
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+
+root.render(
+  <div style={{ padding: 50, fontFamily: 'sans-serif' }}>
+    <h1>ФИНАЛЬНЫЙ ТЕСТ</h1>
+    <p>Если вы видите этот текст — сайт починился.</p>
+    <p>Мы отключили всё лишнее.</p>
+  </div>
+);
