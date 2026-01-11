@@ -78,19 +78,28 @@ export default function LessonPlayer() {
     }
   };
 
-  const completeLesson = async () => {
-    setShowConfetti(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('user_progress').upsert({
-        user_id: user.id,
-        lesson_id: Number(id),
-        is_completed: true,
-        updated_at: new Date()
-      }, { onConflict: 'user_id, lesson_id' });
-    }
-    setTimeout(() => navigate('/map'), 5000);
-  };
+// Логика в LessonPlayer.jsx
+ const completeLesson = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Проверяем, был ли урок пройден ранее
+  const { data: existingProgress } = await supabase
+    .from('user_progress')
+    .select('is_completed')
+    .eq('user_id', user.id)
+    .eq('lesson_id', Number(id))
+    .single();
+
+  if (!existingProgress) {
+    // Если проходим первый раз — даем 50 гемов
+    console.log("First time! +50 Gems");
+  } else {
+    // Если повторно — даем только 5 гемов
+    console.log("Review! +5 Gems");
+  }
+
+  // Обновляем базу...
+};;
 
   const handleQuizAnswer = (opt, correct) => {
     if (selectedOption !== null) return;
