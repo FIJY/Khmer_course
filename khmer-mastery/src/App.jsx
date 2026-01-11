@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Map as MapIcon, Book, User } from 'lucide-react';
-import { supabase } from './lib/supabase'; // Твой актуальный путь
+// import { supabase } from './lib/supabase'; <--- ЭТУ СТРОКУ УБРАЛИ, ЧТОБЫ НЕ БЫЛО ОШИБОК
 import Login from './pages/Login';
 
 import Home from './pages/Home';
@@ -12,7 +12,7 @@ const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  if (location.pathname === '/') return null;
+  if (location.pathname === '/' || location.pathname === '/login') return null; // Скрываем меню на логине тоже
 
   const tabs = [
     { id: 'map', icon: <MapIcon size={24} />, label: 'Map', path: '/map' },
