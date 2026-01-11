@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Map as MapIcon, Book, User } from 'lucide-react';
 import { supabase } from './lib/supabase'; // Твой актуальный путь
+import Login from './pages/Login';
 
 import Home from './pages/Home';
 import CourseMap from './pages/CourseMap';
@@ -47,6 +48,7 @@ function App() {
           <div className="flex-1 overflow-y-auto pb-24">
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
               <Route path="/map" element={<CourseMap />} />
               <Route path="/lesson/:id" element={<LessonPlayer />} />
               <Route path="/vocab" element={<div className="p-10 text-center text-gray-500 italic">3,000+ Words Dictionary Indexing...</div>} />
