@@ -22,7 +22,7 @@ export default function Profile() {
       if (!user) return navigate('/login');
 
       const { count: totalInApp } = await supabase.from('lesson_items').select('*', { count: 'exact', head: true }).eq('type', 'vocab_card');
-      const { count: userLearned } = await supabase.from('user_srs').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+      const { count: userLearned } = await supabase.from('user_srs_items').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
       const { data: prog } = await supabase.from('user_progress').select('lesson_id').eq('user_id', user.id).eq('is_completed', true);
       const { data: leaders } = await supabase.rpc('get_leaderboard');
 
