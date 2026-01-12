@@ -59,7 +59,7 @@ export default function LessonPlayer() {
       console.error("Critical error:", err);
     }
   };
-  };
+
 
   const handleNext = async (quality = 3) => {
     const currentItem = items[step];
