@@ -24,3 +24,23 @@ export const updateSRSItem = async (userId, itemId, quality) => {
     next_review: nextReview.toISOString()
   });
 };
+
+// Добавь это в srsService.js
+export const getDueItems = async (userId) => {
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('user_srs_items')
+    .select(`
+      id,
+      item_id,
+      interval,
+      dictionary:dictionary_id(*)
+    `)
+    .eq('user_id', userId)
+    .lte('next_review', now) // Выбираем всё, что "меньше или равно" текущему времени
+    .order('next_review', { ascending: true }) // Самые старые — первыми
+    .limit(20); // Чтобы не перегружать за один раз
+
+  return data || [];
+};
