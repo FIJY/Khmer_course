@@ -43,16 +43,22 @@ export default function LessonPlayer() {
         .from('user_progress')
         .upsert({
           user_id: user.id,
-          lesson_id: Number(id), // ВАЖНО: сохраняем как число для совместимости с картой
+          lesson_id: Number(id),
           is_completed: true,
           completed_at: new Date().toISOString()
         }, { onConflict: 'user_id,lesson_id' });
 
-      if (error) throw error;
-      console.log("Progress saved for lesson:", id);
+      if (error) {
+        // ЕСЛИ ГАЛОЧКА НЕ ПОЯВЛЯЕТСЯ, ТЫ УВИДИШЬ ПОЧЕМУ
+        console.error("DB ERROR:", error.message);
+        alert("Database error: " + error.message);
+        throw error;
+      }
+      console.log("Success! Saved lesson:", id);
     } catch (err) {
-      console.error("Critical: Failed to save progress:", err);
+      console.error("Critical error:", err);
     }
+  };
   };
 
   const handleNext = async (quality = 3) => {
