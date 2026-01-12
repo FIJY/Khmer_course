@@ -33,11 +33,16 @@ export default function LessonPlayer() {
     finally { setLoading(false); }
   };
 
-  // ФУНКЦИЯ, КОТОРАЯ "ЗАЖИГАЕТ" ГАЛОЧКИ
+// ЗАМЕНИ СТАРУЮ markLessonCompleted НА ЭТУ:
   const markLessonCompleted = async () => {
     try {
+      console.log("Saving progress for lesson ID:", id);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+
+      if (!user) {
+        alert("ОШИБКА: Пользователь не авторизован! Перезайди в приложение.");
+        return;
+      }
 
       const { error } = await supabase
         .from('user_progress')
@@ -49,15 +54,18 @@ export default function LessonPlayer() {
         }, { onConflict: 'user_id,lesson_id' });
 
       if (error) {
-        // ЕСЛИ ГАЛОЧКА НЕ ПОЯВЛЯЕТСЯ, ТЫ УВИДИШЬ ПОЧЕМУ
-        console.error("DB ERROR:", error.message);
-        alert("Database error: " + error.message);
-        throw error;
+        // ВОТ ГДЕ МЫ ПОЙМАЕМ ГАДА
+        console.error("DB Error:", error);
+        alert(`❌ ОШИБКА БАЗЫ ДАННЫХ:\n${error.message}\nCode: ${error.code}`);
+      } else {
+        // Если всё ок - тоже скажем
+        // alert("✅ УСПЕХ! Прогресс сохранен в базу."); // Можешь раскомментировать для проверки
+        console.log("Success saving lesson");
       }
-      console.log("Success! Saved lesson:", id);
     } catch (err) {
-      console.error("Critical error:", err);
+      alert(`❌ КРИТИЧЕСКАЯ ОШИБКА:\n${err.message}`);
     }
+
   };
 
 
