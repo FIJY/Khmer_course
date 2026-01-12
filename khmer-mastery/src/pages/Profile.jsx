@@ -2,170 +2,134 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
-  LogOut, User, Gem, Award,
-  BookOpen, TrendingUp, Map as MapIcon, BookText
+  LogOut, User, Gem, Award, BookOpen,
+  TrendingUp, Map as MapIcon, BookText,
+  Trophy, Flame, Target, ChevronRight
 } from 'lucide-react';
 
 export default function Profile() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
-
-  // Инициализируем нулями, чтобы UI не падал при расчетах
   const [stats, setStats] = useState({
-    learnedWords: 0,
-    totalWordsInApp: 0,
-    completedLessons: 0,
-    gems: 0
+    learned: 0, total: 0, gems: 0, streak: 3 // Streak пока захардкодим для теста
   });
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [weakWords, setWeakWords] = useState([]);
 
-  useEffect(() => {
-    fetchUserData();
-  }, []);
+  useEffect(() => { fetchAllData(); }, []);
 
-  const fetchUserData = async () => {
+  const fetchAllData = async () => {
     try {
       setLoading(true);
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return navigate('/login');
 
-      if (!authUser) {
-        navigate('/login');
-        return;
-      }
-      setUser(authUser);
+      // 1. Статистика слов
+      const { count: totalCount } = await supabase.from('lesson_items').select('*', { count: 'exact', head: true }).eq('type', 'vocab_card');
+      const { count: learnedCount } = await supabase.from('user_srs').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+      const { data: prog } = await supabase.from('user_progress').select('lesson_id').eq('user_id', user.id).eq('is_completed', true);
 
-      // 1. Считаем РЕАЛЬНОЕ количество слов в базе
-      const { count: totalCount } = await supabase
-        .from('lesson_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('type', 'vocab_card');
+      // 2. Слабые слова (SRS < 2.0)
+      const { data: weak } = await supabase.from('user_srs')
+        .select('lesson_items(data)').eq('user_id', user.id).lt('easiness', 2.0).limit(3);
 
-      // 2. Считаем прогресс пользователя (SRS)
-      const { count: learnedCount } = await supabase
-        .from('user_srs')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', authUser.id);
-
-      // 3. Считаем пройденные уроки для Гемов
-      const { data: progressData } = await supabase
-        .from('user_progress')
-        .select('lesson_id')
-        .eq('user_id', authUser.id)
-        .eq('is_completed', true);
-
-      const completedCount = progressData ? progressData.length : 0;
+      // 3. Рейтинг (вызов SQL функции)
+      const { data: leaders } = await supabase.rpc('get_leaderboard');
 
       setStats({
-        learnedWords: learnedCount || 0,
-        totalWordsInApp: totalCount || 0,
-        completedLessons: completedCount,
-        gems: completedCount * 50
+        learned: learnedCount || 0,
+        total: totalCount || 0,
+        gems: (prog?.length || 0) * 50,
+        streak: 3
       });
-
-    } catch (e) {
-      console.error("Profile error:", e);
-    } finally {
-      setLoading(false);
-    }
+      setWeakWords(weak?.map(w => w.lesson_items.data.front) || []);
+      setLeaderboard(leaders || []);
+    } finally { setLoading(false); }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
-  };
-
-  if (loading) return (
-    <div className="h-[100dvh] bg-black flex items-center justify-center">
-       <span className="text-cyan-400 font-black italic animate-pulse">SYNCING DATA...</span>
-    </div>
-  );
-
-  // Расчет прогресса B1 (цель 3000 слов)
-  const progressPercent = Math.min(Math.round((stats.learnedWords / 3000) * 100), 100);
+  const progress = stats.total > 0 ? Math.round((stats.learned / stats.total) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-40 font-sans">
+    <div className="min-h-screen bg-black text-white pb-40 font-sans max-w-4xl mx-auto px-6">
+
       {/* Header */}
-      <div className="p-8 pt-12 flex justify-between items-start">
-        <div className="max-w-[70%]">
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter leading-none mb-2">
-            My <span className="text-cyan-400">Stats</span>
-          </h1>
-          <p className="text-gray-600 font-bold text-[10px] uppercase truncate tracking-widest italic">
-            {user?.email}
-          </p>
+      <div className="pt-12 mb-10 flex justify-between items-end">
+        <div>
+          <h1 className="text-5xl font-black italic uppercase tracking-tighter italic">DASHBOARD</h1>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-1 text-orange-500 font-black italic text-sm">
+              <Flame size={16} fill="currentColor" /> {stats.streak} DAY STREAK
+            </div>
+          </div>
         </div>
-        <button onClick={handleLogout} className="p-4 bg-gray-900/50 rounded-2xl border border-white/5 text-gray-500 hover:text-red-500 transition-colors">
-          <LogOut size={20} />
-        </button>
+        <button onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="p-4 bg-gray-900/50 rounded-2xl border border-white/5 text-gray-500"><LogOut size={20} /></button>
       </div>
 
-      <div className="px-8 space-y-8">
-        {/* Реальный счетчик слов */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-gray-900/30 p-6 rounded-[2.5rem] border border-white/5 relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="text-3xl font-black italic text-cyan-400 mb-1 leading-none">{stats.learnedWords}</div>
-              <div className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Learned</div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        {/* Main Progress */}
+        <div className="md:col-span-2 bg-gray-900/30 border border-white/5 p-10 rounded-[3rem] relative overflow-hidden">
+          <div className="flex justify-between items-end mb-6 relative z-10">
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-[0.3em] text-cyan-500 mb-2">Overall Mastery</h4>
+              <div className="text-5xl font-black italic">{progress}%</div>
             </div>
-            <TrendingUp className="absolute -right-2 -bottom-2 text-white/5" size={60} />
+            <div className="text-right text-[10px] font-black uppercase text-gray-600 tracking-widest">
+              {stats.learned} / {stats.total} WORDS
+            </div>
           </div>
+          <div className="h-4 bg-black rounded-full overflow-hidden border border-white/5"><div className="h-full bg-cyan-500 transition-all duration-1000" style={{ width: `${progress}%` }} /></div>
+        </div>
 
-          <div className="bg-gray-900/30 p-6 rounded-[2.5rem] border border-white/5 relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="text-3xl font-black italic text-white mb-1 leading-none">{stats.totalWordsInApp}</div>
-              <div className="text-[10px] font-black uppercase text-gray-600 tracking-widest">In App</div>
-            </div>
-            <BookOpen className="absolute -right-2 -bottom-2 text-white/5" size={60} />
+        {/* Gems */}
+        <div className="bg-emerald-500/5 border border-emerald-500/10 p-10 rounded-[3rem] flex flex-col items-center justify-center text-center">
+          <Gem className="text-emerald-500 mb-2" size={40} fill="currentColor" />
+          <div className="text-3xl font-black italic">{stats.gems}</div>
+          <div className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Gems Balance</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Weakest Words (Retention Idea) */}
+        <div className="bg-red-500/5 border border-red-500/10 p-8 rounded-[3rem]">
+          <div className="flex items-center gap-3 mb-6">
+            <Target className="text-red-500" size={20} />
+            <h4 className="text-xs font-black uppercase tracking-widest">Needs Practice</h4>
+          </div>
+          <div className="space-y-3">
+            {weakWords.length > 0 ? weakWords.map(word => (
+              <div key={word} className="bg-black/40 p-4 rounded-2xl border border-white/5 flex justify-between items-center group">
+                <span className="font-bold text-gray-300 italic">{word}</span>
+                <ChevronRight size={16} className="text-red-500 opacity-50 group-hover:translate-x-1 transition-transform" />
+              </div>
+            )) : <p className="text-gray-600 text-[10px] italic uppercase">You're doing great! No weak words found.</p>}
           </div>
         </div>
 
-        {/* Шкала B1 Proficiency */}
+        {/* Leaderboard (Competition Idea) */}
         <div className="bg-gray-900/30 border border-white/5 p-8 rounded-[3rem]">
-          <div className="flex justify-between items-end mb-4">
-            <div>
-              <h4 className="text-xs font-black uppercase tracking-widest text-cyan-500 mb-1 leading-none">B1 Progress</h4>
-              <p className="text-[10px] text-gray-600 font-bold uppercase italic tracking-tighter">Goal: 3,000 words</p>
-            </div>
-            <span className="text-2xl font-black italic text-white leading-none">{progressPercent}%</span>
+          <div className="flex items-center gap-3 mb-6">
+            <Trophy className="text-yellow-500" size={20} />
+            <h4 className="text-xs font-black uppercase tracking-widest">Global Top 5</h4>
           </div>
-          <div className="h-3 bg-black rounded-full overflow-hidden border border-white/5">
-            <div
-              className="h-full bg-cyan-500 transition-all duration-1000 shadow-[0_0_20px_rgba(6,182,212,0.4)]"
-              style={{ width: `${progressPercent}%` }}
-            />
+          <div className="space-y-3">
+            {leaderboard.slice(0, 5).map((entry, i) => (
+              <div key={i} className="flex justify-between items-center p-4 bg-black/40 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-3">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${i === 0 ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-500'}`}>{i + 1}</span>
+                  <span className="text-xs font-bold text-gray-400 truncate max-w-[100px]">{entry.username.split('@')[0]}</span>
+                </div>
+                <span className="text-xs font-black italic text-cyan-400">{entry.words_count} words</span>
+              </div>
+            ))}
           </div>
-        </div>
-
-        {/* Гемы / Достижения */}
-        <div className="bg-gray-900/30 border border-white/5 p-8 rounded-[3rem] flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="w-14 h-14 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/10 shadow-lg shadow-emerald-500/5">
-              <Gem className="text-emerald-500 fill-emerald-500/20" size={28} />
-            </div>
-            <div>
-              <div className="text-2xl font-black italic leading-none mb-1">{stats.gems}</div>
-              <div className="text-[10px] font-black uppercase text-gray-600 tracking-widest leading-none">Gems Earned</div>
-            </div>
-          </div>
-          <Award className="text-emerald-500 opacity-20" size={32} />
         </div>
       </div>
 
-      {/* Navigation Bar: Фикс Safari */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-2xl border-t border-white/5 px-10 pt-5 pb-10 flex justify-between items-center z-50 max-w-lg mx-auto rounded-t-[3rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <button onClick={() => navigate('/map')} className="text-gray-600 flex flex-col items-center gap-2 group">
-          <MapIcon size={24} className="group-active:scale-90 transition-transform" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Explore</span>
-        </button>
-        <button onClick={() => navigate('/vocab')} className="text-gray-600 flex flex-col items-center gap-2 group">
-          <BookText size={24} className="group-active:scale-90 transition-transform" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Words</span>
-        </button>
-        <button onClick={() => navigate('/profile')} className="text-cyan-400 flex flex-col items-center gap-2 outline-none">
-          <User size={24} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Me</span>
-        </button>
+      {/* Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-2xl border-t border-white/5 px-10 pt-5 pb-10 flex justify-between items-center z-50 max-w-lg mx-auto rounded-t-[3rem]">
+        <button onClick={() => navigate('/map')} className="text-gray-600 flex flex-col items-center gap-2 group"><MapIcon size={26} /><span className="text-[10px] font-black uppercase">Explore</span></button>
+        <button onClick={() => navigate('/vocab')} className="text-gray-600 flex flex-col items-center gap-2 group"><BookText size={26} /><span className="text-[10px] font-black uppercase">Words</span></button>
+        <button onClick={() => navigate('/profile')} className="text-cyan-400 flex flex-col items-center gap-2 outline-none"><User size={26} /><span className="text-[10px] font-black uppercase">Me</span></button>
       </div>
     </div>
   );
