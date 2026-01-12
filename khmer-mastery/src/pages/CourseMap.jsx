@@ -114,8 +114,20 @@ export default function CourseMap() {
                     <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest italic">{chapter.desc}</p>
                   </div>
 
+                  {/* ИСПРАВЛЕННАЯ КНОПКА ЗАПУСКА ГЛАВЫ */}
                   <button
-                    onClick={() => navigate(`/lesson/${chapter.id}/preview`)}
+                    onClick={() => {
+                      // 1. Ищем первый доступный урок (например, 201)
+                      const firstLessonId = chapter.subLessons?.[0]?.id;
+
+                      if (firstLessonId) {
+                        // 2. Если уроки есть - запускаем первый
+                        navigate(`/lesson/${firstLessonId}`);
+                      } else {
+                        // 3. Если глава пустая - не ломаем базу, просто говорим
+                        alert("Этот урок пока в разработке 🚧");
+                      }
+                    }}
                     className={`p-4 rounded-2xl border transition-all duration-300 shadow-xl active:scale-90
                       ${isChapterFullDone ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-cyan-500/5 border-cyan-500/20 text-cyan-400'}`}
                   >
