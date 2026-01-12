@@ -7,6 +7,7 @@ import Welcome from './pages/Welcome';
 import Vocab from './pages/Vocab';
 import LessonPreview from './pages/LessonPreview';
 import Profile from './pages/Profile'; // Обязательно импортируем!
+import { supabase } from './supabaseClient';
 
 export default function App() {
   return (
