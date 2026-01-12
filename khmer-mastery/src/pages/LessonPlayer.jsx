@@ -141,11 +141,18 @@ export default function LessonPlayer() {
         )}
       </footer>
       <style>{`
-        .perspective-1000 { perspective: 1000px; }
-        /* Добавляем префикс для Safari на iPhone */
+        .perspective-1000 {
+          perspective: 1000px;
+          -webkit-perspective: 1000px;
+        }
         .backface-hidden {
           backface-visibility: hidden;
           -webkit-backface-visibility: hidden;
+        }
+        /* Это заставит Safari отрисовать обе стороны карточки */
+        div {
+          -webkit-transform-style: preserve-3d;
+          transform-style: preserve-3d;
         }
       `}</style>
     </div>
