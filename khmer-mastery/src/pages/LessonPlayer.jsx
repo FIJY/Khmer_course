@@ -8,7 +8,7 @@ import {
 import { updateSRSItem } from '../services/srsService';
 
 export default function LessonPlayer() {
-  const { id } = useParams();
+  const { id } = useParams(); // Это ID урока из URL (строка "101")
   const navigate = useNavigate();
 
   const [lessonInfo, setLessonInfo] = useState(null);
@@ -18,12 +18,6 @@ export default function LessonPlayer() {
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isFinished, setIsFinished] = useState(false);
-
-  const shuffledOptions = useMemo(() => {
-    const current = items[step];
-    if (current?.type !== 'quiz') return [];
-    return [...current.data.options].sort(() => Math.random() - 0.5);
-  }, [items, step]);
 
   useEffect(() => { fetchLessonData(); }, [id]);
 
@@ -39,29 +33,25 @@ export default function LessonPlayer() {
     finally { setLoading(false); }
   };
 
-  const playAudio = (audioFile) => {
-    if (!audioFile) return;
-    new Audio(`/sounds/${audioFile}`).play().catch(() => {});
-  };
+  // ФУНКЦИЯ, КОТОРАЯ "ЗАЖИГАЕТ" ГАЛОЧКИ
   const markLessonCompleted = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Записываем завершение урока в таблицу user_progress
       const { error } = await supabase
         .from('user_progress')
         .upsert({
           user_id: user.id,
-          lesson_id: id, // ID берем из useParams()
+          lesson_id: Number(id), // ВАЖНО: сохраняем как число для совместимости с картой
           is_completed: true,
           completed_at: new Date().toISOString()
-        }, { onConflict: 'user_id,lesson_id' }); // Если запись уже есть — обновляем
+        }, { onConflict: 'user_id,lesson_id' });
 
       if (error) throw error;
-      console.log("Lesson marked as completed!");
+      console.log("Progress saved for lesson:", id);
     } catch (err) {
-      console.error("Error saving lesson progress:", err);
+      console.error("Critical: Failed to save progress:", err);
     }
   };
 
@@ -69,8 +59,13 @@ export default function LessonPlayer() {
     const currentItem = items[step];
     const { data: { session } } = await supabase.auth.getSession();
 
+    // Записываем прогресс конкретного слова (SRS)
     if (session?.user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
-      await updateSRSItem(session.user.id, currentItem.id, quality);
+      try {
+        await updateSRSItem(session.user.id, currentItem.id, quality);
+      } catch (e) {
+        console.error("SRS update failed, but continuing lesson:", e);
+      }
     }
 
     if (step < items.length - 1) {
@@ -78,11 +73,22 @@ export default function LessonPlayer() {
       setIsFlipped(false);
       setSelectedOption(null);
     } else {
-      // ВАЖНО: Сначала сохраняем в базу, потом показываем финальный экран
-      await markLessonCompleted();
-      setIsFinished(true);
+      // КОГДА УРОК ОКОНЧЕН:
+      await markLessonCompleted(); // 1. Сохраняем прогресс в БД
+      setIsFinished(true);         // 2. Показываем экран с кубком
     }
   };
+
+  const playAudio = (audioFile) => {
+    if (!audioFile) return;
+    new Audio(`/sounds/${audioFile}`).play().catch(() => {});
+  };
+
+  const shuffledOptions = useMemo(() => {
+    const current = items[step];
+    if (current?.type !== 'quiz') return [];
+    return [...current.data.options].sort(() => Math.random() - 0.5);
+  }, [items, step]);
 
   if (loading) return <div className="h-[100dvh] bg-black flex items-center justify-center text-cyan-400 font-black italic">SYNCING...</div>;
 
@@ -90,14 +96,14 @@ export default function LessonPlayer() {
     return (
       <div className="h-[100dvh] bg-black flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
         <Trophy size={64} className="text-emerald-400 mb-8" />
-        <h1 className="text-4xl font-black italic uppercase mb-2">Complete!</h1>
-        <div className="bg-gray-900/50 p-8 rounded-[2.5rem] w-full max-w-sm mb-12">
+        <h1 className="text-4xl font-black italic uppercase mb-2 text-white">Complete!</h1>
+        <div className="bg-gray-900/50 p-8 rounded-[2.5rem] w-full max-w-sm mb-12 border border-white/5">
           <div className="flex justify-between items-center text-white text-2xl font-black italic">
             <div className="flex items-center gap-3"><Gem className="text-emerald-500" /><span>+50</span></div>
-            <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Gems</span>
+            <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest leading-none">Gems Earned</span>
           </div>
         </div>
-        <button onClick={() => navigate('/map')} className="w-full max-w-sm py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95">Back to Map</button>
+        <button onClick={() => navigate('/map')} className="w-full max-w-sm py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Back to Map</button>
       </div>
     );
   }
@@ -123,7 +129,7 @@ export default function LessonPlayer() {
       <main className="flex-1 overflow-y-auto px-6 py-4 flex flex-col items-center z-10">
         <div className="w-full max-w-sm my-auto py-8">
           {type === 'vocab_card' && (
-            <div className="w-full" onClick={() => { setIsFlipped(!isFlipped); if(!isFlipped) playAudio(current.audio); }}>
+            <div className="w-full cursor-pointer" onClick={() => { setIsFlipped(!isFlipped); if(!isFlipped) playAudio(current.audio); }}>
               <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
                 <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
                   <span className="text-gray-600 font-black text-[10px] uppercase mb-8 tracking-widest">Meaning</span>
@@ -133,7 +139,7 @@ export default function LessonPlayer() {
                   <span className="text-cyan-500 font-black text-[10px] uppercase mb-8 tracking-widest">Khmer</span>
                   <h2 className="text-4xl font-black mb-3">{current.back}</h2>
                   <p className="text-xl text-cyan-400 font-bold italic mb-6">{current.pronunciation}</p>
-                  <div className="p-5 bg-cyan-500 rounded-full text-black shadow-lg"><Volume2 size={28} /></div>
+                  <div className="p-5 bg-cyan-500 rounded-full text-black shadow-lg shadow-cyan-500/20"><Volume2 size={28} /></div>
                 </div>
               </div>
             </div>
@@ -149,7 +155,7 @@ export default function LessonPlayer() {
                    let btnClass = "bg-gray-900/50 border-white/5 text-white";
                    if (selectedOption) {
                      if (isCorrect) btnClass = "bg-emerald-600 border-emerald-400 text-white";
-                     else if (isSelected) btnClass = "bg-red-600 border-red-400 text-white";
+                     else if (isSelected) btnClass = "bg-red-600 border-red-400 text-white shadow-[0_0_20px_rgba(220,38,38,0.2)]";
                      else btnClass = "bg-gray-900/20 border-white/5 text-gray-700";
                    }
                    return (
