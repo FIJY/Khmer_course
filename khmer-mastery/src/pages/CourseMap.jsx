@@ -20,7 +20,7 @@ export default function CourseMap() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate('/login'); return; }
 
-      // 1. Загружаем прогресс
+      // 1. Загружаем прогресс (какие уроки пройдены)
       const { data: progressData } = await supabase
         .from('user_progress')
         .select('lesson_id')
@@ -30,7 +30,7 @@ export default function CourseMap() {
       const doneIds = progressData ? progressData.map(item => Number(item.lesson_id)) : [];
       setCompletedLessons(doneIds);
 
-      // 2. Загружаем все уроки
+      // 2. Загружаем все уроки из базы
       const { data: allLessons, error } = await supabase
         .from('lessons')
         .select('*')
@@ -38,10 +38,10 @@ export default function CourseMap() {
 
       if (error) throw error;
 
-      // 3. НОВАЯ ЛОГИКА ГРУППИРОВКИ
+      // 3. Группируем уроки по главам
       const chaptersMap = {};
 
-      // Сначала находим все заголовки глав (ID < 100)
+      // Шаг А: Создаем главы (ID < 100)
       allLessons.filter(l => l.id < 100).forEach(l => {
         chaptersMap[l.id] = {
           id: l.id,
@@ -51,23 +51,24 @@ export default function CourseMap() {
         };
       });
 
-      // Затем распределяем подуроки (ID >= 100) по этим главам
+      // Шаг Б: Раскидываем подуроки (ID >= 100) по главам
       allLessons.filter(l => l.id >= 100).forEach(l => {
         const chapterId = Math.floor(l.id / 100);
-        if (chaptersMap[chapterId]) {
-          chaptersMap[chapterId].subLessons.push({
-            id: l.id,
-            title: l.title
-          });
-        } else {
-          // Если заголовок главы не найден в базе, создаем временный
+
+        // Если такой главы нет в базе, создаем временную "виртуальную" главу
+        if (!chaptersMap[chapterId]) {
           chaptersMap[chapterId] = {
             id: chapterId,
             title: `Chapter ${chapterId}`,
-            desc: 'Additional Lessons',
-            subLessons: [{ id: l.id, title: l.title }]
+            desc: 'Extra Lessons',
+            subLessons: []
           };
         }
+
+        chaptersMap[chapterId].subLessons.push({
+          id: l.id,
+          title: l.title
+        });
       });
 
       setChapters(Object.values(chaptersMap));
@@ -86,6 +87,7 @@ export default function CourseMap() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-40 font-sans">
+      {/* HEADER: Заголовок и Гемы */}
       <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/50 backdrop-blur-md sticky top-0 z-30">
         <h1 className="text-3xl font-black tracking-tighter uppercase italic">
           Khmer <span className="text-cyan-400">Mastery</span>
@@ -96,8 +98,10 @@ export default function CourseMap() {
         </div>
       </div>
 
+      {/* СПИСОК ГЛАВ */}
       <div className="max-w-xl mx-auto p-6 space-y-10 mt-6">
         {chapters.map((chapter) => {
+          // Проверяем, пройдена ли вся глава целиком
           const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
           const isChapterFullDone = subLessonIds.length > 0 && subLessonIds.every(id => completedLessons.includes(id));
 
@@ -114,20 +118,9 @@ export default function CourseMap() {
                     <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest italic">{chapter.desc}</p>
                   </div>
 
-                  {/* ИСПРАВЛЕННАЯ КНОПКА ЗАПУСКА ГЛАВЫ */}
+                  {/* КНОПКА-КНИЖКА: Открывает КОНСПЕКТ (Preview) */}
                   <button
-                    onClick={() => {
-                      // 1. Ищем первый доступный урок (например, 201)
-                      const firstLessonId = chapter.subLessons?.[0]?.id;
-
-                      if (firstLessonId) {
-                        // 2. Если уроки есть - запускаем первый
-                        navigate(`/lesson/${firstLessonId}`);
-                      } else {
-                        // 3. Если глава пустая - не ломаем базу, просто говорим
-                        alert("Этот урок пока в разработке 🚧");
-                      }
-                    }}
+                    onClick={() => navigate(`/lesson/${chapter.id}/preview`)}
                     className={`p-4 rounded-2xl border transition-all duration-300 shadow-xl active:scale-90
                       ${isChapterFullDone ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-cyan-500/5 border-cyan-500/20 text-cyan-400'}`}
                   >
@@ -135,7 +128,7 @@ export default function CourseMap() {
                   </button>
                 </div>
 
-                {/* Подуроки: Рендерим их только если они есть в базе */}
+                {/* СПИСОК УРОКОВ: Открывает ПРАКТИКУ */}
                 {chapter.subLessons.length > 0 && (
                   <div className="grid grid-cols-1 gap-2 mt-4 pt-4 border-t border-white/5">
                     {chapter.subLessons.map((sub) => {
@@ -144,8 +137,8 @@ export default function CourseMap() {
                         <button
                           key={sub.id}
                           onClick={() => navigate(`/lesson/${sub.id}`)}
-                          className={`flex items-center justify-between p-4 rounded-xl transition-all border
-                            ${isDone ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-black/40 border-white/5 text-gray-500'}`}
+                          className={`flex items-center justify-between p-4 rounded-xl transition-all border active:scale-95
+                            ${isDone ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' : 'bg-black/40 border-white/5 text-gray-500 hover:bg-gray-900'}`}
                         >
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2
@@ -166,6 +159,7 @@ export default function CourseMap() {
         })}
       </div>
 
+      {/* НИЖНЕЕ МЕНЮ */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-2xl border-t border-white/5 px-10 pt-5 pb-10 flex justify-between items-center z-50 max-w-lg mx-auto rounded-t-[3rem]">
         <button onClick={() => navigate('/map')} className="text-cyan-400 flex flex-col items-center gap-2">
           <MapIcon size={24} />
