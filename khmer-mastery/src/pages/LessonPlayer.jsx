@@ -140,7 +140,14 @@ export default function LessonPlayer() {
           </button>
         )}
       </footer>
-      <style>{`.backface-hidden { backface-visibility: hidden; }`}</style>
+      <style>{`
+        .perspective-1000 { perspective: 1000px; }
+        /* Добавляем префикс для Safari на iPhone */
+        .backface-hidden {
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
+        }
+      `}</style>
     </div>
   );
 }
