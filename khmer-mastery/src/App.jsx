@@ -8,6 +8,8 @@ import Vocab from './pages/Vocab';
 import LessonPreview from './pages/LessonPreview';
 import Profile from './pages/Profile'; // Обязательно импортируем!
 import { supabase } from './supabaseClient';
+import ReviewHub from './pages/ReviewHub';
+import ReviewPlayer from './pages/ReviewPlayer';
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
           <Route path="/profile" element={<Profile />} /> {/* Теперь профиль будет работать */}
           <Route path="/lesson/:id/preview" element={<LessonPreview />} />
           <Route path="/lesson/:id" element={<LessonPlayer />} />
+          <Route path="/review" element={<ReviewHub />} />
+          <Route path="/review/session" element={<ReviewPlayer />} />
         </Routes>
       </div>
     </Router>
