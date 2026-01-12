@@ -8,7 +8,7 @@ import {
 import { updateSRSItem } from '../services/srsService';
 
 export default function LessonPlayer() {
-  const { id } = useParams(); // Это ID урока из URL (строка "101")
+  const { id } = useParams();
   const navigate = useNavigate();
 
   const [lessonInfo, setLessonInfo] = useState(null);
@@ -33,16 +33,10 @@ export default function LessonPlayer() {
     finally { setLoading(false); }
   };
 
-// ЗАМЕНИ СТАРУЮ markLessonCompleted НА ЭТУ:
   const markLessonCompleted = async () => {
     try {
-      console.log("Saving progress for lesson ID:", id);
       const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        alert("ОШИБКА: Пользователь не авторизован! Перезайди в приложение.");
-        return;
-      }
+      if (!user) return;
 
       const { error } = await supabase
         .from('user_progress')
@@ -54,31 +48,24 @@ export default function LessonPlayer() {
         }, { onConflict: 'user_id,lesson_id' });
 
       if (error) {
-        // ВОТ ГДЕ МЫ ПОЙМАЕМ ГАДА
         console.error("DB Error:", error);
-        alert(`❌ ОШИБКА БАЗЫ ДАННЫХ:\n${error.message}\nCode: ${error.code}`);
-      } else {
-        // Если всё ок - тоже скажем
-        // alert("✅ УСПЕХ! Прогресс сохранен в базу."); // Можешь раскомментировать для проверки
-        console.log("Success saving lesson");
+        alert(`Ошибка сохранения: ${error.message}`);
       }
     } catch (err) {
-      alert(`❌ КРИТИЧЕСКАЯ ОШИБКА:\n${err.message}`);
+      console.error("System error:", err);
     }
-
   };
-
 
   const handleNext = async (quality = 3) => {
     const currentItem = items[step];
     const { data: { session } } = await supabase.auth.getSession();
 
-    // Записываем прогресс конкретного слова (SRS)
+    // SRS логика
     if (session?.user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
       try {
         await updateSRSItem(session.user.id, currentItem.id, quality);
       } catch (e) {
-        console.error("SRS update failed, but continuing lesson:", e);
+        console.error("SRS update failed:", e);
       }
     }
 
@@ -87,9 +74,8 @@ export default function LessonPlayer() {
       setIsFlipped(false);
       setSelectedOption(null);
     } else {
-      // КОГДА УРОК ОКОНЧЕН:
-      await markLessonCompleted(); // 1. Сохраняем прогресс в БД
-      setIsFinished(true);         // 2. Показываем экран с кубком
+      await markLessonCompleted();
+      setIsFinished(true);
     }
   };
 
@@ -106,18 +92,21 @@ export default function LessonPlayer() {
 
   if (loading) return <div className="h-[100dvh] bg-black flex items-center justify-center text-cyan-400 font-black italic">SYNCING...</div>;
 
+  // ЭКРАН ПОБЕДЫ (Тоже центрируем)
   if (isFinished) {
     return (
-      <div className="h-[100dvh] bg-black flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
-        <Trophy size={64} className="text-emerald-400 mb-8" />
-        <h1 className="text-4xl font-black italic uppercase mb-2 text-white">Complete!</h1>
-        <div className="bg-gray-900/50 p-8 rounded-[2.5rem] w-full max-w-sm mb-12 border border-white/5">
-          <div className="flex justify-between items-center text-white text-2xl font-black italic">
-            <div className="flex items-center gap-3"><Gem className="text-emerald-500" /><span>+50</span></div>
-            <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest leading-none">Gems Earned</span>
+      <div className="min-h-screen bg-black flex justify-center items-center">
+        <div className="w-full max-w-lg h-[100dvh] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500 border-x border-white/5 shadow-2xl">
+          <Trophy size={64} className="text-emerald-400 mb-8" />
+          <h1 className="text-4xl font-black italic uppercase mb-2 text-white">Complete!</h1>
+          <div className="bg-gray-900/50 p-8 rounded-[2.5rem] w-full max-w-sm mb-12 border border-white/5">
+            <div className="flex justify-between items-center text-white text-2xl font-black italic">
+              <div className="flex items-center gap-3"><Gem className="text-emerald-500" /><span>+50</span></div>
+              <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest leading-none">Gems Earned</span>
+            </div>
           </div>
+          <button onClick={() => navigate('/map')} className="w-full max-w-sm py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Back to Map</button>
         </div>
-        <button onClick={() => navigate('/map')} className="w-full max-w-sm py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Back to Map</button>
       </div>
     );
   }
@@ -126,116 +115,128 @@ export default function LessonPlayer() {
   const type = items[step]?.type;
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-black text-white overflow-hidden font-sans relative">
-      <header className="p-4 flex-shrink-0 border-b border-white/5 bg-gray-900/20 z-20">
-        <div className="flex justify-between items-center max-w-lg mx-auto w-full">
-          <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white transition-colors"><X size={24} /></button>
-          <div className="text-center">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500 mb-1">{lessonInfo?.title}</h2>
-            <div className="w-24 h-1 bg-gray-900 rounded-full overflow-hidden mx-auto">
-              <div className="h-full bg-cyan-500 transition-all duration-500" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
-            </div>
-          </div>
-          <Gem size={20} className="text-emerald-500/50" />
-        </div>
-      </header>
+    // ГЛАВНЫЙ КОНТЕЙНЕР (Центрирует "Телефон" на экране)
+    <div className="h-[100dvh] bg-black flex justify-center font-sans overflow-hidden">
 
-      <main className="flex-1 overflow-y-auto px-6 py-4 flex flex-col items-center z-10">
-        <div className="w-full max-w-sm my-auto py-8">
-          {type === 'vocab_card' && (
-            <div className="w-full cursor-pointer" onClick={() => { setIsFlipped(!isFlipped); if(!isFlipped) playAudio(current.audio); }}>
-              <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
-                <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
-                  <span className="text-gray-600 font-black text-[10px] uppercase mb-8 tracking-widest">Meaning</span>
-                  <h2 className="text-3xl font-black italic tracking-tighter leading-tight">{current.front}</h2>
-                </div>
-                <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center">
-                  <span className="text-cyan-500 font-black text-[10px] uppercase mb-8 tracking-widest">Khmer</span>
-                  <h2 className="text-4xl font-black mb-3">{current.back}</h2>
-                  <p className="text-xl text-cyan-400 font-bold italic mb-6">{current.pronunciation}</p>
-                  <div className="p-5 bg-cyan-500 rounded-full text-black shadow-lg shadow-cyan-500/20"><Volume2 size={28} /></div>
-                </div>
+      {/* ТЕЛЕФОН (Ограничитель ширины) */}
+      <div className="w-full max-w-lg h-full flex flex-col relative bg-black shadow-2xl border-x border-white/5">
+
+        {/* HEADER */}
+        <header className="p-4 flex-shrink-0 border-b border-white/5 bg-gray-900/20 z-20">
+          <div className="flex justify-between items-center w-full">
+            <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white transition-colors"><X size={24} /></button>
+            <div className="text-center flex-1 px-4">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500 mb-1 truncate">{lessonInfo?.title}</h2>
+              <div className="w-24 h-1 bg-gray-900 rounded-full overflow-hidden mx-auto">
+                <div className="h-full bg-cyan-500 transition-all duration-500" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
               </div>
             </div>
-          )}
+            <Gem size={20} className="text-emerald-500/50" />
+          </div>
+        </header>
 
-          {type === 'quiz' && (
-            <div className="w-full">
-               <h2 className="text-xl font-black mb-10 italic uppercase text-center tracking-tighter leading-tight">{current.question}</h2>
-               <div className="space-y-3">
-                 {shuffledOptions.map((opt, i) => {
-                   const isCorrect = opt === current.correct_answer;
-                   const isSelected = selectedOption === opt;
-                   let btnClass = "bg-gray-900/50 border-white/5 text-white";
-                   if (selectedOption) {
-                     if (isCorrect) btnClass = "bg-emerald-600 border-emerald-400 text-white";
-                     else if (isSelected) btnClass = "bg-red-600 border-red-400 text-white shadow-[0_0_20px_rgba(220,38,38,0.2)]";
-                     else btnClass = "bg-gray-900/20 border-white/5 text-gray-700";
-                   }
-                   return (
-                     <button key={i} disabled={!!selectedOption} onClick={() => { setSelectedOption(opt); playAudio(isCorrect ? 'success.mp3' : 'error.mp3'); }}
-                       className={`w-full p-5 border rounded-2xl text-left font-bold transition-all text-sm ${btnClass}`}>{opt}</button>
-                   );
-                 })}
-               </div>
-            </div>
-          )}
+        {/* MAIN CONTENT */}
+        <main className="flex-1 overflow-y-auto px-6 py-4 flex flex-col items-center z-10 custom-scrollbar">
+          <div className="w-full my-auto py-8">
 
-          {type === 'theory' && (
-            <div className="w-full bg-gray-900 border border-white/10 p-10 rounded-[3.5rem] text-center translate-z-0">
-              <BookOpen className="text-cyan-500/20 mx-auto mb-4" size={32} />
-              <h2 className="text-xl font-black italic uppercase text-cyan-400 mb-4 tracking-tighter leading-tight">{current.title}</h2>
-              <p className="text-base text-gray-300 italic leading-relaxed">{current.text}</p>
-            </div>
-          )}
-        </div>
-      </main>
-
-      {/* FOOTER: Только для карточек и теории */}
-      {type !== 'quiz' && (
-        <footer className="px-8 pt-4 pb-16 flex-shrink-0 bg-black/80 backdrop-blur-md border-t border-white/5 z-20">
-          <button onClick={() => handleNext(3)}
-            className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all">
-            Continue <ArrowRight size={20} />
-          </button>
-        </footer>
-      )}
-
-      {/* MODAL FEEDBACK: Появляется поверх квиза */}
-      {selectedOption && (
-        <div className="absolute inset-0 z-[100] flex flex-col justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-gray-900 border-t-2 border-white/10 rounded-t-[3rem] p-10 pb-16 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] translate-z-0 animate-in slide-in-from-bottom-full duration-500">
-            <div className="max-w-sm mx-auto">
-              <div className="flex items-center gap-4 mb-4">
-                {selectedOption === current.correct_answer ?
-                  <CheckCircle2 size={32} className="text-emerald-500" /> :
-                  <AlertCircle size={32} className="text-red-500" />
-                }
-                <div>
-                  <h3 className={`text-xl font-black uppercase italic ${selectedOption === current.correct_answer ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {selectedOption === current.correct_answer ? 'Awesome!' : 'Correct Answer:'}
-                  </h3>
-                  {selectedOption !== current.correct_answer && (
-                    <p className="text-white font-bold text-lg">{current.correct_answer}</p>
-                  )}
+            {/* КАРТОЧКА СЛОВА */}
+            {type === 'vocab_card' && (
+              <div className="w-full cursor-pointer" onClick={() => { setIsFlipped(!isFlipped); if(!isFlipped) playAudio(current.audio); }}>
+                <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+                  <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
+                    <span className="text-gray-600 font-black text-[10px] uppercase mb-8 tracking-widest">Meaning</span>
+                    <h2 className="text-3xl font-black italic tracking-tighter leading-tight">{current.front}</h2>
+                  </div>
+                  <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center">
+                    <span className="text-cyan-500 font-black text-[10px] uppercase mb-8 tracking-widest">Khmer</span>
+                    <h2 className="text-4xl font-black mb-3">{current.back}</h2>
+                    <p className="text-xl text-cyan-400 font-bold italic mb-6">{current.pronunciation}</p>
+                    <div className="p-5 bg-cyan-500 rounded-full text-black shadow-lg shadow-cyan-500/20"><Volume2 size={28} /></div>
+                  </div>
                 </div>
               </div>
-              <p className="text-gray-400 text-sm italic mb-10 leading-relaxed">{current.explanation}</p>
-              <button onClick={() => handleNext(selectedOption === current.correct_answer ? 5 : 1)}
-                className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl ${selectedOption === current.correct_answer ? 'bg-emerald-500 text-white' : 'bg-white text-black'}`}>
-                Next Step <ArrowRight size={20} />
-              </button>
+            )}
+
+            {/* ТЕСТ (QUIZ) */}
+            {type === 'quiz' && (
+              <div className="w-full">
+                 <h2 className="text-xl font-black mb-10 italic uppercase text-center tracking-tighter leading-tight">{current.question}</h2>
+                 <div className="space-y-3">
+                   {shuffledOptions.map((opt, i) => {
+                     const isCorrect = opt === current.correct_answer;
+                     const isSelected = selectedOption === opt;
+                     let btnClass = "bg-gray-900/50 border-white/5 text-white";
+                     if (selectedOption) {
+                       if (isCorrect) btnClass = "bg-emerald-600 border-emerald-400 text-white";
+                       else if (isSelected) btnClass = "bg-red-600 border-red-400 text-white shadow-[0_0_20px_rgba(220,38,38,0.2)]";
+                       else btnClass = "bg-gray-900/20 border-white/5 text-gray-700";
+                     }
+                     return (
+                       <button key={i} disabled={!!selectedOption} onClick={() => { setSelectedOption(opt); playAudio(isCorrect ? 'success.mp3' : 'error.mp3'); }}
+                         className={`w-full p-5 border rounded-2xl text-left font-bold transition-all text-sm ${btnClass}`}>{opt}</button>
+                     );
+                   })}
+                 </div>
+              </div>
+            )}
+
+            {/* ТЕОРИЯ */}
+            {type === 'theory' && (
+              <div className="w-full bg-gray-900 border border-white/10 p-10 rounded-[3.5rem] text-center translate-z-0">
+                <BookOpen className="text-cyan-500/20 mx-auto mb-4" size={32} />
+                <h2 className="text-xl font-black italic uppercase text-cyan-400 mb-4 tracking-tighter leading-tight">{current.title}</h2>
+                <p className="text-base text-gray-300 italic leading-relaxed">{current.text}</p>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* FOOTER: Кнопка "Continue" */}
+        {type !== 'quiz' && (
+          <footer className="px-8 pt-4 pb-16 flex-shrink-0 bg-black/80 backdrop-blur-md border-t border-white/5 z-20">
+            <button onClick={() => handleNext(3)}
+              className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all">
+              Continue <ArrowRight size={20} />
+            </button>
+          </footer>
+        )}
+
+        {/* MODAL FEEDBACK: Появляется поверх квиза, но ВНУТРИ "телефона" */}
+        {selectedOption && (
+          <div className="absolute inset-0 z-[100] flex flex-col justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-gray-900 border-t-2 border-white/10 rounded-t-[3rem] p-10 pb-16 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] translate-z-0 animate-in slide-in-from-bottom-full duration-500">
+              <div className="w-full">
+                <div className="flex items-center gap-4 mb-4">
+                  {selectedOption === current.correct_answer ?
+                    <CheckCircle2 size={32} className="text-emerald-500" /> :
+                    <AlertCircle size={32} className="text-red-500" />
+                  }
+                  <div>
+                    <h3 className={`text-xl font-black uppercase italic ${selectedOption === current.correct_answer ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {selectedOption === current.correct_answer ? 'Awesome!' : 'Correct Answer:'}
+                    </h3>
+                    {selectedOption !== current.correct_answer && (
+                      <p className="text-white font-bold text-lg">{current.correct_answer}</p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-gray-400 text-sm italic mb-10 leading-relaxed">{current.explanation}</p>
+                <button onClick={() => handleNext(selectedOption === current.correct_answer ? 5 : 1)}
+                  className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl ${selectedOption === current.correct_answer ? 'bg-emerald-500 text-white' : 'bg-white text-black'}`}>
+                  Next Step <ArrowRight size={20} />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <style>{`
-        .perspective-1000 { perspective: 1000px; -webkit-perspective: 1000px; }
-        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-        .preserve-3d { transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
-        .translate-z-0 { transform: translateZ(0); -webkit-transform: translateZ(0); }
-      `}</style>
+        <style>{`
+          .perspective-1000 { perspective: 1000px; -webkit-perspective: 1000px; }
+          .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+          .preserve-3d { transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
+          .translate-z-0 { transform: translateZ(0); -webkit-transform: translateZ(0); }
+        `}</style>
+      </div>
     </div>
   );
 }
