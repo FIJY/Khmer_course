@@ -43,18 +43,43 @@ export default function LessonPlayer() {
     if (!audioFile) return;
     new Audio(`/sounds/${audioFile}`).play().catch(() => {});
   };
+  const markLessonCompleted = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Записываем завершение урока в таблицу user_progress
+      const { error } = await supabase
+        .from('user_progress')
+        .upsert({
+          user_id: user.id,
+          lesson_id: id, // ID берем из useParams()
+          is_completed: true,
+          completed_at: new Date().toISOString()
+        }, { onConflict: 'user_id,lesson_id' }); // Если запись уже есть — обновляем
+
+      if (error) throw error;
+      console.log("Lesson marked as completed!");
+    } catch (err) {
+      console.error("Error saving lesson progress:", err);
+    }
+  };
 
   const handleNext = async (quality = 3) => {
     const currentItem = items[step];
     const { data: { session } } = await supabase.auth.getSession();
+
     if (session?.user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
       await updateSRSItem(session.user.id, currentItem.id, quality);
     }
+
     if (step < items.length - 1) {
       setStep(step + 1);
       setIsFlipped(false);
       setSelectedOption(null);
     } else {
+      // ВАЖНО: Сначала сохраняем в базу, потом показываем финальный экран
+      await markLessonCompleted();
       setIsFinished(true);
     }
   };
