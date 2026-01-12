@@ -2,176 +2,191 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
-  LogOut, User, Gem, Award, BookOpen, TrendingUp,
-  Map as MapIcon, BookText, Trophy, Flame, Target,
-  ChevronRight, Crown, Zap, PlayCircle
+  User, Map as MapIcon, BookText, LogOut,
+  BrainCircuit, Trash2, Trophy, Flame, Zap, Target
 } from 'lucide-react';
 
 export default function Profile() {
   const navigate = useNavigate();
+  const [profile, setProfile] = useState({ email: '', joined: '' });
+  const [stats, setStats] = useState({ lessons: 0, words: 0, gems: 0 });
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ learned: 0, total: 0, gems: 0, streak: 3 });
-  const [leaderboard, setLeaderboard] = useState([]);
 
-  useEffect(() => { fetchAllData(); }, []);
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
 
-  const fetchAllData = async () => {
+  const fetchProfileData = async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return navigate('/login');
+      if (!user) { navigate('/login'); return; }
 
-      const { count: totalInApp } = await supabase.from('lesson_items').select('*', { count: 'exact', head: true }).eq('type', 'vocab_card');
-      const { count: userLearned } = await supabase.from('user_srs_items').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
-      const { data: prog } = await supabase.from('user_progress').select('lesson_id').eq('user_id', user.id).eq('is_completed', true);
-      const { data: leaders } = await supabase.rpc('get_leaderboard');
+      // 1. Считаем уроки
+      const { data: progress } = await supabase
+        .from('user_progress').select('id').eq('user_id', user.id).eq('is_completed', true);
+
+      // 2. Считаем слова
+      const { data: words } = await supabase
+        .from('user_srs').select('id').eq('user_id', user.id);
+
+      const lessonsCount = progress?.length || 0;
+
+      setProfile({
+        email: user.email,
+        joined: new Date(user.created_at).toLocaleDateString()
+      });
 
       setStats({
-        learned: userLearned || 0,
-        total: totalInApp || 0,
-        gems: (prog?.length || 0) * 50,
-        streak: 3 // В будущем добавим расчет из БД
+        lessons: lessonsCount,
+        words: words?.length || 0,
+        gems: lessonsCount * 50 // 50 гемов за урок
       });
-      setLeaderboard(leaders || []);
-    } finally { setLoading(false); }
+
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const progressPercent = stats.total > 0 ? Math.round((stats.learned / stats.total) * 100) : 0;
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
+  };
 
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 italic font-black">SYNCING...</div>;
+  const handleResetProgress = async () => {
+    if (confirm("⚠️ ARE YOU SURE? This will wipe all your progress permanently!")) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from('user_progress').delete().eq('user_id', user.id);
+      await supabase.from('user_srs').delete().eq('user_id', user.id);
+
+      alert("Account reset to Level 0.");
+      navigate('/map');
+    }
+  };
+
+  if (loading) return <div className="h-screen bg-black text-white flex items-center justify-center">Loading Profile...</div>;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-40 font-sans selection:bg-cyan-500/30">
-      {/* Согласованная ширина контейнера (max-w-xl) */}
-      <div className="max-w-xl mx-auto px-6">
+    <div className="min-h-screen bg-black text-white pb-32 font-sans">
 
-        {/* HERO SECTION: Streak & Daily Goal */}
-        <div className="pt-12 mb-10 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="text-6xl animate-bounce-subtle select-none">🔥</div>
-              <div className="absolute -top-1 -right-1 bg-orange-500 rounded-full w-8 h-8 flex items-center justify-center font-black text-lg shadow-lg shadow-orange-500/40">
-                {stats.streak}
-              </div>
-            </div>
-            <div>
-              <h1 className="text-3xl font-black italic uppercase tracking-tighter leading-none mb-1">STREAK</h1>
-              <p className="text-[10px] text-orange-400 font-bold uppercase tracking-widest">Don't break the chain!</p>
+      {/* HEADER: Карточка пользователя */}
+      <div className="p-6 pt-10 bg-gradient-to-b from-gray-900 to-black border-b border-white/5">
+        <div className="flex items-center gap-5">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-cyan-500 to-emerald-500 p-[2px]">
+            <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
+              <User size={32} className="text-white" />
             </div>
           </div>
-          <button onClick={() => { supabase.auth.signOut(); navigate('/login'); }} className="p-3 bg-gray-900/50 rounded-xl border border-white/5 text-gray-600"><LogOut size={18} /></button>
-        </div>
-
-        {/* OVERALL MASTERY: С микро-целью */}
-        <div className="bg-gray-900/40 border border-white/5 p-8 rounded-[2.5rem] mb-8 relative overflow-hidden">
-          <div className="flex justify-between items-end mb-4">
-            <div>
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-cyan-500 mb-1 leading-none">Overall Mastery</h4>
-              <p className="text-[10px] text-gray-500 font-bold uppercase italic">
-                {stats.learned < 5 ? `Complete ${5 - stats.learned} more words to reach 5%` : 'Keep it up!'}
-              </p>
-            </div>
-            <span className="text-4xl font-black italic leading-none">{progressPercent}%</span>
-          </div>
-          <div className="relative h-3 bg-black rounded-full overflow-hidden border border-white/5">
-            <div
-              className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 transition-all duration-1000"
-              style={{ width: `${Math.max(progressPercent, 2)}%` }}
-            />
-          </div>
-          <button onClick={() => navigate('/map')} className="w-full mt-6 py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
-            <PlayCircle size={18} /> Continue Learning
-          </button>
-        </div>
-
-        {/* STATS GRID: Gems & Categories */}
-        <div className="grid grid-cols-1 gap-6 mb-10">
-          {/* GEMS & SHOP TEASER */}
-          <div className="bg-gradient-to-br from-emerald-900/20 to-cyan-900/20 p-8 rounded-[2.5rem] border border-emerald-500/20">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <div className="text-5xl font-black italic leading-none">{stats.gems}</div>
-                <div className="text-[10px] text-emerald-400 uppercase font-black tracking-widest mt-1">Gems Balance</div>
-              </div>
-              <div className="text-6xl opacity-30 select-none">💎</div>
-            </div>
-            <div className="bg-black/40 p-4 rounded-2xl border border-emerald-500/10">
-              <p className="text-[10px] text-gray-500 uppercase font-black mb-2 tracking-widest">Next unlock:</p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-200 italic">Skip Waiting Time</span>
-                <span className="text-emerald-400 font-black flex items-center gap-1">50 <Gem size={12} fill="currentColor" /></span>
-              </div>
-            </div>
-          </div>
-
-          {/* WORDS BY CATEGORY */}
-          <div className="bg-gray-900/30 border border-white/5 p-8 rounded-[2.5rem]">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-6">Progress by category</h4>
-            <div className="space-y-6">
-              {[
-                {name: 'Greetings', done: stats.learned > 10 ? 10 : stats.learned, total: 15, color: 'cyan', icon: '🙏'},
-                {name: 'Survival', done: 0, total: 25, color: 'orange', icon: '📍'},
-                {name: 'Food', done: 0, total: 20, color: 'purple', icon: '🍲'},
-              ].map(cat => (
-                <div key={cat.name} className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-black/40 rounded-2xl flex items-center justify-center text-xl border border-white/5">{cat.icon}</div>
-                  <div className="flex-1">
-                    <div className="flex justify-between mb-1.5">
-                      <span className="font-black italic uppercase text-[10px] tracking-wider">{cat.name}</span>
-                      <span className="text-[10px] text-gray-600 font-black">{cat.done}/{cat.total}</span>
-                    </div>
-                    <div className="h-1.5 bg-black rounded-full overflow-hidden">
-                      <div className={`h-full bg-${cat.color}-500 transition-all duration-700`} style={{width: `${(cat.done/cat.total)*100}%`}} />
-                    </div>
-                  </div>
-                </div>
-              ))}
+          <div>
+            <h1 className="text-2xl font-black italic tracking-tight text-white">Student</h1>
+            <p className="text-gray-500 text-xs font-bold tracking-widest mb-2">{profile.email}</p>
+            <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+              {stats.gems > 500 ? 'Intermediate' : 'Beginner'} Level
             </div>
           </div>
         </div>
+      </div>
 
-        {/* LEADERBOARD & CHALLENGE */}
-        <div className="bg-gradient-to-br from-purple-900/10 to-pink-900/10 p-8 rounded-[3rem] border border-purple-500/10 mb-10">
-          <div className="flex items-center gap-3 mb-6">
+      <div className="p-6 space-y-6">
+
+        {/* STATS GRID */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Gems */}
+          <div className="bg-gray-900/40 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center gap-2">
             <Trophy className="text-yellow-500" size={24} />
-            <h3 className="font-black uppercase tracking-tighter text-xl italic">Leaderboard</h3>
+            <span className="text-2xl font-black text-white">{stats.gems}</span>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total Gems</span>
           </div>
-          <div className="space-y-3">
-            {leaderboard.slice(0, 3).map((u, i) => (
-              <div key={i} className="flex items-center gap-4 p-3 bg-black/30 rounded-2xl border border-white/5">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${i === 0 ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-500'}`}>{i+1}</div>
-                <div className="flex-1 text-xs font-bold text-gray-400">{u.username.split('@')[0]}</div>
-                <div className="text-xs font-black italic text-cyan-400">{u.words_count} XP</div>
+
+          {/* Words */}
+          <div className="bg-gray-900/40 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center gap-2">
+            <Zap className="text-cyan-500" size={24} />
+            <span className="text-2xl font-black text-white">{stats.words}</span>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Words Known</span>
+          </div>
+
+          {/* Lessons */}
+          <div className="bg-gray-900/40 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center gap-2">
+            <Target className="text-emerald-500" size={24} />
+            <span className="text-2xl font-black text-white">{stats.lessons}</span>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Lessons Done</span>
+          </div>
+
+          {/* Streak (Пока фейковый, можно подключить позже) */}
+          <div className="bg-gray-900/40 border border-white/5 p-5 rounded-2xl flex flex-col items-center justify-center gap-2">
+            <Flame className="text-orange-500" size={24} />
+            <span className="text-2xl font-black text-white">1</span>
+            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Day Streak</span>
+          </div>
+        </div>
+
+        {/* WEEKLY ACTIVITY (Визуализация) */}
+        <div className="bg-gray-900/20 border border-white/5 p-6 rounded-3xl">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="font-bold text-white text-sm uppercase tracking-wide">Weekly Focus</h3>
+            <span className="text-xs text-gray-600 font-bold">Last 7 Days</span>
+          </div>
+          <div className="flex justify-between items-end h-24 px-2">
+            {/* Столбики графика */}
+            {[20, 45, 10, 80, 50, 30, 60].map((h, i) => (
+              <div key={i} className="w-2 bg-gray-800 rounded-full relative group">
+                <div
+                  className="absolute bottom-0 w-full bg-cyan-500 rounded-full transition-all duration-1000 group-hover:bg-emerald-400"
+                  style={{ height: `${h}%` }}
+                />
               </div>
             ))}
           </div>
-          <div className="mt-6 p-4 bg-cyan-500/5 rounded-2xl border border-cyan-500/20 flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Your Rank:</span>
-            <span className="font-black text-2xl text-cyan-400 italic">#147</span>
-          </div>
         </div>
 
-        {/* PREMIUM TEASER (Commercial Strategy) */}
-        <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 p-8 rounded-[3rem] border-2 border-yellow-500/20">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 bg-yellow-500/20 rounded-2xl"><Crown className="text-yellow-500" size={32} /></div>
-            <div>
-              <h3 className="font-black text-xl italic uppercase tracking-tighter">Go Premium</h3>
-              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Unlimited hearts & ad-free</p>
+        {/* SETTINGS AREA */}
+        <div className="pt-4 space-y-3">
+          <button onClick={handleResetProgress} className="w-full bg-red-900/10 border border-red-500/20 p-4 rounded-xl flex items-center gap-4 group active:scale-95 transition-all">
+            <div className="p-2 bg-red-500/10 rounded-lg text-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors">
+              <Trash2 size={18} />
             </div>
-          </div>
-          <button className="w-full py-5 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-500/20 active:scale-95 transition-all">
-            Try 7 Days Free
+            <span className="font-bold text-red-500 text-sm">Reset All Progress</span>
+          </button>
+
+          <button onClick={handleLogout} className="w-full bg-gray-900 border border-white/10 p-4 rounded-xl flex items-center gap-4 group active:scale-95 transition-all">
+            <div className="p-2 bg-gray-800 rounded-lg text-gray-400 group-hover:text-white transition-colors">
+              <LogOut size={18} />
+            </div>
+            <span className="font-bold text-gray-400 group-hover:text-white text-sm">Sign Out</span>
           </button>
         </div>
 
+        <div className="pt-8 text-center pb-4">
+          <p className="text-[9px] text-gray-800 font-black uppercase tracking-[0.3em]">Khmer Mastery 2026</p>
+        </div>
       </div>
 
-      {/* Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-2xl border-t border-white/5 px-10 pt-5 pb-10 flex justify-between items-center z-50 max-w-lg mx-auto rounded-t-[3rem]">
-        <button onClick={() => navigate('/map')} className="text-gray-600 flex flex-col items-center gap-2 group"><MapIcon size={24} /><span className="text-[10px] font-black uppercase">Explore</span></button>
-        <button onClick={() => navigate('/vocab')} className="text-gray-600 flex flex-col items-center gap-2 group"><BookText size={24} /><span className="text-[10px] font-black uppercase">Words</span></button>
-        <button onClick={() => navigate('/profile')} className="text-cyan-400 flex flex-col items-center gap-2 outline-none"><User size={24} /><span className="text-[10px] font-black uppercase">Me</span></button>
+      {/* НИЖНЕЕ МЕНЮ (4 Кнопки) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-2xl border-t border-white/5 px-6 pt-4 pb-8 flex justify-between items-center z-50 max-w-lg mx-auto">
+        <button onClick={() => navigate('/map')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
+          <MapIcon size={24} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Map</span>
+        </button>
+
+        <button onClick={() => navigate('/review')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
+          <BrainCircuit size={24} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Review</span>
+        </button>
+
+        <button onClick={() => navigate('/vocab')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
+          <BookText size={24} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Vocab</span>
+        </button>
+
+        {/* ACTIVE TAB */}
+        <button onClick={() => navigate('/profile')} className="text-cyan-400 flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
+          <User size={24} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Me</span>
+        </button>
       </div>
     </div>
   );
