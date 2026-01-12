@@ -3,15 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
   Check, Play, Gem, Map as MapIcon,
-  BookText, User, ChevronRight, BookOpen, Layers
+  BookText, User, BookOpen, Layers,
+  BrainCircuit // Иконка для Review
 } from 'lucide-react';
+import { getDueItems } from '../services/srsService'; // Логика повторений
 
-// Конфигурация уровней (какие главы куда входят)
+// Конфигурация уровней (Твой красивый дизайн)
 const COURSE_LEVELS = [
   {
     title: "LEVEL 1: SURVIVAL MODE",
     description: "The absolute basics to survive in Cambodia.",
-    range: [1, 4], // ID глав от 1 до 4
+    range: [1, 4],
     color: "text-cyan-400",
     bg: "from-cyan-500/10 to-transparent",
     border: "border-cyan-500/20"
@@ -46,7 +48,8 @@ export default function CourseMap() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [completedLessons, setCompletedLessons] = useState([]);
-  const [chapters, setChapters] = useState({}); // Теперь это объект { id: chapterData }
+  const [chapters, setChapters] = useState({});
+  const [dueCount, setDueCount] = useState(0); // Счетчик для красной точки
 
   useEffect(() => { fetchAllData(); }, []);
 
@@ -56,7 +59,7 @@ export default function CourseMap() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate('/login'); return; }
 
-      // 1. Прогресс
+      // 1. Прогресс уроков
       const { data: progressData } = await supabase
         .from('user_progress')
         .select('lesson_id')
@@ -66,15 +69,17 @@ export default function CourseMap() {
       const doneIds = progressData ? progressData.map(item => Number(item.lesson_id)) : [];
       setCompletedLessons(doneIds);
 
-      // 2. Уроки
-      const { data: allLessons, error } = await supabase
+      // 2. Проверяем SRS (Сколько слов нужно повторить для красной точки)
+      const dueItems = await getDueItems(user.id);
+      setDueCount(dueItems.length);
+
+      // 3. Уроки
+      const { data: allLessons } = await supabase
         .from('lessons')
         .select('*')
         .order('id', { ascending: true });
 
-      if (error) throw error;
-
-      // 3. Группировка
+      // 4. Группировка по главам
       const chaptersMap = {};
 
       allLessons.filter(l => l.id < 100).forEach(l => {
@@ -123,10 +128,10 @@ export default function CourseMap() {
       </div>
 
       {/* КАРТА УРОВНЕЙ */}
-      <div className="max-w-xl mx-auto space-y-12 pb-20">
+      <div className="max-w-xl mx-auto space-y-12 pb-20 mt-6">
 
         {COURSE_LEVELS.map((level, levelIndex) => {
-          // Фильтруем главы, которые относятся к этому уровню
+          // Фильтруем главы для уровня
           const levelChapters = Object.values(chapters).filter(ch =>
             ch.id >= level.range[0] && ch.id <= level.range[1]
           );
@@ -136,8 +141,8 @@ export default function CourseMap() {
           return (
             <div key={levelIndex} className="relative">
 
-              {/* ЗАГОЛОВОК УРОВНЯ (Sticky, чтобы было видно при скролле) */}
-              <div className={`sticky top-[72px] z-30 py-4 px-6 backdrop-blur-xl border-b border-t ${level.border} bg-gradient-to-r ${level.bg} bg-black/60`}>
+              {/* ЗАГОЛОВОК УРОВНЯ (Sticky) */}
+              <div className={`sticky top-[73px] z-30 py-4 px-6 backdrop-blur-xl border-b border-t ${level.border} bg-gradient-to-r ${level.bg} bg-black/60`}>
                 <div className="flex items-center gap-3">
                   <Layers size={20} className={level.color} />
                   <div>
@@ -151,7 +156,7 @@ export default function CourseMap() {
                 </div>
               </div>
 
-              {/* СПИСОК ГЛАВ ЭТОГО УРОВНЯ */}
+              {/* СПИСОК ГЛАВ */}
               <div className="p-6 space-y-8">
                 {levelChapters.map((chapter) => {
                   const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
@@ -159,7 +164,6 @@ export default function CourseMap() {
 
                   return (
                     <div key={chapter.id} className="relative pl-4 border-l-2 border-white/5">
-                      {/* Линия соединения */}
                       <div className={`absolute -left-[9px] top-10 w-4 h-4 rounded-full border-4 bg-black transition-colors ${isChapterFullDone ? `border-emerald-500` : 'border-gray-800'}`} />
 
                       <div className={`bg-gray-900/40 border rounded-[2.5rem] p-6 transition-all duration-500 hover:bg-gray-900/60
@@ -177,7 +181,6 @@ export default function CourseMap() {
                             <p className="text-gray-500 text-xs italic leading-tight">{chapter.description}</p>
                           </div>
 
-                          {/* Кнопка "Конспект" */}
                           <button
                             onClick={() => navigate(`/lesson/${chapter.id}/preview`)}
                             className={`p-3 rounded-2xl border transition-all active:scale-90
@@ -226,17 +229,26 @@ export default function CourseMap() {
         })}
       </div>
 
-      {/* НИЖНЕЕ МЕНЮ */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-2xl border-t border-white/5 px-10 pt-4 pb-8 flex justify-between items-center z-50 max-w-lg mx-auto">
-        <button onClick={() => navigate('/map')} className="text-cyan-400 flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
+      {/* НИЖНЕЕ МЕНЮ (4 КНОПКИ) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-2xl border-t border-white/5 px-6 pt-4 pb-8 flex justify-between items-center z-50 max-w-lg mx-auto">
+        <button onClick={() => navigate('/map')} className="text-cyan-400 flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
           <MapIcon size={24} />
           <span className="text-[9px] font-black uppercase tracking-widest">Map</span>
         </button>
-        <button onClick={() => navigate('/vocab')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
+
+        <button onClick={() => navigate('/review')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
+          <div className="relative">
+            <BrainCircuit size={24} />
+            {dueCount > 0 && <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />}
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-widest">Review</span>
+        </button>
+
+        <button onClick={() => navigate('/vocab')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
           <BookText size={24} />
           <span className="text-[9px] font-black uppercase tracking-widest">Vocab</span>
         </button>
-        <button onClick={() => navigate('/profile')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
+        <button onClick={() => navigate('/profile')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
           <User size={24} />
           <span className="text-[9px] font-black uppercase tracking-widest">Me</span>
         </button>
