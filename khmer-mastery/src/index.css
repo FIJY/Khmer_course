@@ -1,9 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
 
 /* Подключаем современный шрифт Inter (популярный в финтехе и дорогих SaaS) */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   /* Тот самый Electric Cyan для всего приложения */
