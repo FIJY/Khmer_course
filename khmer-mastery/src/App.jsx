@@ -2,15 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
-// Импортируем страницы
+// --- ИМПОРТ СТРАНИЦ ---
 import Login from './pages/Login';
 import CourseMap from './pages/CourseMap';
-import LessonPreview from './pages/LessonPreview'; // Конспект
-import LessonPlayer from './pages/LessonPlayer';   // Урок
+import LessonPreview from './pages/LessonPreview';
+import LessonPlayer from './pages/LessonPlayer';
 import Vocab from './pages/Vocab';
 import Profile from './pages/Profile';
-import ReviewHub from './pages/ReviewHub';     // <--- НОВОЕ
-import ReviewPlayer from './pages/ReviewPlayer'; // <--- НОВОЕ
+
+// 👇 ВОТ ЭТИ ДВА ФАЙЛА МЫ ДОБАВИЛИ, ПРОВЕРЬ ЧТО ОНИ ТУТ ЕСТЬ
+import ReviewHub from './pages/ReviewHub';
+import ReviewPlayer from './pages/ReviewPlayer';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -34,23 +36,23 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        {/* Если не залогинен -> Login */}
+        {/* ЛОГИН */}
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/map" />} />
 
-        {/* Основные маршруты (Только для залогиненных) */}
+        {/* ГЛАВНЫЕ СТРАНИЦЫ */}
         <Route path="/map" element={session ? <CourseMap /> : <Navigate to="/login" />} />
         <Route path="/vocab" element={session ? <Vocab /> : <Navigate to="/login" />} />
         <Route path="/profile" element={session ? <Profile /> : <Navigate to="/login" />} />
 
-        {/* Уроки */}
+        {/* УРОКИ */}
         <Route path="/lesson/:id/preview" element={session ? <LessonPreview /> : <Navigate to="/login" />} />
         <Route path="/lesson/:id" element={session ? <LessonPlayer /> : <Navigate to="/login" />} />
 
-        {/* Повторение (Review) */}
+        {/* 👇 НОВЫЕ МАРШРУТЫ ДЛЯ REVIEW (БЕЗ НИХ БУДЕТ ЧЕРНЫЙ ЭКРАН) */}
         <Route path="/review" element={session ? <ReviewHub /> : <Navigate to="/login" />} />
         <Route path="/review/session" element={session ? <ReviewPlayer /> : <Navigate to="/login" />} />
 
-        {/* По умолчанию -> на карту */}
+        {/* Если адрес не найден — отправляем на карту */}
         <Route path="*" element={<Navigate to={session ? "/map" : "/login"} />} />
       </Routes>
     </Router>
