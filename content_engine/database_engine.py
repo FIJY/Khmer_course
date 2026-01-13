@@ -98,4 +98,46 @@ async def seed_lesson(lesson_id, title, desc, content_list):
         except Exception as e:
             print(f"   ❌ Insert error: {e}")
 
+
+
     print(f"🎉 Lesson {lesson_id} synced!")
+
+
+# Добавь это в конец файла database_engine.py
+
+async def update_study_materials(module_id, lessons_data):
+    """
+    Автоматически собирает 'скучный список' из всех уроков модуля
+    и записывает его в таблицу study_materials.
+    """
+    print(f"📖 Формируем конспект для модуля {module_id}...")
+
+    summary_text = f"# Конспект главы\n\n"
+
+    for lesson_id, info in lessons_data.items():
+        summary_text += f"## {info['title']}\n"
+
+        # Собираем теорию
+        for item in info['content']:
+            if item['type'] == 'theory':
+                summary_text += f"* 💡 {item['data']['title']}: {item['data']['text']}\n"
+
+        # Собираем слова
+        for item in info['content']:
+            if item['type'] == 'vocab_card':
+                khmer = item['data'].get('back', '')
+                eng = item['data'].get('front', '')
+                pron = item['data'].get('pronunciation', '')
+                summary_text += f"* **{khmer}** ({pron}) — {eng}\n"
+
+        summary_text += "\n"
+
+    try:
+        supabase.table("study_materials").upsert({
+            "chapter_id": module_id,
+            "content": summary_text,
+            "type": "summary"
+        }, on_conflict="chapter_id").execute()
+        print(f"✅ Книжечка для модуля {module_id} обновлена!")
+    except Exception as e:
+        print(f"⚠️ Не удалось обновить книжечку (возможно, таблицы study_materials еще нет): {e}")
