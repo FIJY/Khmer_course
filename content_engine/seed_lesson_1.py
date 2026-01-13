@@ -1,8 +1,8 @@
 import asyncio
-from database_engine import seed_lesson
+from database_engine import seed_lesson, supabase
 
 # ==========================================
-# 1. ДАННЫЕ УРОКОВ (Без саммари в конце)
+# 1. ДАННЫЕ УРОКОВ
 # ==========================================
 CHAPTER_1_DATA = {
     101: {
@@ -21,7 +21,6 @@ CHAPTER_1_DATA = {
              "data": {"front": "You", "back": "អ្នក", "pronunciation": "Neak", "context": "Polite."}},
             {"type": "quiz",
              "data": {"question": "Informal Hello?", "options": ["សួស្តី", "ជំរាបសួរ"], "correct_answer": "សួស្តី"}}
-            # ЗДЕСЬ БОЛЬШЕ НЕТ САММАРИ
         ]
     },
     102: {
@@ -35,7 +34,6 @@ CHAPTER_1_DATA = {
              "data": {"front": "Sorry", "back": "សូមទោស", "pronunciation": "Soum Toh", "context": "Apology."}},
             {"type": "quiz",
              "data": {"question": "Thanks?", "options": ["Arkun", "Soum Toh"], "correct_answer": "Arkun"}}
-            # ЗДЕСЬ БОЛЬШЕ НЕТ САММАРИ
         ]
     },
     103: {
@@ -50,55 +48,56 @@ CHAPTER_1_DATA = {
             {"type": "vocab_card",
              "data": {"front": "No", "back": "ទេ", "pronunciation": "Te", "context": "Particle."}},
             {"type": "quiz", "data": {"question": "Male Yes?", "options": ["Baat", "Jaa"], "correct_answer": "Baat"}}
-            # ЗДЕСЬ БОЛЬШЕ НЕТ САММАРИ
         ]
     }
 }
 
 
 # ==========================================
-# 2. СБОРЩИК СПИСКА (Скучный текст)
+# 2. ГЕНЕРАТОР СПИСКА ДЛЯ КАЖДОГО УРОКА
 # ==========================================
 
-def generate_text_guidebook(all_lessons):
+def inject_guidebook_into_lesson(lesson_id, lesson_data):
     """
-    Собирает все слова в один длинный текстовый список.
+    Создает текстовый список (шпаргалку) и прячет его внутри урока
+    под типом 'guidebook'.
     """
-    print("📝 Generating Text-Only Guidebook...")
+    print(f"   📝 Generating boring list for Lesson {lesson_id}...")
 
-    # 1. Собираем текст
-    full_text = "CHAPTER 1 VOCABULARY\n\n"
+    # Формируем скучный список (Markdown style)
+    list_text = f"## {lesson_data['title']}\n\n"
 
-    for lid, lesson in all_lessons.items():
-        # Заголовок подурока
-        full_text += f"--- {lesson['title']} ---\n"
+    # 1. Сначала Правила
+    list_text += "### 🧠 Rules\n"
+    has_theory = False
+    for item in lesson_data['content']:
+        if item['type'] == 'theory':
+            list_text += f"* **{item['data']['title']}:** {item['data']['text']}\n"
+            has_theory = True
+    if not has_theory: list_text += "No grammar rules in this lesson.\n"
 
-        # Правила (коротко)
-        for item in lesson['content']:
-            if item['type'] == 'theory':
-                full_text += f"💡 {item['data']['title']}: {item['data']['text']}\n"
+    # 2. Потом Слова
+    list_text += "\n### 📚 Vocabulary\n"
+    for item in lesson_data['content']:
+        if item['type'] == 'vocab_card':
+            khmer = item['data']['back']
+            eng = item['data']['front']
+            pron = item['data']['pronunciation']
+            # Формат строки: Кхмерский (Произношение) - Перевод
+            list_text += f"* **{khmer}** ({pron}) — {eng}\n"
 
-        # Слова (списком)
-        for item in lesson['content']:
-            if item['type'] == 'vocab_card':
-                khmer = item['data']['back']
-                eng = item['data']['front']
-                pron = item['data']['pronunciation']
-                # Формат строки списка
-                full_text += f"• {khmer} ({pron}) — {eng}\n"
-
-        full_text += "\n"  # Отступ между уроками
-
-    # 2. Упаковываем в ОДНУ карточку
-    guidebook_content = [{
-        "type": "theory",
+    # Добавляем этот список как СКРЫТУЮ карточку в урок
+    guidebook_item = {
+        "type": "guidebook",  # <-- Фронтенд должен искать этот тип для модалки
         "data": {
-            "title": "📖 Full Word List",
-            "text": full_text
+            "title": "Cheat Sheet",
+            "markdown": list_text
         }
-    }]
+    }
 
-    return guidebook_content
+    # Добавляем в конец списка контента (но фронтенд не должен показывать её в слайдере)
+    lesson_data['content'].append(guidebook_item)
+    return lesson_data
 
 
 # ==========================================
@@ -106,15 +105,24 @@ def generate_text_guidebook(all_lessons):
 # ==========================================
 
 async def main():
-    # 1. Заливаем уроки (без хвостов)
+    print("🗑️ Deleting old Reference Lesson (100)...")
+    try:
+        supabase.table("lesson_items").delete().eq("lesson_id", 100).execute()
+        supabase.table("lessons").delete().eq("id", 100).execute()
+        print("   ✅ Old Lesson 100 deleted.")
+    except Exception as e:
+        print(f"   ⚠️ Could not delete lesson 100 (maybe already gone): {e}")
+
+    print("\n🌟 Updating Lessons with embedded Guidebooks...")
+
     for lesson_id, info in CHAPTER_1_DATA.items():
-        await seed_lesson(lesson_id, info["title"], info["desc"], info["content"])
+        # Внедряем шпаргалку внутрь данных
+        updated_info = inject_guidebook_into_lesson(lesson_id, info)
 
-    # 2. Заливаем Скучный Список (ID 100)
-    text_content = generate_text_guidebook(CHAPTER_1_DATA)
-    await seed_lesson(100, "Chapter 1 Reference", "Reference list.", text_content)
+        # Заливаем в базу
+        await seed_lesson(lesson_id, updated_info["title"], updated_info["desc"], updated_info["content"])
 
-    print("🚀 Done. Lessons are clean, Guidebook is a list.")
+    print("🚀 Done! Use the 'guidebook' item inside each lesson for the book icon.")
 
 
 if __name__ == "__main__":
