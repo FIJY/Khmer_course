@@ -2,7 +2,7 @@ import asyncio
 from database_engine import seed_lesson, supabase
 
 # ==========================================
-# 1. ДАННЫЕ УРОКОВ (Оставляем чистыми)
+# 1. ЧИСТЫЕ УРОКИ (Для прохождения)
 # ==========================================
 CHAPTER_1_DATA = {
     101: {
@@ -54,53 +54,40 @@ CHAPTER_1_DATA = {
 
 
 # ==========================================
-# 2. ГЕНЕРАТОР "СКУЧНОГО СПИСКА" (Для Урока 100)
+# 2. ГЕНЕРАТОР ШПАРГАЛКИ (Для кнопки "Книжечка")
 # ==========================================
 
-def generate_full_guidebook(all_lessons):
+def generate_simple_list(all_lessons):
     """
-    Собирает всё в одну большую текстовую 'простыню'.
+    Собирает простой текстовый список для справочника.
     """
-    print("📜 Generating Master Cheat Sheet...")
+    print("📜 Generating Text List for Book Icon...")
 
-    # Заголовок (Markdown)
-    full_text = "# Chapter 1 Vocabulary & Rules\n\n"
+    # Формируем Markdown текст
+    full_text = "# Chapter 1 Vocabulary\n\n"
 
     for lid, lesson in all_lessons.items():
-        # Добавляем разделитель
+        # Заголовок раздела
         full_text += f"## {lesson['title']}\n"
 
-        # 1. Сначала правила этого урока
-        theory_text = ""
-        for item in lesson['content']:
-            if item['type'] == 'theory':
-                theory_text += f"* 💡 **{item['data']['title']}**: {item['data']['text']}\n"
-
-        if theory_text:
-            full_text += "### Grammar\n" + theory_text + "\n"
-
-        # 2. Потом слова этого урока
-        vocab_text = ""
+        # Список слов
         for item in lesson['content']:
             if item['type'] == 'vocab_card':
                 khmer = item['data']['back']
                 eng = item['data']['front']
                 pron = item['data']['pronunciation']
-                # Формат: • Слово (Произношение) - Перевод
-                vocab_text += f"* **{khmer}** ({pron}) — {eng}\n"
+                # Строка: Кхмерский (Произношение) - Перевод
+                full_text += f"* **{khmer}** ({pron}) — {eng}\n"
 
-        if vocab_text:
-            full_text += "### Words\n" + vocab_text + "\n"
+        full_text += "\n"
 
-        full_text += "---\n\n"
-
-    # Создаем ОДНУ карточку 'theory', в которой лежит весь этот текст
+    # Упаковываем в одну карточку Theory
     guidebook_content = [{
         "type": "theory",
         "data": {
-            "title": "Full Summary",  # Заголовок карточки
-            "text": "Scroll down to see all words.",  # Подзаголовок
-            "markdown": full_text  # Основной текст (React должен уметь рендерить Markdown)
+            "title": "Reference List",
+            "text": "All words from this chapter.",
+            "markdown": full_text
         }
     }]
 
@@ -112,25 +99,22 @@ def generate_full_guidebook(all_lessons):
 # ==========================================
 
 async def main():
-    print("🌟 Syncing Chapter 1 Lessons...")
-
-    # 1. Заливаем уроки (101-103)
+    print("🌟 Syncing Lessons 101-103 (Clean)...")
     for lesson_id, info in CHAPTER_1_DATA.items():
         await seed_lesson(lesson_id, info["title"], info["desc"], info["content"])
 
-    # 2. ВОЗВРАЩАЕМ Урок 100 (Guidebook), но с новым наполнением
-    # Без него кнопка пишет "No study materials"
-    print("📘 Restoring Guidebook Source (Lesson 100)...")
-    guidebook_items = generate_full_guidebook(CHAPTER_1_DATA)
+    print("📘 Syncing Lesson 100 (Required for Book Icon)...")
+    guidebook_items = generate_simple_list(CHAPTER_1_DATA)
 
+    # Мы обязаны создать этот урок, иначе кнопка выдает ошибку
     await seed_lesson(
         100,
-        "Guidebook",  # Название
-        "Cheat sheet for Chapter 1",
+        "Chapter 1 Summary",
+        "Reference material.",
         guidebook_items
     )
 
-    print("🚀 Done! The 'Book Icon' should now show the list again.")
+    print("🚀 Done! Lessons are clean. Book Icon has data.")
 
 
 if __name__ == "__main__":
