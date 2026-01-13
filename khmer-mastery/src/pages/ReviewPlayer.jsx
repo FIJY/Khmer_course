@@ -212,79 +212,87 @@ export default function ReviewPlayer() {
            </button>
         </div>
 
-        {/* SETTINGS MODAL (ШТОРКА СНИЗУ) */}
-        {showSettings && (
-          <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col justify-end animate-in fade-in">
-             <div className="bg-gray-900 border-t border-white/10 rounded-t-[2rem] p-6 pb-10 animate-in slide-in-from-bottom-full">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-white font-black uppercase tracking-widest text-sm">Review Settings</h3>
-                  <button onClick={() => setShowSettings(false)} className="bg-black p-2 rounded-full"><X size={20} className="text-white"/></button>
-                </div>
+        {/* SETTINGS MODAL (ЦЕНТРАЛЬНОЕ ОКНО) */}
+                {showSettings && (
+                  // 1. Изменили justify-end на justify-center и добавили items-center
+                  <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
 
-                {/* 1. РЕЖИМЫ */}
-                <div className="mb-6">
-                  <p className="text-gray-500 text-[10px] font-bold uppercase mb-3">Training Mode</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[
-                      {id: 'mix', icon: Shuffle, label: 'Mix'},
-                      {id: 'read', icon: Eye, label: 'Read'},
-                      {id: 'listen', icon: Ear, label: 'Listen'},
-                      {id: 'recall', icon: BrainCircuit, label: 'Recall'}
-                    ].map(mode => (
-                      <button
-                        key={mode.id}
-                        onClick={() => setSettings({...settings, mode: mode.id})}
-                        className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all
-                          ${settings.mode === mode.id
-                            ? 'bg-cyan-500 border-cyan-400 text-black'
-                            : 'bg-gray-800 border-transparent text-gray-400 hover:bg-gray-700'}`}
-                      >
-                        <mode.icon size={20} className="mb-1" />
-                        <span className="text-[9px] font-black uppercase">{mode.label}</span>
-                      </button>
-                    ))}
+                     {/* 2. Изменили стили окна: rounded-3xl (все углы), zoom-in анимация */}
+                     <div className="bg-gray-900 border border-white/10 rounded-3xl p-6 w-full shadow-2xl animate-in zoom-in-95 duration-200">
+
+                        <div className="flex justify-between items-center mb-6">
+                          <h3 className="text-white font-black uppercase tracking-widest text-sm">Review Settings</h3>
+                          <button onClick={() => setShowSettings(false)} className="bg-black p-2 rounded-full hover:bg-gray-800 transition-colors">
+                            <X size={20} className="text-white"/>
+                          </button>
+                        </div>
+
+                        {/* 1. РЕЖИМЫ */}
+                        <div className="mb-6">
+                          <p className="text-gray-500 text-[10px] font-bold uppercase mb-3">Training Mode</p>
+                          <div className="grid grid-cols-4 gap-2">
+                            {[
+                              {id: 'mix', icon: Shuffle, label: 'Mix'},
+                              {id: 'read', icon: Eye, label: 'Read'},
+                              {id: 'listen', icon: Ear, label: 'Listen'},
+                              {id: 'recall', icon: BrainCircuit, label: 'Recall'}
+                            ].map(mode => (
+                              <button
+                                key={mode.id}
+                                onClick={() => setSettings({...settings, mode: mode.id})}
+                                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all
+                                  ${settings.mode === mode.id
+                                    ? 'bg-cyan-500 border-cyan-400 text-black'
+                                    : 'bg-gray-800 border-transparent text-gray-400 hover:bg-gray-700'}`}
+                              >
+                                <mode.icon size={20} className="mb-1" />
+                                <span className="text-[9px] font-black uppercase">{mode.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 2. ПОМОЩНИКИ */}
+                        <div className="space-y-3">
+                           <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xl">🅰️</span>
+                                <div>
+                                  <p className="text-white font-bold text-sm">Show Phonetics</p>
+                                  <p className="text-gray-500 text-[10px]">Helper text for reading</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => setSettings({...settings, showPhonetics: !settings.showPhonetics})}
+                                className={`w-12 h-6 rounded-full transition-colors relative ${settings.showPhonetics ? 'bg-emerald-500' : 'bg-gray-700'}`}
+                              >
+                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.showPhonetics ? 'left-7' : 'left-1'}`} />
+                              </button>
+                           </div>
+
+                           <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xl">🔊</span>
+                                <div>
+                                  <p className="text-white font-bold text-sm">Auto-play Audio</p>
+                                  <p className="text-gray-500 text-[10px]">Hear words automatically</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => setSettings({...settings, autoPlay: !settings.autoPlay})}
+                                className={`w-12 h-6 rounded-full transition-colors relative ${settings.autoPlay ? 'bg-emerald-500' : 'bg-gray-700'}`}
+                              >
+                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.autoPlay ? 'left-7' : 'left-1'}`} />
+                              </button>
+                           </div>
+                        </div>
+
+                        <button onClick={() => setShowSettings(false)} className="w-full mt-6 py-4 bg-white text-black font-black uppercase rounded-xl hover:bg-gray-200 transition-colors">
+                          Save & Close
+                        </button>
+                     </div>
                   </div>
-                </div>
-
-                {/* 2. ПОМОЩНИКИ */}
-                <div className="space-y-3">
-                   <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">🅰️</span>
-                        <div>
-                          <p className="text-white font-bold text-sm">Show Phonetics</p>
-                          <p className="text-gray-500 text-[10px]">Helper text for reading</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setSettings({...settings, showPhonetics: !settings.showPhonetics})}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${settings.showPhonetics ? 'bg-emerald-500' : 'bg-gray-700'}`}
-                      >
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.showPhonetics ? 'left-7' : 'left-1'}`} />
-                      </button>
-                   </div>
-
-                   <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">🔊</span>
-                        <div>
-                          <p className="text-white font-bold text-sm">Auto-play Audio</p>
-                          <p className="text-gray-500 text-[10px]">Hear words automatically</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setSettings({...settings, autoPlay: !settings.autoPlay})}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${settings.autoPlay ? 'bg-emerald-500' : 'bg-gray-700'}`}
-                      >
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.autoPlay ? 'left-7' : 'left-1'}`} />
-                      </button>
-                   </div>
-                </div>
-
-                <button onClick={() => setShowSettings(false)} className="w-full mt-6 py-4 bg-white text-black font-black uppercase rounded-xl">Save & Close</button>
-             </div>
-          </div>
-        )}
+                )}
 
         {/* MAIN QUESTION AREA */}
         <div className="flex-1 flex flex-col items-center justify-center p-6 pb-10 min-h-[30vh]">
