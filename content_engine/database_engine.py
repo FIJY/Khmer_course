@@ -6,12 +6,12 @@ from dotenv import load_dotenv
 import edge_tts
 from pathlib import Path
 
-# 1. Загрузка переменных
+# --- НАСТРОЙКИ ---
 env_path = Path('.') / '.env'
 load_dotenv(dotenv_path=env_path)
 
 url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
-key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")  # Приоритет Service Role для удаления
+key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")  # Приоритет Service Role
 if not key:
     key = os.getenv("SUPABASE_KEY") or os.getenv("VITE_SUPABASE_ANON_KEY")
 
@@ -27,14 +27,6 @@ if not url or not key:
 supabase: Client = create_client(url, key)
 
 
-def get_item_type(khmer_text, english_text):
-    clean = khmer_text.split(' (')[0].strip()
-    if '?' in clean or clean.count(' ') >= 2: return 'sentence'
-    if any(char.isdigit() for char in english_text): return 'number'
-    if clean in ["សួស្តី", "ជំរាបសួរ", "អរគុណ"]: return 'phrase'
-    return 'word'
-
-
 async def generate_audio(text, filename):
     filepath = AUDIO_DIR / filename
     if filepath.exists(): return
@@ -42,70 +34,68 @@ async def generate_audio(text, filename):
         await edge_tts.Communicate(text, VOICE, rate=SPEED).save(filepath)
         print(f"   ✅ Audio: {filename}")
     except Exception:
-        pass  # Тихо пропускаем ошибки аудио
+        pass
+
+
+def get_item_type(khmer, eng):
+    clean = khmer.split(' (')[0].strip()
+    if '?' in clean or clean.count(' ') >= 2: return 'sentence'
+    if any(char.isdigit() for char in eng): return 'number'
+    return 'word'
 
 
 async def seed_lesson(lesson_id, title, desc, content_list):
     print(f"🚀 Processing Lesson {lesson_id}: {title}...")
 
-    # 1. Обновляем заголовок
+    # 1. Upsert Lesson
     supabase.table("lessons").upsert({"id": lesson_id, "title": title, "description": desc}).execute()
 
-    # 2. ЧИСТКА (Исправление ошибки Foreign Key)
+    # 2. Cleanup (Fix Foreign Keys)
     try:
-        # Получаем ID старых карточек
         existing = supabase.table("lesson_items").select("id").eq("lesson_id", lesson_id).execute()
         ids = [i['id'] for i in existing.data]
-
         if ids:
-            # УДАЛЯЕМ ИЗ ВСЕХ ВОЗМОЖНЫХ ТАБЛИЦ СТАТИСТИКИ
-            # Пробуем user_srs (как в ошибке)
             try:
                 supabase.table("user_srs").delete().in_("item_id", ids).execute()
             except:
                 pass
-                # Пробуем user_srs_items (альтернативное название)
             try:
                 supabase.table("user_srs_items").delete().in_("item_id", ids).execute()
             except:
                 pass
-
-        # Теперь удаляем сами карточки
         supabase.table("lesson_items").delete().eq("lesson_id", lesson_id).execute()
     except Exception as e:
-        print(f"   ⚠️ Cleanup Warning: {e}")
+        print(f"   ⚠️ Cleanup warn: {e}")
 
-    # 3. ЗАГРУЗКА
+    # 3. Insert Items
     for idx, item in enumerate(content_list):
-        # Аудио и Словарь
         if item['type'] in ['vocab_card', 'quiz']:
             khmer = item['data'].get('back') or item['data'].get('correct_answer')
-            english = item['data'].get('front') or "Quiz Answer"
+            eng = item['data'].get('front') or "Quiz Answer"
             clean_khmer = khmer.split(' (')[0].replace('?', '').strip()
+            safe_eng = re.sub(r'[\\/*?:"<>|]', "", eng).lower().strip().replace(' ', '_')
+            audio = f"{safe_eng}.mp3"
 
-            safe_english = re.sub(r'[\\/*?:"<>|]', "", english).lower().strip().replace(' ', '_')
-            audio_name = f"{safe_english}.mp3"
+            await generate_audio(clean_khmer, audio)
 
-            await generate_audio(clean_khmer, audio_name)
-
-            dict_entry = {
-                "khmer": clean_khmer, "english": english,
+            # Словарь
+            dict_res = supabase.table("dictionary").upsert({
+                "khmer": clean_khmer, "english": eng,
                 "pronunciation": item['data'].get('pronunciation', ''),
-                "item_type": get_item_type(clean_khmer, english)
-            }
-            res = supabase.table("dictionary").upsert(dict_entry, on_conflict="khmer").execute()
-            if res.data: item['data']['dictionary_id'] = res.data[0]['id']
-            item['data']['audio'] = audio_name
+                "item_type": get_item_type(clean_khmer, eng)
+            }, on_conflict="khmer").execute()
 
-        # Вставка
+            if dict_res.data: item['data']['dictionary_id'] = dict_res.data[0]['id']
+            item['data']['audio'] = audio
+
         try:
             supabase.table("lesson_items").insert({
                 "lesson_id": lesson_id,
-                "type": item['type'],  # Теперь здесь будет 'theory' вместо 'guidebook'
+                "type": item['type'],
                 "order_index": idx,
                 "data": item['data']
             }).execute()
         except Exception as e:
-            print(f"   ❌ Error inserting item {idx}: {e}")
+            print(f"   ❌ Insert error: {e}")
 
     print(f"🎉 Lesson {lesson_id} synced!")
