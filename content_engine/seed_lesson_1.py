@@ -2,162 +2,130 @@ import asyncio
 from database_engine import seed_lesson
 
 # ==========================================
-# 1. ИСХОДНЫЕ ДАННЫЕ (Source of Truth)
+# 1. ИСХОДНЫЕ ДАННЫЕ (Уроки)
 # ==========================================
-
 CHAPTER_1_DATA = {
     101: {
-        "title": "Lesson 1.1: The Anatomy of Hello",
-        "desc": "Deep dive into greetings and self-reference.",
+        "title": "Lesson 1.1: Hello",
+        "desc": "Basics of greeting.",
         "content": [
-            {"type": "theory", "data": {"title": "Components",
-                                        "text": "Khmer words are often built from smaller meanings. Let's break them down."}},
+            {"type": "theory", "data": {"title": "Components", "text": "Khmer words are built from smaller parts."}},
             {"type": "vocab_card", "data": {"front": "Hello (Friends)", "back": "សួស្តី", "pronunciation": "Suəs-dey",
                                             "context": "Informal."}},
             {"type": "vocab_card",
-             "data": {"front": "Hello (Formal)", "back": "ជំរាបសួរ", "pronunciation": "Cum-riəp Suə",
-                      "context": "Lit: 'I inform and ask'."}},
+             "data": {"front": "I / Me", "back": "ខ្ញុំ", "pronunciation": "Kɲom", "context": "Universal."}},
             {"type": "vocab_card",
-             "data": {"front": "I / Me", "back": "ខ្ញុំ", "pronunciation": "Kɲom", "context": "Universal 'I'."}},
-            {"type": "vocab_card",
-             "data": {"front": "You", "back": "អ្នក", "pronunciation": "Neak", "context": "Polite 'You'."}},
-            {"type": "vocab_card",
-             "data": {"front": "Health", "back": "សុខ", "pronunciation": "Sok", "context": "Component of 'Fine'."}},
-            {"type": "vocab_card", "data": {"front": "Happiness", "back": "សប្បាយ", "pronunciation": "Sap-baay",
-                                            "context": "Component of 'Fine'."}},
-            {"type": "vocab_card", "data": {"front": "I am fine", "back": "សុខសប្បាយ", "pronunciation": "Sok Sap-baay",
-                                            "context": "Lit: Healthy and Happy."}},
-            {"type": "vocab_card", "data": {"front": "Question Particle", "back": "តើ", "pronunciation": "Tae",
-                                            "context": "Starts a formal question."}},
+             "data": {"front": "You", "back": "អ្នក", "pronunciation": "Neak", "context": "Polite."}},
             {"type": "quiz",
-             "data": {"question": "Informal Hello?", "options": ["សួស្តី", "ជំរាបសួរ"], "correct_answer": "សួស្តី"}},
-            {"type": "theory",
-             "data": {"title": "🎉 Lesson 1.1 Summary", "text": "Sok + Sabay = Healthy + Happy. That's the Khmer way!"}}
+             "data": {"question": "Informal Hello?", "options": ["សួស្តី", "ជំរាបសួរ"], "correct_answer": "សួស្តី"}}
         ]
     },
     102: {
-        "title": "Lesson 1.2: Manners & Goodbyes",
-        "desc": "Essential particles for polite conversation.",
+        "title": "Lesson 1.2: Manners",
+        "desc": "Polite particles.",
         "content": [
-            {"type": "theory",
-             "data": {"title": "Polite Particles", "text": "Men say Baat. Women say Jaa. Don't mix them up!"}},
-            {"type": "vocab_card", "data": {"front": "Bye (Informal)", "back": "លាហើយ", "pronunciation": "Liə-haəj",
-                                            "context": "Leaving already."}},
+            {"type": "theory", "data": {"title": "Polite Particles", "text": "Men say Baat. Women say Jaa."}},
             {"type": "vocab_card",
-             "data": {"front": "Goodbye (Formal)", "back": "ជំរាបលា", "pronunciation": "Cum-riəp Liə",
-                      "context": "Inform I am leaving."}},
-            {"type": "vocab_card", "data": {"front": "Thank you", "back": "អរគុណ", "pronunciation": "Arkun",
-                                            "context": "Glad for goodness."}},
-            {"type": "vocab_card", "data": {"front": "Sorry", "back": "សូមទោស", "pronunciation": "Soum Toh",
-                                            "context": "Ask for forgiveness."}},
+             "data": {"front": "Thank you", "back": "អរគុណ", "pronunciation": "Arkun", "context": "Gratitude."}},
+            {"type": "vocab_card",
+             "data": {"front": "Sorry", "back": "សូមទោស", "pronunciation": "Soum Toh", "context": "Apology."}},
             {"type": "quiz",
-             "data": {"question": "Thank you?", "options": ["Arkun", "Soum Toh"], "correct_answer": "Arkun"}},
-            {"type": "theory", "data": {"title": "🎉 Lesson 1.2 Summary", "text": "Remember: 'Liə' implies leaving."}}
+             "data": {"question": "Thanks?", "options": ["Arkun", "Soum Toh"], "correct_answer": "Arkun"}}
         ]
     },
     103: {
-        "title": "Lesson 1.3: Yes, No & Negation",
-        "desc": "Agreements and the Negation Sandwich.",
+        "title": "Lesson 1.3: Yes/No",
+        "desc": "Negation.",
         "content": [
+            {"type": "theory", "data": {"title": "Negation Sandwich", "text": "Format: Mɨn + Verb + Te."}},
             {"type": "vocab_card",
-             "data": {"front": "Yes (Male)", "back": "បាទ", "pronunciation": "Baat", "context": "Polite particle."}},
-            {"type": "vocab_card",
-             "data": {"front": "Yes (Female)", "back": "ចាស", "pronunciation": "Jaa", "context": "Polite particle."}},
+             "data": {"front": "Yes (M)", "back": "បាទ", "pronunciation": "Baat", "context": "Male."}},
             {"type": "vocab_card",
              "data": {"front": "No", "back": "ទេ", "pronunciation": "Te", "context": "Particle."}},
-            {"type": "vocab_card",
-             "data": {"front": "No (Emphatic)", "back": "អត់ទេ", "pronunciation": "Ot-Te", "context": "Common No."}},
-            {"type": "vocab_card",
-             "data": {"front": "Not (Start)", "back": "មិន", "pronunciation": "Mɨn", "context": "Before verb."}},
-            {"type": "vocab_card",
-             "data": {"front": "I am NOT fine", "back": "ខ្ញុំមិនសុខសប្បាយទេ", "pronunciation": "Kɲom mɨn sok-sabay te",
-                      "context": "Mɨn ... Te sandwich."}},
-            {"type": "quiz", "data": {"question": "Male Yes?", "options": ["Baat", "Jaa"], "correct_answer": "Baat"}},
-            {"type": "theory", "data": {"title": "🎉 Lesson 1.3 Summary", "text": "The Sandwich: Mɨn [Verb] Te."}}
+            {"type": "quiz", "data": {"question": "Male Yes?", "options": ["Baat", "Jaa"], "correct_answer": "Baat"}}
         ]
     }
 }
 
 
 # ==========================================
-# 2. ГЕНЕРАТОР СПРАВОЧНИКА (Автоматика)
+# 2. СБОРЩИК "УМНОГО ПОВТОРЕНИЯ" (Карточки)
 # ==========================================
 
-def generate_guidebook(all_lessons_data):
+def generate_review_mode(all_lessons):
     """
-    Пробегает по всем урокам, собирает слова и правила,
-    и создает контент для Справочника (ID 100).
+    Собирает все карточки в один большой 'Альбом' для повторения.
+    Без квизов, только польза.
     """
-    print("🤖 Auto-generating Guidebook content...")
+    print("🔄 Generating Swipeable Review Mode...")
 
-    collected_vocab = []
-    collected_theory = []
+    review_cards = []
 
-    # 1. Пылесосим данные из уроков
-    for lesson_id, lesson in all_lessons_data.items():
-        for item in lesson['content']:
-            # Собираем слова
-            if item['type'] == 'vocab_card':
-                # Добавляем пометку, из какого это урока (для красоты)
-                item['data']['source_lesson'] = lesson['title']
-                collected_vocab.append(item)
-
-            # Собираем теорию (исключая финальные саммари с '🎉')
-            if item['type'] == 'theory' and '🎉' not in item['data']['title']:
-                collected_theory.append(item)
-
-    # 2. Формируем контент Справочника
-    guidebook_content = []
-
-    # Блок А: Вступление
-    guidebook_content.append({
+    # Карточка-обложка
+    review_cards.append({
         "type": "theory",
         "data": {
-            "title": "📖 Chapter 1 Guidebook",
-            "text": f"Here is everything you learned in Chapter 1.\nTotal words: {len(collected_vocab)}\nGrammar notes: {len(collected_theory)}"
+            "title": "📖 Chapter 1 Review",
+            "text": "Swipe to review all grammar rules and vocabulary from this chapter."
         }
     })
 
-    # Блок Б: Грамматика (сначала повторяем правила)
-    # Добавляем разделитель
-    guidebook_content.append({
-        "type": "theory",
-        "data": {"title": "🧠 Grammar Recap", "text": "Let's review the rules first."}
-    })
-    guidebook_content.extend(collected_theory)
+    # 1. Сначала собираем Грамматику (Rules)
+    review_cards.append(
+        {"type": "theory", "data": {"title": "🧠 Grammar Section", "text": "Let's refresh the rules first."}})
 
-    # Блок В: Все слова (списком карточек)
-    guidebook_content.append({
-        "type": "theory",
-        "data": {"title": "📚 Vocabulary List", "text": "Swipe to review all words from this chapter."}
-    })
-    guidebook_content.extend(collected_vocab)
+    for lid, lesson in all_lessons.items():
+        for item in lesson['content']:
+            # Берем теорию, но без финальных поздравлений
+            if item['type'] == 'theory' and '🎉' not in item['data']['title']:
+                # Добавляем пометку "Из урока такого-то"
+                item_copy = item.copy()
+                item_copy['data']['title'] = f"Rule: {item['data']['title']}"
+                review_cards.append(item_copy)
 
-    return guidebook_content
+    # 2. Потом собираем Словарь (Vocabulary)
+    review_cards.append(
+        {"type": "theory", "data": {"title": "🔊 Vocabulary Section", "text": "Tap to listen and repeat."}})
+
+    for lid, lesson in all_lessons.items():
+        for item in lesson['content']:
+            if item['type'] == 'vocab_card':
+                # Это полноценные карточки! Они будут играть звук!
+                review_cards.append(item)
+
+    # Финиш
+    review_cards.append({
+        "type": "theory",
+        "data": {
+            "title": "✅ Review Complete",
+            "text": "You are ready to move to the next chapter!"
+        }
+    })
+
+    return review_cards
 
 
 # ==========================================
-# 3. ОСНОВНОЙ СКРИПТ ЗАГРУЗКИ
+# 3. ЗАПУСК
 # ==========================================
 
 async def main():
-    print("🌟 Starting SMART Chapter 1 Import...")
-
-    # Шаг 1: Заливаем обычные уроки (101, 102, 103)
+    # 1. Заливаем обычные уроки
     for lesson_id, info in CHAPTER_1_DATA.items():
         await seed_lesson(lesson_id, info["title"], info["desc"], info["content"])
 
-    # Шаг 2: Генерируем и заливаем Справочник (100)
-    guidebook_items = generate_guidebook(CHAPTER_1_DATA)
+    # 2. Заливаем "Урок-Повторение" (ID 100)
+    # Теперь это набор карточек, а не текст.
+    review_content = generate_review_mode(CHAPTER_1_DATA)
 
     await seed_lesson(
         100,
-        "Chapter 1: Full Guidebook",
-        "Auto-generated summary of all Chapter 1 content.",
-        guidebook_items
+        "Chapter 1 Review",  # Нормальное название
+        "Swipe to review all words and rules.",
+        review_content
     )
 
-    print("🚀 All lessons AND Guidebook (100) are synced!")
+    print("🚀 All lessons and Interactive Review (100) are synced!")
 
 
 if __name__ == "__main__":
