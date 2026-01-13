@@ -4,11 +4,10 @@ import { supabase } from '../supabaseClient';
 import {
   Check, Play, Gem, Map as MapIcon,
   BookText, User, BookOpen, Layers,
-  BrainCircuit // Иконка для Review
+  BrainCircuit, RefreshCw // Добавил иконку перезагрузки
 } from 'lucide-react';
-import { getDueItems } from '../services/srsService'; // Логика повторений
+import { getDueItems } from '../services/srsService';
 
-// Конфигурация уровней (Твой красивый дизайн)
 const COURSE_LEVELS = [
   {
     title: "LEVEL 1: SURVIVAL MODE",
@@ -47,75 +46,103 @@ const COURSE_LEVELS = [
 export default function CourseMap() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null); // Добавил состояние ошибки
   const [completedLessons, setCompletedLessons] = useState([]);
   const [chapters, setChapters] = useState({});
-  const [dueCount, setDueCount] = useState(0); // Счетчик для красной точки
+  const [dueCount, setDueCount] = useState(0);
 
   useEffect(() => { fetchAllData(); }, []);
 
   const fetchAllData = async () => {
     try {
       setLoading(true);
+      setError(null);
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate('/login'); return; }
 
-      // 1. Прогресс уроков
-      const { data: progressData } = await supabase
+      // 1. Прогресс
+      const { data: progressData, error: progError } = await supabase
         .from('user_progress')
         .select('lesson_id')
         .eq('user_id', user.id)
         .eq('is_completed', true);
 
+      if (progError) throw progError;
+
       const doneIds = progressData ? progressData.map(item => Number(item.lesson_id)) : [];
       setCompletedLessons(doneIds);
 
-      // 2. Проверяем SRS (Сколько слов нужно повторить для красной точки)
-      const dueItems = await getDueItems(user.id);
-      setDueCount(dueItems.length);
+      // 2. SRS
+      try {
+          const dueItems = await getDueItems(user.id);
+          setDueCount(dueItems.length);
+      } catch (srsErr) {
+          console.warn("SRS fetch failed, skipping:", srsErr);
+      }
 
       // 3. Уроки
-      const { data: allLessons } = await supabase
+      const { data: allLessons, error: lessonError } = await supabase
         .from('lessons')
         .select('*')
         .order('id', { ascending: true });
 
-      // 4. Группировка по главам
+      if (lessonError) throw lessonError;
+      if (!allLessons) { setChapters({}); return; }
+
+      // 4. Группировка (Безопасная версия)
       const chaptersMap = {};
 
+      // Обработка старых ID (<100)
       allLessons.filter(l => l.id < 100).forEach(l => {
         chaptersMap[l.id] = { ...l, subLessons: [] };
       });
 
+      // Обработка новых ID (>=100)
       allLessons.filter(l => l.id >= 100).forEach(l => {
-        const chapterId = Math.floor(l.id / 100);
-        if (!chaptersMap[chapterId]) {
-          chaptersMap[chapterId] = {
-            id: chapterId,
-            title: `Chapter ${chapterId}`,
-            description: 'Coming soon...',
-            subLessons: []
-          };
+        try {
+            const chapterId = Math.floor(l.id / 100);
+            if (!chaptersMap[chapterId]) {
+              chaptersMap[chapterId] = {
+                id: chapterId,
+                title: `Chapter ${chapterId}`,
+                description: 'Coming soon...',
+                subLessons: []
+              };
+            }
+            chaptersMap[chapterId].subLessons.push({ id: l.id, title: l.title });
+        } catch (err) {
+            console.error("Skipping bad lesson:", l, err);
         }
-        chaptersMap[chapterId].subLessons.push({ id: l.id, title: l.title });
       });
 
       setChapters(chaptersMap);
     } catch (e) {
-      console.error("Map fetch error:", e);
+      console.error("CRITICAL MAP ERROR:", e);
+      setError(e.message);
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) return (
-    <div className="h-[100dvh] bg-black flex items-center justify-center text-cyan-400 font-black italic tracking-widest">
-      LOADING WORLD MAP...
+    <div className="h-[100dvh] bg-black flex flex-col items-center justify-center text-cyan-400 font-black italic tracking-widest gap-4">
+      <div className="animate-spin"><RefreshCw size={32} /></div>
+      <span>LOADING WORLD MAP...</span>
+    </div>
+  );
+
+  // Если произошла ошибка - показываем кнопку перезагрузки
+  if (error) return (
+    <div className="h-[100dvh] bg-black flex flex-col items-center justify-center text-red-500 p-6 text-center">
+        <h2 className="text-xl font-black mb-4">SYSTEM ERROR</h2>
+        <p className="text-sm text-gray-400 mb-8">{error}</p>
+        <button onClick={fetchAllData} className="px-6 py-3 bg-white text-black rounded-xl font-bold uppercase">Retry</button>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-black text-white pb-40 font-sans">
-
       {/* HEADER */}
       <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-40">
         <h1 className="text-2xl font-black tracking-tighter uppercase italic">
@@ -129,9 +156,7 @@ export default function CourseMap() {
 
       {/* КАРТА УРОВНЕЙ */}
       <div className="max-w-xl mx-auto space-y-12 pb-20 mt-6">
-
         {COURSE_LEVELS.map((level, levelIndex) => {
-          // Фильтруем главы для уровня
           const levelChapters = Object.values(chapters).filter(ch =>
             ch.id >= level.range[0] && ch.id <= level.range[1]
           );
@@ -140,8 +165,7 @@ export default function CourseMap() {
 
           return (
             <div key={levelIndex} className="relative">
-
-              {/* ЗАГОЛОВОК УРОВНЯ (Sticky) */}
+              {/* Sticky Header */}
               <div className={`sticky top-[73px] z-30 py-4 px-6 backdrop-blur-xl border-b border-t ${level.border} bg-gradient-to-r ${level.bg} bg-black/60`}>
                 <div className="flex items-center gap-3">
                   <Layers size={20} className={level.color} />
@@ -169,7 +193,6 @@ export default function CourseMap() {
                       <div className={`bg-gray-900/40 border rounded-[2.5rem] p-6 transition-all duration-500 hover:bg-gray-900/60
                         ${isChapterFullDone ? 'border-emerald-500/30 shadow-[0_0_30px_-10px_rgba(16,185,129,0.2)]' : 'border-white/5'}`}>
 
-                        {/* Шапка главы */}
                         <div className="flex justify-between items-start mb-6">
                           <div className="max-w-[70%]">
                             <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1 block">
@@ -190,7 +213,6 @@ export default function CourseMap() {
                           </button>
                         </div>
 
-                        {/* Список уроков */}
                         {chapter.subLessons.length > 0 && (
                           <div className="space-y-2">
                             {chapter.subLessons.map((sub) => {
@@ -229,7 +251,7 @@ export default function CourseMap() {
         })}
       </div>
 
-      {/* НИЖНЕЕ МЕНЮ (4 КНОПКИ) */}
+      {/* FOOTER */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-2xl border-t border-white/5 px-6 pt-4 pb-8 flex justify-between items-center z-50 max-w-lg mx-auto">
         <button onClick={() => navigate('/map')} className="text-cyan-400 flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
           <MapIcon size={24} />

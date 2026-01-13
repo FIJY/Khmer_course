@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import VisualDecoder from '../components/VisualDecoder';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
@@ -7,6 +6,8 @@ import {
   AlertCircle, Trophy, BookOpen
 } from 'lucide-react';
 import { updateSRSItem } from '../services/srsService';
+// 1. ВАЖНО: Импортируем компонент VisualDecoder
+import VisualDecoder from '../components/VisualDecoder';
 
 export default function LessonPlayer() {
   const { id } = useParams();
@@ -50,7 +51,6 @@ export default function LessonPlayer() {
 
       if (error) {
         console.error("DB Error:", error);
-        alert(`Ошибка сохранения: ${error.message}`);
       }
     } catch (err) {
       console.error("System error:", err);
@@ -61,7 +61,7 @@ export default function LessonPlayer() {
     const currentItem = items[step];
     const { data: { session } } = await supabase.auth.getSession();
 
-    // SRS логика
+    // SRS логика (только для карточек и квизов)
     if (session?.user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
       try {
         await updateSRSItem(session.user.id, currentItem.id, quality);
@@ -93,7 +93,7 @@ export default function LessonPlayer() {
 
   if (loading) return <div className="h-[100dvh] bg-black flex items-center justify-center text-cyan-400 font-black italic">SYNCING...</div>;
 
-  // ЭКРАН ПОБЕДЫ (Тоже центрируем)
+  // ЭКРАН ПОБЕДЫ
   if (isFinished) {
     return (
       <div className="min-h-screen bg-black flex justify-center items-center">
@@ -116,10 +116,7 @@ export default function LessonPlayer() {
   const type = items[step]?.type;
 
   return (
-    // ГЛАВНЫЙ КОНТЕЙНЕР (Центрирует "Телефон" на экране)
     <div className="h-[100dvh] bg-black flex justify-center font-sans overflow-hidden">
-
-      {/* ТЕЛЕФОН (Ограничитель ширины) */}
       <div className="w-full max-w-lg h-full flex flex-col relative bg-black shadow-2xl border-x border-white/5">
 
         {/* HEADER */}
@@ -139,13 +136,16 @@ export default function LessonPlayer() {
         {/* MAIN CONTENT */}
         <main className="flex-1 overflow-y-auto px-6 py-4 flex flex-col items-center z-10 custom-scrollbar">
           <div className="w-full my-auto py-8">
+
             {/* --- НОВЫЙ БЛОК: VISUAL DECODER --- */}
+            {/* 2. ВАЖНО: Добавляем рендер VisualDecoder */}
             {type === 'visual_decoder' && (
               <VisualDecoder
                 data={current}
-                onComplete={() => handleNext(5)} // Сразу ставим оценку 5, так как это обучающее упражнение
+                onComplete={() => handleNext(5)}
               />
             )}
+
             {/* КАРТОЧКА СЛОВА */}
             {type === 'vocab_card' && (
               <div className="w-full cursor-pointer" onClick={() => { setIsFlipped(!isFlipped); if(!isFlipped) playAudio(current.audio); }}>
@@ -199,7 +199,8 @@ export default function LessonPlayer() {
         </main>
 
         {/* FOOTER: Кнопка "Continue" */}
-        {type !== 'quiz' && (
+        {/* Скрываем кнопку, если это quiz или visual_decoder (у них свои кнопки) */}
+        {type !== 'quiz' && type !== 'visual_decoder' && (
           <footer className="px-8 pt-4 pb-16 flex-shrink-0 bg-black/80 backdrop-blur-md border-t border-white/5 z-20">
             <button onClick={() => handleNext(3)}
               className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all">
@@ -208,7 +209,7 @@ export default function LessonPlayer() {
           </footer>
         )}
 
-        {/* MODAL FEEDBACK: Появляется поверх квиза, но ВНУТРИ "телефона" */}
+        {/* MODAL FEEDBACK ДЛЯ КВИЗА */}
         {selectedOption && (
           <div className="absolute inset-0 z-[100] flex flex-col justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-gray-900 border-t-2 border-white/10 rounded-t-[3rem] p-10 pb-16 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] translate-z-0 animate-in slide-in-from-bottom-full duration-500">
