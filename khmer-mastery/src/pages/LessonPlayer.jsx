@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import VisualDecoder from '../components/VisualDecoder';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
@@ -138,7 +139,13 @@ export default function LessonPlayer() {
         {/* MAIN CONTENT */}
         <main className="flex-1 overflow-y-auto px-6 py-4 flex flex-col items-center z-10 custom-scrollbar">
           <div className="w-full my-auto py-8">
-
+            {/* --- НОВЫЙ БЛОК: VISUAL DECODER --- */}
+            {type === 'visual_decoder' && (
+              <VisualDecoder
+                data={current}
+                onComplete={() => handleNext(5)} // Сразу ставим оценку 5, так как это обучающее упражнение
+              />
+            )}
             {/* КАРТОЧКА СЛОВА */}
             {type === 'vocab_card' && (
               <div className="w-full cursor-pointer" onClick={() => { setIsFlipped(!isFlipped); if(!isFlipped) playAudio(current.audio); }}>
