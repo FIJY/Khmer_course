@@ -1,6 +1,9 @@
 import asyncio
 from database_engine import seed_lesson, supabase
 
+# ==========================================
+# 1. ДАННЫЕ УРОКОВ (Оставляем чистыми)
+# ==========================================
 CHAPTER_1_DATA = {
     101: {
         "title": "Lesson 1.1: Hello",
@@ -50,58 +53,84 @@ CHAPTER_1_DATA = {
 }
 
 
-def inject_guidebook_into_lesson(lesson_id, lesson_data):
+# ==========================================
+# 2. ГЕНЕРАТОР "СКУЧНОГО СПИСКА" (Для Урока 100)
+# ==========================================
+
+def generate_full_guidebook(all_lessons):
     """
-    Создает шпаргалку, маскируя её под 'theory',
-    но с флагом 'is_guidebook', чтобы база не ругалась.
+    Собирает всё в одну большую текстовую 'простыню'.
     """
-    print(f"   📝 Generating hidden cheat-sheet for Lesson {lesson_id}...")
+    print("📜 Generating Master Cheat Sheet...")
 
-    list_text = f"## {lesson_data['title']}\n\n"
-    list_text += "### 🧠 Rules\n"
-    has_theory = False
-    for item in lesson_data['content']:
-        if item['type'] == 'theory':
-            list_text += f"* **{item['data']['title']}:** {item['data']['text']}\n"
-            has_theory = True
-    if not has_theory: list_text += "No grammar rules in this lesson.\n"
+    # Заголовок (Markdown)
+    full_text = "# Chapter 1 Vocabulary & Rules\n\n"
 
-    list_text += "\n### 📚 Vocabulary\n"
-    for item in lesson_data['content']:
-        if item['type'] == 'vocab_card':
-            khmer = item['data']['back']
-            eng = item['data']['front']
-            pron = item['data']['pronunciation']
-            list_text += f"* **{khmer}** ({pron}) — {eng}\n"
+    for lid, lesson in all_lessons.items():
+        # Добавляем разделитель
+        full_text += f"## {lesson['title']}\n"
 
-    # ХИТРОСТЬ: Используем тип 'theory' (он разрешен), но добавляем флаг
-    guidebook_item = {
+        # 1. Сначала правила этого урока
+        theory_text = ""
+        for item in lesson['content']:
+            if item['type'] == 'theory':
+                theory_text += f"* 💡 **{item['data']['title']}**: {item['data']['text']}\n"
+
+        if theory_text:
+            full_text += "### Grammar\n" + theory_text + "\n"
+
+        # 2. Потом слова этого урока
+        vocab_text = ""
+        for item in lesson['content']:
+            if item['type'] == 'vocab_card':
+                khmer = item['data']['back']
+                eng = item['data']['front']
+                pron = item['data']['pronunciation']
+                # Формат: • Слово (Произношение) - Перевод
+                vocab_text += f"* **{khmer}** ({pron}) — {eng}\n"
+
+        if vocab_text:
+            full_text += "### Words\n" + vocab_text + "\n"
+
+        full_text += "---\n\n"
+
+    # Создаем ОДНУ карточку 'theory', в которой лежит весь этот текст
+    guidebook_content = [{
         "type": "theory",
         "data": {
-            "title": "Cheat Sheet",
-            "text": "Hidden content",  # Заглушка
-            "markdown": list_text,
-            "is_guidebook": True  # <--- ФРОНТЕНД БУДЕТ ИСКАТЬ ЭТОТ ФЛАГ
+            "title": "Full Summary",  # Заголовок карточки
+            "text": "Scroll down to see all words.",  # Подзаголовок
+            "markdown": full_text  # Основной текст (React должен уметь рендерить Markdown)
         }
-    }
+    }]
 
-    lesson_data['content'].append(guidebook_item)
-    return lesson_data
+    return guidebook_content
 
+
+# ==========================================
+# 3. ЗАПУСК
+# ==========================================
 
 async def main():
-    print("🗑️ Cleaning up...")
-    try:
-        supabase.table("lessons").delete().eq("id", 100).execute()
-    except:
-        pass
+    print("🌟 Syncing Chapter 1 Lessons...")
 
-    print("\n🌟 Updating Lessons...")
+    # 1. Заливаем уроки (101-103)
     for lesson_id, info in CHAPTER_1_DATA.items():
-        updated_info = inject_guidebook_into_lesson(lesson_id, info)
-        await seed_lesson(lesson_id, updated_info["title"], updated_info["desc"], updated_info["content"])
+        await seed_lesson(lesson_id, info["title"], info["desc"], info["content"])
 
-    print("🚀 Success! Frontend instruction: Find item where data.is_guidebook == True")
+    # 2. ВОЗВРАЩАЕМ Урок 100 (Guidebook), но с новым наполнением
+    # Без него кнопка пишет "No study materials"
+    print("📘 Restoring Guidebook Source (Lesson 100)...")
+    guidebook_items = generate_full_guidebook(CHAPTER_1_DATA)
+
+    await seed_lesson(
+        100,
+        "Guidebook",  # Название
+        "Cheat sheet for Chapter 1",
+        guidebook_items
+    )
+
+    print("🚀 Done! The 'Book Icon' should now show the list again.")
 
 
 if __name__ == "__main__":
