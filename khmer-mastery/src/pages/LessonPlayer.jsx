@@ -2,11 +2,13 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
-  Volume2, ArrowRight, X, Gem, CheckCircle2,
-  AlertCircle, Trophy, BookOpen, ChevronLeft, RotateCcw, Frown
+  Volume2, X, CheckCircle2, AlertCircle,
+  Trophy, BookOpen, ChevronLeft, RotateCcw, Frown
 } from 'lucide-react';
 import { updateSRSItem } from '../services/srsService';
 import VisualDecoder from '../components/VisualDecoder';
+import MobileLayout from '../components/Layout/MobileLayout';
+import Button from '../components/UI/Button';
 
 export default function LessonPlayer() {
   const { id } = useParams();
@@ -15,35 +17,29 @@ export default function LessonPlayer() {
   const [lessonInfo, setLessonInfo] = useState(null);
   const [items, setItems] = useState([]);
   const [step, setStep] = useState(0);
-
-  // --- НОВЫЕ СОСТОЯНИЯ ---
-  const [score, setScore] = useState(0);        // Счетчик правильных ответов
-  const [quizCount, setQuizCount] = useState(0); // Всего квизов в уроке
-  const [canAdvance, setCanAdvance] = useState(false); // Можно ли идти дальше?
-  const [hasInteracted, setHasInteracted] = useState(false); // Для Vocab: перевернули ли карточку?
-
+  const [score, setScore] = useState(0);
+  const [quizCount, setQuizCount] = useState(0);
+  const [canAdvance, setCanAdvance] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isFinished, setIsFinished] = useState(false);
-  const [lessonPassed, setLessonPassed] = useState(false); // Сдал или провалил?
+  const [lessonPassed, setLessonPassed] = useState(false);
 
-  // Аудио реф
   const audioRef = useRef(null);
 
   useEffect(() => { fetchLessonData(); }, [id]);
 
-  // Сбрасываем блокировку при смене шага
   useEffect(() => {
     setCanAdvance(false);
     setHasInteracted(false);
     setSelectedOption(null);
     setIsFlipped(false);
 
-    // Если это Theory - даем 3 секунды на чтение перед разблокировкой
     if (items[step]?.type === 'theory') {
-        const timer = setTimeout(() => setCanAdvance(true), 3000); // 3 сек задержка
-        return () => clearTimeout(timer);
+      const timer = setTimeout(() => setCanAdvance(true), 2000);
+      return () => clearTimeout(timer);
     }
   }, [step, items]);
 
@@ -56,126 +52,63 @@ export default function LessonPlayer() {
         .select('*').eq('lesson_id', id).order('order_index', { ascending: true });
 
       setItems(itemsData || []);
-      // Считаем сколько всего квизов для подсчета %
-      const totalQuizzes = itemsData.filter(i => i.type === 'quiz').length;
-      setQuizCount(totalQuizzes);
-
+      setQuizCount(itemsData.filter(i => i.type === 'quiz').length);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
 
-  const markLessonCompleted = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      await supabase.from('user_progress').upsert({
-          user_id: user.id,
-          lesson_id: Number(id),
-          is_completed: true,
-          completed_at: new Date().toISOString(),
-          score: score // (Опционально) Можно сохранять счет в базу, если добавишь колонку
-        }, { onConflict: 'user_id,lesson_id' });
-    } catch (err) { console.error("System error:", err); }
-  };
-
   const handleNext = async (quality = 3) => {
     const currentItem = items[step];
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    // SRS Update
-    if (session?.user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
-      try { await updateSRSItem(session.user.id, currentItem.id, quality); }
-      catch (e) { console.error("SRS update failed:", e); }
+    if (user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
+      await updateSRSItem(user.id, currentItem.id, quality);
     }
 
-    if (step < items.length - 1) {
-      setStep(step + 1);
-    } else {
-      finishLesson();
-    }
+    if (step < items.length - 1) setStep(step + 1);
+    else finishLesson();
   };
 
   const finishLesson = async () => {
-    // ЛОГИКА ЗАЧЕТА:
-    // Если квизов не было вообще -> Сдал (теоретический урок)
-    // Если были -> Нужен порог 70%
-    const threshold = 0.7;
-    const pass = quizCount === 0 || (score / quizCount) >= threshold;
-
+    const pass = quizCount === 0 || (score / quizCount) >= 0.7;
     setLessonPassed(pass);
     setIsFinished(true);
-
     if (pass) {
-        await markLessonCompleted();
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from('user_progress').upsert({
+        user_id: user.id, lesson_id: Number(id), is_completed: true, score
+      });
     }
   };
 
-  const handlePrev = () => {
-    if (step > 0) setStep(step - 1);
-  };
-
-  const playAudio = (audioFile) => {
-    if (!audioFile) return;
-    if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-    }
-    const audio = new Audio(`/sounds/${audioFile}`);
+  const playAudio = (file) => {
+    if (!file) return;
+    if (audioRef.current) { audioRef.current.pause(); }
+    const audio = new Audio(`/sounds/${file}`);
     audioRef.current = audio;
     audio.play().catch(() => {});
   };
 
-  const getAudioForOption = (text) => {
-    if (!text) return null;
-    const cleanText = text.trim();
-    const vocabCard = items.find(item =>
-      item.type === 'vocab_card' && (
-         item.data.back?.trim() === cleanText ||
-         item.data.front?.trim() === cleanText
-      )
-    );
-    return vocabCard?.data?.audio || null;
-  };
+  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic">SYNCING...</div>;
 
-  const shuffledOptions = useMemo(() => {
-    const current = items[step];
-    if (current?.type !== 'quiz') return [];
-    return [...current.data.options].sort(() => Math.random() - 0.5);
-  }, [items, step]);
-
-  // --- RENDERING ---
-
-  if (loading) return <div className="h-[100dvh] bg-black flex items-center justify-center text-cyan-400 font-black italic">SYNCING...</div>;
-
-  // ЭКРАН ЗАВЕРШЕНИЯ (УСПЕХ ИЛИ ПРОВАЛ)
   if (isFinished) {
     return (
-      <div className="min-h-screen bg-black flex justify-center items-center">
-        <div className="w-full max-w-lg h-[100dvh] flex flex-col items-center justify-center p-8 text-center border-x border-white/5 shadow-2xl">
-
-          {lessonPassed ? (
-              // SUCCESS SCREEN
-              <>
-                <Trophy size={80} className="text-emerald-400 mb-8 animate-bounce" />
-                <h1 className="text-4xl font-black italic uppercase mb-2 text-white">Lesson Complete!</h1>
-                <p className="text-gray-400 mb-8">Score: {score}/{quizCount}</p>
-                <button onClick={() => navigate('/map')} className="w-full max-w-sm py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-xl">Back to Map</button>
-              </>
-          ) : (
-              // FAILURE SCREEN
-              <>
-                <Frown size={80} className="text-red-500 mb-8" />
-                <h1 className="text-3xl font-black italic uppercase mb-2 text-white">Review Needed</h1>
-                <p className="text-gray-400 mb-8 px-4">You scored {score}/{quizCount}. You need 70% to pass.</p>
-                <button onClick={() => window.location.reload()} className="w-full max-w-sm py-5 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2">
-                    <RotateCcw size={20} /> Try Again
-                </button>
-                <button onClick={() => navigate('/map')} className="mt-4 text-gray-500 text-sm font-bold uppercase tracking-widest hover:text-white">Give Up</button>
-              </>
-          )}
-
-        </div>
-      </div>
+      <MobileLayout withNav={false} className="justify-center items-center text-center p-8">
+        {lessonPassed ? (
+          <>
+            <Trophy size={80} className="text-emerald-400 mb-8 animate-bounce" />
+            <h1 className="text-4xl font-black italic uppercase mb-2">Complete!</h1>
+            <p className="text-gray-400 mb-8 text-xl font-bold">Score: {score}/{quizCount}</p>
+            <Button onClick={() => navigate('/map')}>Back to Map</Button>
+          </>
+        ) : (
+          <>
+            <Frown size={80} className="text-red-500 mb-8" />
+            <h1 className="text-3xl font-black italic uppercase mb-2">Review Needed</h1>
+            <Button variant="danger" onClick={() => window.location.reload()}>Try Again</Button>
+          </>
+        )}
+      </MobileLayout>
     );
   }
 
@@ -183,150 +116,93 @@ export default function LessonPlayer() {
   const type = items[step]?.type;
 
   return (
-    <div className="h-[100dvh] bg-black flex justify-center font-sans overflow-hidden">
-      <div className="w-full max-w-lg h-full flex flex-col relative bg-black shadow-2xl border-x border-white/5">
-
-        {/* HEADER */}
-        <header className="p-4 flex-shrink-0 border-b border-white/5 bg-gray-900/20 z-20">
-          <div className="flex justify-between items-center w-full">
-            <div className="flex items-center gap-2">
-                <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white transition-colors"><X size={24} /></button>
-                <button onClick={handlePrev} disabled={step === 0} className={`p-2 transition-colors flex items-center gap-1 ${step === 0 ? 'opacity-0 pointer-events-none' : 'text-gray-400 hover:text-white'}`}><ChevronLeft size={24} /></button>
-            </div>
-            <div className="text-center flex-1 px-4">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500 mb-1 truncate">{lessonInfo?.title}</h2>
-              <div className="w-24 h-1 bg-gray-900 rounded-full overflow-hidden mx-auto">
-                <div className="h-full bg-cyan-500 transition-all duration-500" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
-              </div>
-            </div>
-            <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs">
-                <CheckCircle2 size={16}/> {score}
-            </div>
-          </div>
-        </header>
-
-        {/* MAIN CONTENT */}
-        <main className="flex-1 overflow-y-auto px-6 py-4 flex flex-col items-center z-10 custom-scrollbar">
-          <div className="w-full my-auto py-8">
-
-            {/* VISUAL DECODER (Всегда проходим до конца) */}
-            {type === 'visual_decoder' && (
-              <VisualDecoder data={current} onComplete={() => handleNext(5)} />
-            )}
-
-            {/* VOCAB CARD (Требует переворота) */}
-            {type === 'vocab_card' && (
-              <div className="w-full cursor-pointer" onClick={() => {
-                  setIsFlipped(!isFlipped);
-                  if(!isFlipped) {
-                      playAudio(current.audio);
-                      setHasInteracted(true); // ЗАЧЕТ ВЗАИМОДЕЙСТВИЯ
-                      setCanAdvance(true);    // МОЖНО ИДТИ ДАЛЬШЕ
-                  }
-              }}>
-                <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
-                  <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
-                    <span className="text-gray-600 font-black text-[10px] uppercase mb-8 tracking-widest">Meaning</span>
-                    <h2 className="text-3xl font-black italic tracking-tighter leading-tight">{current.front}</h2>
-                    {!hasInteracted && <div className="absolute bottom-6 text-cyan-500 text-xs font-bold animate-pulse uppercase tracking-widest">Tap to flip</div>}
-                  </div>
-                  <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center">
-                    <span className="text-cyan-500 font-black text-[10px] uppercase mb-8 tracking-widest">Khmer</span>
-                    <h2 className="text-4xl font-black mb-3">{current.back}</h2>
-                    <p className="text-xl text-cyan-400 font-bold italic mb-6">{current.pronunciation}</p>
-                    <div className="p-5 bg-cyan-500 rounded-full text-black shadow-lg shadow-cyan-500/20"><Volume2 size={28} /></div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* QUIZ (Считаем очки) */}
-            {type === 'quiz' && (
-              <div className="w-full">
-                 <h2 className="text-xl font-black mb-10 italic uppercase text-center tracking-tighter leading-tight">{current.question}</h2>
-                 <div className="space-y-3">
-                   {shuffledOptions.map((opt, i) => {
-                     const isCorrect = opt === current.correct_answer;
-                     const isSelected = selectedOption === opt;
-                     let btnClass = "bg-gray-900/50 border-white/5 text-white";
-                     if (selectedOption) {
-                       if (isCorrect) btnClass = "bg-emerald-600 border-emerald-400 text-white";
-                       else if (isSelected) btnClass = "bg-red-600 border-red-400 text-white shadow-[0_0_20px_rgba(220,38,38,0.2)]";
-                       else btnClass = "bg-gray-900/20 border-white/5 text-gray-700";
-                     }
-                     return (
-                       <button key={i} disabled={!!selectedOption}
-                         onClick={() => {
-                            setSelectedOption(opt);
-                            playAudio(isCorrect ? 'success.mp3' : 'error.mp3');
-                            const wordAudio = getAudioForOption(opt);
-                            if (wordAudio) setTimeout(() => playAudio(wordAudio), 800);
-
-                            // ЛОГИКА ОЧКОВ
-                            if (isCorrect) {
-                                setScore(prev => prev + 1);
-                                setCanAdvance(true); // Разрешаем идти дальше
-                            } else {
-                                // Если ошибся - тоже разрешаем идти, но очков не даем
-                                setCanAdvance(true);
-                            }
-                         }}
-                         className={`w-full p-5 border rounded-2xl text-left font-bold transition-all text-sm ${btnClass}`}
-                       >
-                         {opt}
-                       </button>
-                     );
-                   })}
-                 </div>
-              </div>
-            )}
-
-            {/* THEORY (Таймер) */}
-            {type === 'theory' && (
-              <div className="w-full bg-gray-900 border border-white/10 p-10 rounded-[3.5rem] text-center">
-                <BookOpen className="text-cyan-500/20 mx-auto mb-4" size={32} />
-                <h2 className="text-xl font-black italic uppercase text-cyan-400 mb-4 tracking-tighter leading-tight">{current.title}</h2>
-                <p className="text-base text-gray-300 italic leading-relaxed">{current.text}</p>
-                {!canAdvance && <p className="mt-4 text-xs text-gray-600 animate-pulse">Read carefully...</p>}
-              </div>
-            )}
-          </div>
-        </main>
-
-        {/* FOOTER (БЛОКИРУЕМ КНОПКУ, ЕСЛИ НЕ ВЫПОЛНЕНО УСЛОВИЕ) */}
-        {type !== 'quiz' && type !== 'visual_decoder' && (
-          <footer className="px-8 pt-4 pb-16 flex-shrink-0 bg-black/80 backdrop-blur-md border-t border-white/5 z-20">
+    <MobileLayout withNav={false}>
+      <header className="p-4 border-b border-white/5 bg-gray-900/20">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white"><X size={24} /></button>
             <button
-              onClick={() => handleNext(3)}
-              disabled={!canAdvance} // <--- ВОТ ГЛАВНАЯ БЛОКИРОВКА
-              className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${
-                  canAdvance
-                  ? 'bg-white text-black active:scale-95'
-                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-              }`}
+              onClick={() => setStep(step - 1)}
+              disabled={step === 0}
+              className={`p-2 transition-all ${step === 0 ? 'opacity-0 pointer-events-none' : 'text-gray-400 hover:text-white'}`}
             >
-              {canAdvance ? "Continue" : (type === 'vocab_card' ? "Flip Card First" : "Wait...")}
-              {canAdvance && <ArrowRight size={20} />}
+              <ChevronLeft size={24} />
             </button>
-          </footer>
-        )}
+          </div>
+          <div className="text-center flex-1">
+            <h2 className="text-[10px] font-black uppercase tracking-widest text-cyan-500 mb-1">{lessonInfo?.title}</h2>
+            <div className="w-20 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden">
+              <div className="h-full bg-cyan-500 transition-all" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
+            </div>
+          </div>
+          <div className="flex items-center gap-1 text-emerald-500 font-black text-sm w-12 justify-end">
+            <CheckCircle2 size={16} /> {score}
+          </div>
+        </div>
+      </header>
 
-        {/* QUIZ FEEDBACK (КНОПКА NEXT ПОЯВЛЯЕТСЯ ТОЛЬКО ПОСЛЕ ОТВЕТА) */}
-        {selectedOption && type === 'quiz' && (
-          <div className="absolute inset-0 z-[100] flex flex-col justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-gray-900 border-t-2 border-white/10 rounded-t-[3rem] p-10 pb-16 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-full duration-500">
-                <div className="flex items-center gap-4 mb-4">
-                  {selectedOption === current.correct_answer ? <CheckCircle2 size={32} className="text-emerald-500" /> : <AlertCircle size={32} className="text-red-500" />}
-                  <div>
-                    <h3 className={`text-xl font-black uppercase italic ${selectedOption === current.correct_answer ? 'text-emerald-500' : 'text-red-500'}`}>{selectedOption === current.correct_answer ? 'Awesome!' : 'Correct Answer:'}</h3>
-                    {selectedOption !== current.correct_answer && <p className="text-white font-bold text-lg">{current.correct_answer}</p>}
-                  </div>
-                </div>
-                <button onClick={() => handleNext(selectedOption === current.correct_answer ? 5 : 1)} className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl">Next Step <ArrowRight size={20} /></button>
+      <main className="flex-1 px-6 py-8 flex flex-col items-center justify-center">
+        {type === 'visual_decoder' && <VisualDecoder data={current} onComplete={() => handleNext(5)} />}
+
+        {type === 'vocab_card' && (
+          <div className="w-full h-80 perspective-1000 cursor-pointer" onClick={() => { setIsFlipped(!isFlipped); if(!isFlipped) { playAudio(current.audio); setCanAdvance(true); }}}>
+            <div className={`relative w-full h-full transition-all duration-500 preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+              <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[2.5rem] border border-white/5 flex flex-col items-center justify-center p-6">
+                <span className="text-gray-500 text-[10px] font-black uppercase mb-4">Meaning</span>
+                <h2 className="text-3xl font-black italic">{current.front}</h2>
+              </div>
+              <div className="absolute inset-0 backface-hidden rotate-y-180 bg-gray-900 rounded-[2.5rem] border-2 border-cyan-500/30 flex flex-col items-center justify-center p-6 text-center">
+                <h2 className="text-4xl font-black mb-2">{current.back}</h2>
+                <p className="text-cyan-400 font-bold italic mb-4">{current.pronunciation}</p>
+                <div className="w-12 h-12 bg-cyan-500 rounded-full flex items-center justify-center text-black shadow-lg"><Volume2 size={24} /></div>
+              </div>
             </div>
           </div>
         )}
-      </div>
-    </div>
+
+        {type === 'quiz' && (
+          <div className="w-full">
+            <h2 className="text-xl font-black mb-8 italic text-center uppercase">{current.question}</h2>
+            <div className="space-y-3">
+              {current.options.map((opt, i) => (
+                <button key={i} disabled={!!selectedOption}
+                  onClick={() => {
+                    setSelectedOption(opt);
+                    const correct = opt === current.correct_answer;
+                    playAudio(correct ? 'success.mp3' : 'error.mp3');
+                    if (correct) setScore(s => s + 1);
+                    setCanAdvance(true);
+                  }}
+                  className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${
+                    selectedOption === opt
+                      ? (opt === current.correct_answer ? 'bg-emerald-600 border-emerald-400' : 'bg-red-600 border-red-400')
+                      : (selectedOption && opt === current.correct_answer ? 'bg-emerald-600/30 border-emerald-500/50' : 'bg-gray-900 border-white/5')
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {type === 'theory' && (
+          <div className="w-full bg-gray-900 border border-white/10 p-8 rounded-[2.5rem] text-center">
+            <BookOpen className="text-cyan-500 mx-auto mb-4 opacity-20" size={40} />
+            <h2 className="text-xl font-black italic uppercase text-cyan-400 mb-4">{current.title}</h2>
+            <p className="text-gray-300 leading-relaxed italic">{current.text}</p>
+          </div>
+        )}
+      </main>
+
+      <footer className="p-6 pb-12">
+        <Button
+          onClick={() => handleNext(selectedOption ? (selectedOption === current.correct_answer ? 5 : 1) : 3)}
+          disabled={!canAdvance}
+        >
+          Next <ChevronLeft size={20} className="rotate-180" />
+        </Button>
+      </footer>
+    </MobileLayout>
   );
 }
