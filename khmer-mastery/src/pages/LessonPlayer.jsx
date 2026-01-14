@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
   Volume2, ArrowRight, X, Gem, CheckCircle2,
-  AlertCircle, Trophy, BookOpen, ChevronLeft
+  AlertCircle, Trophy, BookOpen, ChevronLeft, RotateCcw, Frown
 } from 'lucide-react';
 import { updateSRSItem } from '../services/srsService';
 import VisualDecoder from '../components/VisualDecoder';
@@ -15,12 +15,37 @@ export default function LessonPlayer() {
   const [lessonInfo, setLessonInfo] = useState(null);
   const [items, setItems] = useState([]);
   const [step, setStep] = useState(0);
+
+  // --- НОВЫЕ СОСТОЯНИЯ ---
+  const [score, setScore] = useState(0);        // Счетчик правильных ответов
+  const [quizCount, setQuizCount] = useState(0); // Всего квизов в уроке
+  const [canAdvance, setCanAdvance] = useState(false); // Можно ли идти дальше?
+  const [hasInteracted, setHasInteracted] = useState(false); // Для Vocab: перевернули ли карточку?
+
   const [isFlipped, setIsFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isFinished, setIsFinished] = useState(false);
+  const [lessonPassed, setLessonPassed] = useState(false); // Сдал или провалил?
+
+  // Аудио реф
+  const audioRef = useRef(null);
 
   useEffect(() => { fetchLessonData(); }, [id]);
+
+  // Сбрасываем блокировку при смене шага
+  useEffect(() => {
+    setCanAdvance(false);
+    setHasInteracted(false);
+    setSelectedOption(null);
+    setIsFlipped(false);
+
+    // Если это Theory - даем 3 секунды на чтение перед разблокировкой
+    if (items[step]?.type === 'theory') {
+        const timer = setTimeout(() => setCanAdvance(true), 3000); // 3 сек задержка
+        return () => clearTimeout(timer);
+    }
+  }, [step, items]);
 
   const fetchLessonData = async () => {
     try {
@@ -29,7 +54,12 @@ export default function LessonPlayer() {
       setLessonInfo(lesson);
       const { data: itemsData } = await supabase.from('lesson_items')
         .select('*').eq('lesson_id', id).order('order_index', { ascending: true });
+
       setItems(itemsData || []);
+      // Считаем сколько всего квизов для подсчета %
+      const totalQuizzes = itemsData.filter(i => i.type === 'quiz').length;
+      setQuizCount(totalQuizzes);
+
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -42,7 +72,8 @@ export default function LessonPlayer() {
           user_id: user.id,
           lesson_id: Number(id),
           is_completed: true,
-          completed_at: new Date().toISOString()
+          completed_at: new Date().toISOString(),
+          score: score // (Опционально) Можно сохранять счет в базу, если добавишь колонку
         }, { onConflict: 'user_id,lesson_id' });
     } catch (err) { console.error("System error:", err); }
   };
@@ -51,6 +82,7 @@ export default function LessonPlayer() {
     const currentItem = items[step];
     const { data: { session } } = await supabase.auth.getSession();
 
+    // SRS Update
     if (session?.user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
       try { await updateSRSItem(session.user.id, currentItem.id, quality); }
       catch (e) { console.error("SRS update failed:", e); }
@@ -58,31 +90,38 @@ export default function LessonPlayer() {
 
     if (step < items.length - 1) {
       setStep(step + 1);
-      setIsFlipped(false);
-      setSelectedOption(null);
     } else {
-      await markLessonCompleted();
-      setIsFinished(true);
+      finishLesson();
     }
   };
 
-  // ФУНКЦИЯ НАЗАД
-  const handlePrev = () => {
-    if (step > 0) {
-      setStep(step - 1);
-      setIsFlipped(false);
-      setSelectedOption(null);
+  const finishLesson = async () => {
+    // ЛОГИКА ЗАЧЕТА:
+    // Если квизов не было вообще -> Сдал (теоретический урок)
+    // Если были -> Нужен порог 70%
+    const threshold = 0.7;
+    const pass = quizCount === 0 || (score / quizCount) >= threshold;
+
+    setLessonPassed(pass);
+    setIsFinished(true);
+
+    if (pass) {
+        await markLessonCompleted();
     }
+  };
+
+  const handlePrev = () => {
+    if (step > 0) setStep(step - 1);
   };
 
   const playAudio = (audioFile) => {
     if (!audioFile) return;
-    if (window.currentAudio) {
-        window.currentAudio.pause();
-        window.currentAudio.currentTime = 0;
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
     }
     const audio = new Audio(`/sounds/${audioFile}`);
-    window.currentAudio = audio;
+    audioRef.current = audio;
     audio.play().catch(() => {});
   };
 
@@ -95,8 +134,7 @@ export default function LessonPlayer() {
          item.data.front?.trim() === cleanText
       )
     );
-    if (vocabCard?.data?.audio) return vocabCard.data.audio;
-    return null;
+    return vocabCard?.data?.audio || null;
   };
 
   const shuffledOptions = useMemo(() => {
@@ -105,15 +143,37 @@ export default function LessonPlayer() {
     return [...current.data.options].sort(() => Math.random() - 0.5);
   }, [items, step]);
 
+  // --- RENDERING ---
+
   if (loading) return <div className="h-[100dvh] bg-black flex items-center justify-center text-cyan-400 font-black italic">SYNCING...</div>;
 
+  // ЭКРАН ЗАВЕРШЕНИЯ (УСПЕХ ИЛИ ПРОВАЛ)
   if (isFinished) {
     return (
       <div className="min-h-screen bg-black flex justify-center items-center">
         <div className="w-full max-w-lg h-[100dvh] flex flex-col items-center justify-center p-8 text-center border-x border-white/5 shadow-2xl">
-          <Trophy size={64} className="text-emerald-400 mb-8" />
-          <h1 className="text-4xl font-black italic uppercase mb-2 text-white">Complete!</h1>
-          <button onClick={() => navigate('/map')} className="w-full max-w-sm py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-xl mt-12">Back to Map</button>
+
+          {lessonPassed ? (
+              // SUCCESS SCREEN
+              <>
+                <Trophy size={80} className="text-emerald-400 mb-8 animate-bounce" />
+                <h1 className="text-4xl font-black italic uppercase mb-2 text-white">Lesson Complete!</h1>
+                <p className="text-gray-400 mb-8">Score: {score}/{quizCount}</p>
+                <button onClick={() => navigate('/map')} className="w-full max-w-sm py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-xl">Back to Map</button>
+              </>
+          ) : (
+              // FAILURE SCREEN
+              <>
+                <Frown size={80} className="text-red-500 mb-8" />
+                <h1 className="text-3xl font-black italic uppercase mb-2 text-white">Review Needed</h1>
+                <p className="text-gray-400 mb-8 px-4">You scored {score}/{quizCount}. You need 70% to pass.</p>
+                <button onClick={() => window.location.reload()} className="w-full max-w-sm py-5 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2">
+                    <RotateCcw size={20} /> Try Again
+                </button>
+                <button onClick={() => navigate('/map')} className="mt-4 text-gray-500 text-sm font-bold uppercase tracking-widest hover:text-white">Give Up</button>
+              </>
+          )}
+
         </div>
       </div>
     );
@@ -126,31 +186,22 @@ export default function LessonPlayer() {
     <div className="h-[100dvh] bg-black flex justify-center font-sans overflow-hidden">
       <div className="w-full max-w-lg h-full flex flex-col relative bg-black shadow-2xl border-x border-white/5">
 
-        {/* HEADER: КНОПКА НАЗАД ТЕПЕРЬ ВСЕГДА В КОДЕ */}
+        {/* HEADER */}
         <header className="p-4 flex-shrink-0 border-b border-white/5 bg-gray-900/20 z-20">
           <div className="flex justify-between items-center w-full">
             <div className="flex items-center gap-2">
-                <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white transition-colors">
-                    <X size={24} />
-                </button>
-
-                {/* Кнопка есть ВСЕГДА, но если step === 0, она прозрачная */}
-                <button
-                  onClick={handlePrev}
-                  disabled={step === 0}
-                  className={`p-2 transition-colors flex items-center gap-1 ${step === 0 ? 'opacity-0 pointer-events-none' : 'text-gray-400 hover:text-white'}`}
-                >
-                    <ChevronLeft size={24} />
-                </button>
+                <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white transition-colors"><X size={24} /></button>
+                <button onClick={handlePrev} disabled={step === 0} className={`p-2 transition-colors flex items-center gap-1 ${step === 0 ? 'opacity-0 pointer-events-none' : 'text-gray-400 hover:text-white'}`}><ChevronLeft size={24} /></button>
             </div>
-
             <div className="text-center flex-1 px-4">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500 mb-1 truncate">{lessonInfo?.title}</h2>
               <div className="w-24 h-1 bg-gray-900 rounded-full overflow-hidden mx-auto">
                 <div className="h-full bg-cyan-500 transition-all duration-500" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
               </div>
             </div>
-            <Gem size={20} className="text-emerald-500/50" />
+            <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs">
+                <CheckCircle2 size={16}/> {score}
+            </div>
           </div>
         </header>
 
@@ -158,18 +209,26 @@ export default function LessonPlayer() {
         <main className="flex-1 overflow-y-auto px-6 py-4 flex flex-col items-center z-10 custom-scrollbar">
           <div className="w-full my-auto py-8">
 
-            {/* VISUAL DECODER */}
+            {/* VISUAL DECODER (Всегда проходим до конца) */}
             {type === 'visual_decoder' && (
               <VisualDecoder data={current} onComplete={() => handleNext(5)} />
             )}
 
-            {/* VOCAB CARD */}
+            {/* VOCAB CARD (Требует переворота) */}
             {type === 'vocab_card' && (
-              <div className="w-full cursor-pointer" onClick={() => { setIsFlipped(!isFlipped); if(!isFlipped) playAudio(current.audio); }}>
+              <div className="w-full cursor-pointer" onClick={() => {
+                  setIsFlipped(!isFlipped);
+                  if(!isFlipped) {
+                      playAudio(current.audio);
+                      setHasInteracted(true); // ЗАЧЕТ ВЗАИМОДЕЙСТВИЯ
+                      setCanAdvance(true);    // МОЖНО ИДТИ ДАЛЬШЕ
+                  }
+              }}>
                 <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
                   <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
                     <span className="text-gray-600 font-black text-[10px] uppercase mb-8 tracking-widest">Meaning</span>
                     <h2 className="text-3xl font-black italic tracking-tighter leading-tight">{current.front}</h2>
+                    {!hasInteracted && <div className="absolute bottom-6 text-cyan-500 text-xs font-bold animate-pulse uppercase tracking-widest">Tap to flip</div>}
                   </div>
                   <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center">
                     <span className="text-cyan-500 font-black text-[10px] uppercase mb-8 tracking-widest">Khmer</span>
@@ -181,7 +240,7 @@ export default function LessonPlayer() {
               </div>
             )}
 
-            {/* QUIZ */}
+            {/* QUIZ (Считаем очки) */}
             {type === 'quiz' && (
               <div className="w-full">
                  <h2 className="text-xl font-black mb-10 italic uppercase text-center tracking-tighter leading-tight">{current.question}</h2>
@@ -201,8 +260,15 @@ export default function LessonPlayer() {
                             setSelectedOption(opt);
                             playAudio(isCorrect ? 'success.mp3' : 'error.mp3');
                             const wordAudio = getAudioForOption(opt);
-                            if (wordAudio) {
-                                setTimeout(() => { playAudio(wordAudio); }, 800);
+                            if (wordAudio) setTimeout(() => playAudio(wordAudio), 800);
+
+                            // ЛОГИКА ОЧКОВ
+                            if (isCorrect) {
+                                setScore(prev => prev + 1);
+                                setCanAdvance(true); // Разрешаем идти дальше
+                            } else {
+                                // Если ошибся - тоже разрешаем идти, но очков не даем
+                                setCanAdvance(true);
                             }
                          }}
                          className={`w-full p-5 border rounded-2xl text-left font-bold transition-all text-sm ${btnClass}`}
@@ -215,28 +281,37 @@ export default function LessonPlayer() {
               </div>
             )}
 
-            {/* THEORY */}
+            {/* THEORY (Таймер) */}
             {type === 'theory' && (
               <div className="w-full bg-gray-900 border border-white/10 p-10 rounded-[3.5rem] text-center">
                 <BookOpen className="text-cyan-500/20 mx-auto mb-4" size={32} />
                 <h2 className="text-xl font-black italic uppercase text-cyan-400 mb-4 tracking-tighter leading-tight">{current.title}</h2>
                 <p className="text-base text-gray-300 italic leading-relaxed">{current.text}</p>
+                {!canAdvance && <p className="mt-4 text-xs text-gray-600 animate-pulse">Read carefully...</p>}
               </div>
             )}
           </div>
         </main>
 
-        {/* FOOTER */}
+        {/* FOOTER (БЛОКИРУЕМ КНОПКУ, ЕСЛИ НЕ ВЫПОЛНЕНО УСЛОВИЕ) */}
         {type !== 'quiz' && type !== 'visual_decoder' && (
           <footer className="px-8 pt-4 pb-16 flex-shrink-0 bg-black/80 backdrop-blur-md border-t border-white/5 z-20">
-            <button onClick={() => handleNext(3)}
-              className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all">
-              Continue <ArrowRight size={20} />
+            <button
+              onClick={() => handleNext(3)}
+              disabled={!canAdvance} // <--- ВОТ ГЛАВНАЯ БЛОКИРОВКА
+              className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${
+                  canAdvance
+                  ? 'bg-white text-black active:scale-95'
+                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {canAdvance ? "Continue" : (type === 'vocab_card' ? "Flip Card First" : "Wait...")}
+              {canAdvance && <ArrowRight size={20} />}
             </button>
           </footer>
         )}
 
-        {/* QUIZ FEEDBACK */}
+        {/* QUIZ FEEDBACK (КНОПКА NEXT ПОЯВЛЯЕТСЯ ТОЛЬКО ПОСЛЕ ОТВЕТА) */}
         {selectedOption && type === 'quiz' && (
           <div className="absolute inset-0 z-[100] flex flex-col justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-gray-900 border-t-2 border-white/10 rounded-t-[3rem] p-10 pb-16 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-full duration-500">
