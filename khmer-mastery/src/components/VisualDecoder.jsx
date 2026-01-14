@@ -8,9 +8,8 @@ export default function VisualDecoder({ data, onComplete }) {
     char_audio_map
   } = data;
 
-  const [status, setStatus] = useState('searching'); // searching | success | error
+  const [status, setStatus] = useState('searching');
   const [selectedCharIndex, setSelectedCharIndex] = useState(null);
-
   const chars = word ? word.split('') : [];
 
   const getTheme = () => {
@@ -26,20 +25,16 @@ export default function VisualDecoder({ data, onComplete }) {
     };
     return { bg: "bg-emerald-500", border: "border-emerald-400", text: "text-black", shadow: "shadow-none", badge: null };
   };
-
   const theme = getTheme();
 
   const playAudio = (file) => {
     if (!file) return;
-
-    // Глушим предыдущий звук, если он был
     if (window.currentAudio) {
         window.currentAudio.pause();
         window.currentAudio.currentTime = 0;
     }
-
     const audio = new Audio(`/sounds/${file}`);
-    window.currentAudio = audio; // Запоминаем текущий звук в глобальную переменную
+    window.currentAudio = audio;
     audio.play().catch(e => console.error("Audio error:", e));
   };
 
@@ -50,36 +45,34 @@ export default function VisualDecoder({ data, onComplete }) {
     const charSound = char_audio_map?.[char];
 
     if (char === target_char) {
-      // --- 1. УСПЕХ (ВЕРНАЯ БУКВА) ---
+      // === ПОБЕДА ===
       setStatus('success');
 
-      // ШАГ 1: Эмоция (Сразу)
+      // 1. Сначала ЭМОЦИЯ
       playAudio('success.mp3');
 
-      // ШАГ 2: Звук буквы (Через 0.8 сек)
+      // 2. Потом БУКВА (через паузу)
+      if (charSound) {
+          setTimeout(() => playAudio(charSound), 1200);
+      }
+
+      // 3. Потом СЛОВО (через большую паузу)
+      if (word_audio) {
+          setTimeout(() => playAudio(word_audio), 2500);
+      }
+
+    } else {
+      // === ОШИБКА ===
+      setStatus('error');
+
+      // 1. Сначала ЭМОЦИЯ
+      playAudio('error.mp3');
+
+      // 2. Потом звук НЕПРАВИЛЬНОЙ буквы (обучающий момент)
       if (charSound) {
           setTimeout(() => playAudio(charSound), 800);
       }
 
-      // ШАГ 3: Звук слова (Через 2.0 сек - даем букве прозвучать)
-      if (word_audio) {
-          setTimeout(() => playAudio(word_audio), 2000);
-      }
-
-    } else {
-      // --- 2. ОШИБКА ---
-      setStatus('error');
-
-      // ШАГ 1: Эмоция (Сразу)
-      playAudio('error.mp3');
-
-      // ШАГ 2: Звук буквы, на которую нажали (Через 0.6 сек)
-      // Это полезно: "Ты нажал не туда, послушай, что это было"
-      if (charSound) {
-          setTimeout(() => playAudio(charSound), 600);
-      }
-
-      // Сброс через 1.5 сек
       setTimeout(() => {
           setStatus('searching');
           setSelectedCharIndex(null);
@@ -90,21 +83,17 @@ export default function VisualDecoder({ data, onComplete }) {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
 
-      {/* ИНСТРУКЦИЯ */}
       <div className="mb-10 text-center space-y-4">
         <h3 className="text-gray-600 font-black uppercase tracking-[0.2em] text-[10px]">Visual Decoder</h3>
-
         <div className="inline-flex flex-col items-center gap-2">
             <span className="text-white font-bold text-xl tracking-tight">{hint}</span>
             {status === 'success' && <div className="animate-in fade-in slide-in-from-top-2">{theme.badge}</div>}
         </div>
       </div>
 
-      {/* СЕТКА БУКВ */}
       <div className="flex flex-nowrap justify-center gap-3 w-full overflow-x-auto pb-4 px-2">
         {chars.map((char, index) => {
           const isTarget = char === target_char;
-
           let styleClass = "bg-gray-900 border-white/10 text-gray-400 hover:bg-gray-800 hover:border-white/30 hover:text-white";
 
           if (status === 'success') {
@@ -127,7 +116,6 @@ export default function VisualDecoder({ data, onComplete }) {
         })}
       </div>
 
-      {/* РЕЗУЛЬТАТ */}
       <div className={`w-full max-w-xs text-center transition-all duration-1000 delay-500 ${status === 'success' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
         <div className="flex flex-col items-center gap-1 mb-8 mt-8">
            <h2 className="text-4xl font-black text-white">{word}</h2>
