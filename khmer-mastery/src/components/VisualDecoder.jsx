@@ -29,7 +29,12 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
 
   const playAudio = (file) => {
     if (!file) return;
+    if (window.currentAudio) {
+      window.currentAudio.pause();
+      window.currentAudio.currentTime = 0;
+    }
     const audio = new Audio(`/sounds/${file}`);
+    window.currentAudio = audio;
     audio.play().catch(e => console.error("Audio error:", e));
   };
 
@@ -41,6 +46,7 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
     if (char === target_char) {
       setStatus('success');
       playAudio('success.mp3');
+      // Цепочка звуков
       if (charSound) setTimeout(() => playAudio(charSound), 1000);
       if (word_audio) setTimeout(() => playAudio(word_audio), 2200);
       onComplete();
@@ -48,7 +54,10 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
       setStatus('error');
       playAudio('error.mp3');
       if (charSound) setTimeout(() => playAudio(charSound), 800);
-      setTimeout(() => { setStatus('searching'); setSelectedCharIndex(null); }, 1500);
+      setTimeout(() => {
+        setStatus('searching');
+        setSelectedCharIndex(null);
+      }, 1500);
     }
   };
 
@@ -62,7 +71,6 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
         </div>
       </div>
 
-      {/* Сетка букв с переносом (flex-wrap) */}
       <div className="flex flex-wrap justify-center gap-3 w-full max-w-sm mb-8">
         {chars.map((char, index) => {
           const isTarget = char === target_char;
@@ -85,7 +93,7 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
         })}
       </div>
 
-      <div className={`w-full max-w-xs text-center transition-all duration-1000 ${status === 'success' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className={`w-full max-w-xs text-center transition-all duration-700 ${status === 'success' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <div className="flex flex-col items-center gap-1 mb-4">
            <h2 className="text-4xl font-black text-white leading-tight">{word}</h2>
            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{english_translation}</p>
