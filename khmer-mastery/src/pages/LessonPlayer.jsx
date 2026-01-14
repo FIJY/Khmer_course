@@ -6,7 +6,6 @@ import {
   AlertCircle, Trophy, BookOpen
 } from 'lucide-react';
 import { updateSRSItem } from '../services/srsService';
-// 1. ВАЖНО: Импортируем компонент VisualDecoder
 import VisualDecoder from '../components/VisualDecoder';
 
 export default function LessonPlayer() {
@@ -39,35 +38,22 @@ export default function LessonPlayer() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { error } = await supabase
-        .from('user_progress')
-        .upsert({
+      await supabase.from('user_progress').upsert({
           user_id: user.id,
           lesson_id: Number(id),
           is_completed: true,
           completed_at: new Date().toISOString()
         }, { onConflict: 'user_id,lesson_id' });
-
-      if (error) {
-        console.error("DB Error:", error);
-      }
-    } catch (err) {
-      console.error("System error:", err);
-    }
+    } catch (err) { console.error("System error:", err); }
   };
 
   const handleNext = async (quality = 3) => {
     const currentItem = items[step];
     const { data: { session } } = await supabase.auth.getSession();
 
-    // SRS логика (только для карточек и квизов)
     if (session?.user && (currentItem.type === 'vocab_card' || currentItem.type === 'quiz')) {
-      try {
-        await updateSRSItem(session.user.id, currentItem.id, quality);
-      } catch (e) {
-        console.error("SRS update failed:", e);
-      }
+      try { await updateSRSItem(session.user.id, currentItem.id, quality); }
+      catch (e) { console.error("SRS update failed:", e); }
     }
 
     if (step < items.length - 1) {
@@ -82,7 +68,21 @@ export default function LessonPlayer() {
 
   const playAudio = (audioFile) => {
     if (!audioFile) return;
-    new Audio(`/sounds/${audioFile}`).play().catch(() => {});
+    // Останавливаем все предыдущие звуки (чтобы не было каши)
+    window.currentAudio?.pause();
+    const audio = new Audio(`/sounds/${audioFile}`);
+    window.currentAudio = audio;
+    audio.play().catch(() => {});
+  };
+
+  // 🔥 НОВАЯ ФУНКЦИЯ: Ищет аудио для текста квиза в материалах урока
+  const getAudioForOption = (text) => {
+    // 1. Ищем, есть ли карточка с таким словом в этом уроке
+    const vocabCard = items.find(item =>
+      item.type === 'vocab_card' && item.data.back === text
+    );
+    if (vocabCard?.data?.audio) return vocabCard.data.audio;
+    return null;
   };
 
   const shuffledOptions = useMemo(() => {
@@ -93,20 +93,13 @@ export default function LessonPlayer() {
 
   if (loading) return <div className="h-[100dvh] bg-black flex items-center justify-center text-cyan-400 font-black italic">SYNCING...</div>;
 
-  // ЭКРАН ПОБЕДЫ
   if (isFinished) {
     return (
       <div className="min-h-screen bg-black flex justify-center items-center">
-        <div className="w-full max-w-lg h-[100dvh] flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500 border-x border-white/5 shadow-2xl">
+        <div className="w-full max-w-lg h-[100dvh] flex flex-col items-center justify-center p-8 text-center border-x border-white/5 shadow-2xl">
           <Trophy size={64} className="text-emerald-400 mb-8" />
           <h1 className="text-4xl font-black italic uppercase mb-2 text-white">Complete!</h1>
-          <div className="bg-gray-900/50 p-8 rounded-[2.5rem] w-full max-w-sm mb-12 border border-white/5">
-            <div className="flex justify-between items-center text-white text-2xl font-black italic">
-              <div className="flex items-center gap-3"><Gem className="text-emerald-500" /><span>+50</span></div>
-              <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest leading-none">Gems Earned</span>
-            </div>
-          </div>
-          <button onClick={() => navigate('/map')} className="w-full max-w-sm py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Back to Map</button>
+          <button onClick={() => navigate('/map')} className="w-full max-w-sm py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-xl mt-12">Back to Map</button>
         </div>
       </div>
     );
@@ -137,16 +130,12 @@ export default function LessonPlayer() {
         <main className="flex-1 overflow-y-auto px-6 py-4 flex flex-col items-center z-10 custom-scrollbar">
           <div className="w-full my-auto py-8">
 
-            {/* --- НОВЫЙ БЛОК: VISUAL DECODER --- */}
-            {/* 2. ВАЖНО: Добавляем рендер VisualDecoder */}
+            {/* --- VISUAL DECODER --- */}
             {type === 'visual_decoder' && (
-              <VisualDecoder
-                data={current}
-                onComplete={() => handleNext(5)}
-              />
+              <VisualDecoder data={current} onComplete={() => handleNext(5)} />
             )}
 
-            {/* КАРТОЧКА СЛОВА */}
+            {/* --- VOCAB CARD --- */}
             {type === 'vocab_card' && (
               <div className="w-full cursor-pointer" onClick={() => { setIsFlipped(!isFlipped); if(!isFlipped) playAudio(current.audio); }}>
                 <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
@@ -164,7 +153,7 @@ export default function LessonPlayer() {
               </div>
             )}
 
-            {/* ТЕСТ (QUIZ) */}
+            {/* --- QUIZ (ОБНОВЛЕННАЯ ЛОГИКА) --- */}
             {type === 'quiz' && (
               <div className="w-full">
                  <h2 className="text-xl font-black mb-10 italic uppercase text-center tracking-tighter leading-tight">{current.question}</h2>
@@ -179,17 +168,34 @@ export default function LessonPlayer() {
                        else btnClass = "bg-gray-900/20 border-white/5 text-gray-700";
                      }
                      return (
-                       <button key={i} disabled={!!selectedOption} onClick={() => { setSelectedOption(opt); playAudio(isCorrect ? 'success.mp3' : 'error.mp3'); }}
-                         className={`w-full p-5 border rounded-2xl text-left font-bold transition-all text-sm ${btnClass}`}>{opt}</button>
+                       <button key={i} disabled={!!selectedOption}
+                         onClick={() => {
+                            setSelectedOption(opt);
+
+                            // 1. Ищем и играем озвучку слова
+                            const wordAudio = getAudioForOption(opt);
+                            if (wordAudio) {
+                                playAudio(wordAudio);
+                            }
+
+                            // 2. Через паузу играем звук успеха/неудачи
+                            setTimeout(() => {
+                                playAudio(isCorrect ? 'success.mp3' : 'error.mp3');
+                            }, 700);
+                         }}
+                         className={`w-full p-5 border rounded-2xl text-left font-bold transition-all text-sm ${btnClass}`}
+                       >
+                         {opt}
+                       </button>
                      );
                    })}
                  </div>
               </div>
             )}
 
-            {/* ТЕОРИЯ */}
+            {/* --- THEORY --- */}
             {type === 'theory' && (
-              <div className="w-full bg-gray-900 border border-white/10 p-10 rounded-[3.5rem] text-center translate-z-0">
+              <div className="w-full bg-gray-900 border border-white/10 p-10 rounded-[3.5rem] text-center">
                 <BookOpen className="text-cyan-500/20 mx-auto mb-4" size={32} />
                 <h2 className="text-xl font-black italic uppercase text-cyan-400 mb-4 tracking-tighter leading-tight">{current.title}</h2>
                 <p className="text-base text-gray-300 italic leading-relaxed">{current.text}</p>
@@ -198,8 +204,7 @@ export default function LessonPlayer() {
           </div>
         </main>
 
-        {/* FOOTER: Кнопка "Continue" */}
-        {/* Скрываем кнопку, если это quiz или visual_decoder (у них свои кнопки) */}
+        {/* FOOTER */}
         {type !== 'quiz' && type !== 'visual_decoder' && (
           <footer className="px-8 pt-4 pb-16 flex-shrink-0 bg-black/80 backdrop-blur-md border-t border-white/5 z-20">
             <button onClick={() => handleNext(3)}
@@ -209,41 +214,21 @@ export default function LessonPlayer() {
           </footer>
         )}
 
-        {/* MODAL FEEDBACK ДЛЯ КВИЗА */}
-        {selectedOption && (
+        {/* QUIZ FEEDBACK */}
+        {selectedOption && type === 'quiz' && (
           <div className="absolute inset-0 z-[100] flex flex-col justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-gray-900 border-t-2 border-white/10 rounded-t-[3rem] p-10 pb-16 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] translate-z-0 animate-in slide-in-from-bottom-full duration-500">
-              <div className="w-full">
+            <div className="bg-gray-900 border-t-2 border-white/10 rounded-t-[3rem] p-10 pb-16 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-full duration-500">
                 <div className="flex items-center gap-4 mb-4">
-                  {selectedOption === current.correct_answer ?
-                    <CheckCircle2 size={32} className="text-emerald-500" /> :
-                    <AlertCircle size={32} className="text-red-500" />
-                  }
+                  {selectedOption === current.correct_answer ? <CheckCircle2 size={32} className="text-emerald-500" /> : <AlertCircle size={32} className="text-red-500" />}
                   <div>
-                    <h3 className={`text-xl font-black uppercase italic ${selectedOption === current.correct_answer ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {selectedOption === current.correct_answer ? 'Awesome!' : 'Correct Answer:'}
-                    </h3>
-                    {selectedOption !== current.correct_answer && (
-                      <p className="text-white font-bold text-lg">{current.correct_answer}</p>
-                    )}
+                    <h3 className={`text-xl font-black uppercase italic ${selectedOption === current.correct_answer ? 'text-emerald-500' : 'text-red-500'}`}>{selectedOption === current.correct_answer ? 'Awesome!' : 'Correct Answer:'}</h3>
+                    {selectedOption !== current.correct_answer && <p className="text-white font-bold text-lg">{current.correct_answer}</p>}
                   </div>
                 </div>
-                <p className="text-gray-400 text-sm italic mb-10 leading-relaxed">{current.explanation}</p>
-                <button onClick={() => handleNext(selectedOption === current.correct_answer ? 5 : 1)}
-                  className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl ${selectedOption === current.correct_answer ? 'bg-emerald-500 text-white' : 'bg-white text-black'}`}>
-                  Next Step <ArrowRight size={20} />
-                </button>
-              </div>
+                <button onClick={() => handleNext(selectedOption === current.correct_answer ? 5 : 1)} className="w-full py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl">Next Step <ArrowRight size={20} /></button>
             </div>
           </div>
         )}
-
-        <style>{`
-          .perspective-1000 { perspective: 1000px; -webkit-perspective: 1000px; }
-          .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-          .preserve-3d { transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
-          .translate-z-0 { transform: translateZ(0); -webkit-transform: translateZ(0); }
-        `}</style>
       </div>
     </div>
   );
