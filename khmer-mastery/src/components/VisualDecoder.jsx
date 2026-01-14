@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sun, Moon, Volume2 } from 'lucide-react';
 
-export default function VisualDecoder({ data, onComplete }) {
+// Добавили hideDefaultButton в деструктуризацию
+export default function VisualDecoder({ data, onComplete, hideDefaultButton = false }) {
   const {
     word, target_char, hint, english_translation,
     letter_series, word_audio,
@@ -23,89 +24,37 @@ export default function VisualDecoder({ data, onComplete }) {
          shadow: "shadow-[0_0_50px_rgba(99,102,241,0.5)]",
          badge: <div className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest"><Moon size={14}/> O-Series</div>
     };
-    return { bg: "bg-emerald-500", border: "border-emerald-400", text: "text-black", shadow: "shadow-none", badge: null };
+    return { bg: "bg-cyan-500", border: "border-cyan-400", text: "text-black", shadow: "", badge: null };
   };
-  const theme = getTheme();
 
-  const playAudio = (file) => {
-    if (!file) return;
-    if (window.currentAudio) {
-        window.currentAudio.pause();
-        window.currentAudio.currentTime = 0;
-    }
-    const audio = new Audio(`/sounds/${file}`);
-    window.currentAudio = audio;
-    audio.play().catch(e => console.error("Audio error:", e));
-  };
+  const theme = getTheme();
 
   const handleCharClick = (char, index) => {
     if (status === 'success') return;
     setSelectedCharIndex(index);
-
-    const charSound = char_audio_map?.[char];
-
     if (char === target_char) {
-      // === ПОБЕДА ===
       setStatus('success');
-
-      // 1. Сначала ЭМОЦИЯ
-      playAudio('success.mp3');
-
-      // 2. Потом БУКВА (через паузу)
-      if (charSound) {
-          setTimeout(() => playAudio(charSound), 1200);
-      }
-
-      // 3. Потом СЛОВО (через большую паузу)
-      if (word_audio) {
-          setTimeout(() => playAudio(word_audio), 2500);
-      }
-
+      onComplete(); // Уведомляем плеер
     } else {
-      // === ОШИБКА ===
       setStatus('error');
-
-      // 1. Сначала ЭМОЦИЯ
-      playAudio('error.mp3');
-
-      // 2. Потом звук НЕПРАВИЛЬНОЙ буквы (обучающий момент)
-      if (charSound) {
-          setTimeout(() => playAudio(charSound), 800);
-      }
-
-      setTimeout(() => {
-          setStatus('searching');
-          setSelectedCharIndex(null);
-      }, 1500);
+      setTimeout(() => setStatus('searching'), 600);
     }
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
+    <div className="flex flex-col items-center w-full max-w-sm mx-auto p-4">
+      <div className="mb-8">{theme.badge}</div>
+      <h1 className="text-2xl font-black text-white text-center mb-12 uppercase italic tracking-tighter">
+        Find character: <span className={theme.text + " px-2 " + theme.bg}>{hint}</span>
+      </h1>
 
-      <div className="mb-10 text-center space-y-4">
-        <h3 className="text-gray-600 font-black uppercase tracking-[0.2em] text-[10px]">Visual Decoder</h3>
-        <div className="inline-flex flex-col items-center gap-2">
-            <span className="text-white font-bold text-xl tracking-tight">{hint}</span>
-            {status === 'success' && <div className="animate-in fade-in slide-in-from-top-2">{theme.badge}</div>}
-        </div>
-      </div>
-
-      <div className="flex flex-nowrap justify-center gap-3 w-full overflow-x-auto pb-4 px-2">
+      <div className="flex flex-wrap justify-center gap-3 mb-16">
         {chars.map((char, index) => {
-          const isTarget = char === target_char;
-          let styleClass = "bg-gray-900 border-white/10 text-gray-400 hover:bg-gray-800 hover:border-white/30 hover:text-white";
-
-          if (status === 'success') {
-            if (isTarget) {
-                styleClass = `${theme.bg} ${theme.text} border-transparent scale-110 z-20 shadow-lg`;
-            } else {
-                styleClass = "bg-gray-900/50 text-gray-600 border-transparent blur-[1px]";
-            }
-          } else if (status === 'error' && selectedCharIndex === index) {
-            styleClass = "bg-red-500/20 border-red-500 text-red-500 animate-shake";
+          let styleClass = "bg-gray-900 border-white/10 text-gray-500";
+          if (selectedCharIndex === index) {
+            if (status === 'success' && char === target_char) styleClass = `${theme.bg} ${theme.border} ${theme.text} ${theme.shadow} scale-110`;
+            if (status === 'error') styleClass = "bg-red-900/20 border-red-500 text-red-500 animate-shake";
           }
-
           return (
             <button key={index} onClick={() => handleCharClick(char, index)}
               className={`flex-shrink-0 w-12 h-16 sm:w-16 sm:h-24 rounded-lg border-2 flex items-center justify-center text-3xl sm:text-4xl font-serif transition-all duration-300 ${styleClass}`}
@@ -121,17 +70,16 @@ export default function VisualDecoder({ data, onComplete }) {
            <h2 className="text-4xl font-black text-white">{word}</h2>
            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{english_translation}</p>
         </div>
-        <button onClick={() => onComplete()}
-          className={`w-full py-4 rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition-all ${theme.bg} ${theme.text}`}
-        >
-          Continue <ArrowRight size={20} />
-        </button>
-      </div>
 
-      <style>{`
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        .animate-shake { animation: shake 0.3s ease-in-out; }
-      `}</style>
+        {/* СКРЫВАЕМ КНОПКУ, если передан hideDefaultButton */}
+        {!hideDefaultButton && (
+          <button onClick={() => onComplete()}
+            className={`w-full py-4 rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition-all ${theme.bg} ${theme.text}`}
+          >
+            Continue <ArrowRight size={20} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

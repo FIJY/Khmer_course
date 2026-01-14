@@ -138,7 +138,13 @@ export default function LessonPlayer() {
 
       <main className="flex-1 overflow-y-auto px-6 py-4 flex flex-col items-center z-10 custom-scrollbar">
         <div className="w-full my-auto py-8">
-          {type === 'visual_decoder' && <VisualDecoder data={current} onComplete={() => handleNext(5)} />}
+          {type === 'visual_decoder' && (
+            <VisualDecoder
+              data={current}
+              onComplete={() => setCanAdvance(true)}
+              hideDefaultButton={true}
+            />
+          )}
 
           {type === 'vocab_card' && (
             <div className="w-full cursor-pointer" onClick={() => {
