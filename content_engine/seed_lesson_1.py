@@ -16,6 +16,7 @@ supabase: Client = create_client(url, key)
 # --- ИМПОРТ ФУНКЦИЙ (Убедись, что database_engine.py лежит рядом) ---
 from database_engine import seed_lesson, update_study_materials
 
+
 # --- 1. ПОЛУЧЕНИЕ КАРТЫ ЗВУКОВ ---
 async def fetch_global_audio_map():
     print("📡 Скачиваю карту звуков...")
@@ -27,8 +28,10 @@ async def fetch_global_audio_map():
         print(f"⚠️ Ошибка чтения алфавита: {e}")
         return {}
 
+
 def build_word_map(word, global_map):
     return {char: global_map[char] for char in word if char in global_map}
+
 
 # --- 2. ВАЛИДАТОР ДАННЫХ (ЗАЩИТА ОТ ОШИБОК) ---
 def validate_visual_decoder(data):
@@ -40,6 +43,7 @@ def validate_visual_decoder(data):
         raise ValueError(f"❌ КРИТИЧЕСКАЯ ОШИБКА: В слове '{word}' НЕТ буквы '{target}'! Проверь данные урока.")
     return True
 
+
 # --- 3. ДАННЫЕ УРОКОВ ---
 def get_chapter_data(global_audio_map):
     return {
@@ -50,8 +54,10 @@ def get_chapter_data(global_audio_map):
             "module_id": 1,
             "order_index": 0,
             "content": [
-                {"type": "theory", "data": {"title": "The Alphabet", "text": "Khmer consonants are divided into two series: A-Series (Sun ☀️) and O-Series (Moon 🌙)."}},
-                {"type": "vocab_card", "data": {"front": "Hello", "back": "សួស្តី", "pronunciation": "Suəs-dey", "audio": "hello.mp3"}},
+                {"type": "theory", "data": {"title": "The Alphabet",
+                                            "text": "Khmer consonants are divided into two series: A-Series (Sun ☀️) and O-Series (Moon 🌙)."}},
+                {"type": "vocab_card",
+                 "data": {"front": "Hello", "back": "សួស្តី", "pronunciation": "Suəs-dey", "audio": "hello.mp3"}},
                 {
                     "type": "visual_decoder",
                     "data": {
@@ -61,10 +67,15 @@ def get_chapter_data(global_audio_map):
                         "char_audio_map": build_word_map("សួស្តី", global_audio_map)
                     }
                 },
-                {"type": "vocab_card", "data": {"front": "Hello (Formal)", "back": "ជំរាបសួរ", "pronunciation": "Cum-riəp Suə", "audio": "hello_formal.mp3"}},
-                {"type": "vocab_card", "data": {"front": "I / Me", "back": "ខ្ញុំ", "pronunciation": "Kɲom", "audio": "i_me.mp3"}},
-                {"type": "vocab_card", "data": {"front": "You", "back": "អ្នក", "pronunciation": "Neak", "audio": "you.mp3"}},
-                {"type": "quiz", "data": {"question": "Informal Hello?", "options": ["សួស្តី", "ជំរាបសួរ"], "correct_answer": "សួស្តី"}}
+                {"type": "vocab_card",
+                 "data": {"front": "Hello (Formal)", "back": "ជំរាបសួរ", "pronunciation": "Cum-riəp Suə",
+                          "audio": "hello_formal.mp3"}},
+                {"type": "vocab_card",
+                 "data": {"front": "I / Me", "back": "ខ្ញុំ", "pronunciation": "Kɲom", "audio": "i_me.mp3"}},
+                {"type": "vocab_card",
+                 "data": {"front": "You", "back": "អ្នក", "pronunciation": "Neak", "audio": "you.mp3"}},
+                {"type": "quiz",
+                 "data": {"question": "Informal Hello?", "options": ["សួស្តី", "ជំរាបសួរ"], "correct_answer": "សួស្តី"}}
             ]
         },
 
@@ -75,23 +86,27 @@ def get_chapter_data(global_audio_map):
             "module_id": 1,
             "order_index": 1,
             "content": [
-                {"type": "theory", "data": {"title": "Politeness", "text": "To be polite, men add 'Baat' and women add 'Jaa' at the end of sentences."}},
-                {"type": "vocab_card", "data": {"front": "Thank you", "back": "អរគុណ", "pronunciation": "Arkun", "audio": "thank_you.mp3"}},
+                {"type": "theory", "data": {"title": "Politeness",
+                                            "text": "To be polite, men add 'Baat' and women add 'Jaa' at the end of sentences."}},
+                {"type": "vocab_card",
+                 "data": {"front": "Thank you", "back": "អរគុណ", "pronunciation": "Arkun", "audio": "thank_you.mp3"}},
                 {
                     "type": "visual_decoder",
                     "data": {
                         "word": "អរគុណ",
                         # ИСПРАВЛЕНО: Теперь ищем គ (Ko), так как она реально есть в слове
                         "target_char": "គ",
-                        "hint": "Find character: Ko (Series 2)", # Подсказка тоже обновлена
+                        "hint": "Find character: Ko (Series 2)",  # Подсказка тоже обновлена
                         "english_translation": "Thank You (Arkun)",
                         "letter_series": 2,
                         "word_audio": "thank_you.mp3",
                         "char_audio_map": build_word_map("អរគុណ", global_audio_map)
                     }
                 },
-                {"type": "vocab_card", "data": {"front": "Sorry", "back": "សូមទោស", "pronunciation": "Soum Toh", "audio": "sorry.mp3"}},
-                {"type": "quiz", "data": {"question": "How to say Thank You?", "options": ["អរគុណ", "សូមទោស"], "correct_answer": "អរគុណ"}}
+                {"type": "vocab_card",
+                 "data": {"front": "Sorry", "back": "សូមទោស", "pronunciation": "Soum Toh", "audio": "sorry.mp3"}},
+                {"type": "quiz", "data": {"question": "How to say Thank You?", "options": ["អរគុណ", "សូមទោស"],
+                                          "correct_answer": "អរគុណ"}}
             ]
         },
 
@@ -102,7 +117,8 @@ def get_chapter_data(global_audio_map):
             "module_id": 1,
             "order_index": 2,
             "content": [
-                {"type": "theory", "data": {"title": "Negation", "text": "To say NO, put 'Min' before the verb and 'Te' after. Example: Min...Te."}},
+                {"type": "theory", "data": {"title": "Negation",
+                                            "text": "To say NO, put 'Min' before the verb and 'Te' after. Example: Min...Te."}},
                 {
                     "type": "visual_decoder",
                     "data": {
@@ -112,13 +128,17 @@ def get_chapter_data(global_audio_map):
                         "char_audio_map": build_word_map("បាទ", global_audio_map)
                     }
                 },
-                {"type": "vocab_card", "data": {"front": "Yes (Male)", "back": "បាទ", "pronunciation": "Baat", "audio": "yes_male.mp3"}},
-                {"type": "vocab_card", "data": {"front": "Yes (Female)", "back": "ចាស", "pronunciation": "Jaa", "audio": "yes_female.mp3"}},
+                {"type": "vocab_card",
+                 "data": {"front": "Yes (Male)", "back": "បាទ", "pronunciation": "Baat", "audio": "yes_male.mp3"}},
+                {"type": "vocab_card",
+                 "data": {"front": "Yes (Female)", "back": "ចាស", "pronunciation": "Jaa", "audio": "yes_female.mp3"}},
                 {"type": "vocab_card", "data": {"front": "No", "back": "ទេ", "pronunciation": "Te", "audio": "no.mp3"}},
-                {"type": "quiz", "data": {"question": "Yes (for men)?", "options": ["បាទ", "ចាស"], "correct_answer": "បាទ"}}
+                {"type": "quiz",
+                 "data": {"question": "Yes (for men)?", "options": ["បាទ", "ចាស"], "correct_answer": "បាទ"}}
             ]
         }
     }
+
 
 async def main():
     global_map = await fetch_global_audio_map()
@@ -139,6 +159,7 @@ async def main():
         )
     await update_study_materials(1, chapter_data)
     print("🚀 Уроки успешно обновлены!")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
