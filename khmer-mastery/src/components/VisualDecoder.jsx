@@ -15,26 +15,19 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
   const getTheme = () => {
     if (letter_series === 1) return {
          bg: "bg-orange-500", border: "border-orange-400", text: "text-black",
-         shadow: "shadow-[0_0_50px_rgba(249,115,22,0.5)]",
-         badge: <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest"><Sun size={14}/> A-Series</div>
+         badge: <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"><Sun size={12}/> A-Series</div>
     };
     if (letter_series === 2) return {
          bg: "bg-indigo-500", border: "border-indigo-400", text: "text-white",
-         shadow: "shadow-[0_0_50px_rgba(99,102,241,0.5)]",
-         badge: <div className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest"><Moon size={14}/> O-Series</div>
+         badge: <div className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"><Moon size={12}/> O-Series</div>
     };
-    return { bg: "bg-emerald-500", border: "border-emerald-400", text: "text-black", shadow: "shadow-none", badge: null };
+    return { bg: "bg-emerald-500", border: "border-emerald-400", text: "text-black", badge: null };
   };
   const theme = getTheme();
 
   const playAudio = (file) => {
     if (!file) return;
-    if (window.currentAudio) {
-      window.currentAudio.pause();
-      window.currentAudio.currentTime = 0;
-    }
     const audio = new Audio(`/sounds/${file}`);
-    window.currentAudio = audio;
     audio.play().catch(e => console.error("Audio error:", e));
   };
 
@@ -46,7 +39,6 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
     if (char === target_char) {
       setStatus('success');
       playAudio('success.mp3');
-      // Цепочка звуков
       if (charSound) setTimeout(() => playAudio(charSound), 1000);
       if (word_audio) setTimeout(() => playAudio(word_audio), 2200);
       onComplete();
@@ -54,38 +46,43 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
       setStatus('error');
       playAudio('error.mp3');
       if (charSound) setTimeout(() => playAudio(charSound), 800);
-      setTimeout(() => {
-        setStatus('searching');
-        setSelectedCharIndex(null);
-      }, 1500);
+      setTimeout(() => { setStatus('searching'); setSelectedCharIndex(null); }, 1500);
     }
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center p-4">
-      <div className="mb-8 text-center space-y-2">
-        <h3 className="text-gray-600 font-black uppercase tracking-[0.2em] text-[10px]">Visual Decoder</h3>
+    <div className="w-full flex flex-col items-center justify-between min-h-[40vh] py-4">
+      {/* Заголовок (убран лишний текст, чтобы не двоилось с LessonPlayer) */}
+      <div className="text-center space-y-3 mb-6">
         <div className="flex flex-col items-center gap-2">
-            <span className="text-white font-bold text-xl tracking-tight">{hint}</span>
-            {status === 'success' && theme.badge}
+            <span className="text-white font-black text-2xl uppercase tracking-tighter italic italic italic italic">
+              Find: <span className="text-cyan-400">{hint}</span>
+            </span>
+            {status === 'success' && <div className="animate-in fade-in zoom-in">{theme.badge}</div>}
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-3 w-full max-w-sm mb-8">
+      {/* Буквы: теперь они используют flex-wrap, но с приоритетом в одну строку */}
+      <div className="flex flex-wrap justify-center items-center gap-2 w-full max-w-md px-2">
         {chars.map((char, index) => {
           const isTarget = char === target_char;
-          const sizeClass = chars.length > 6 ? "w-10 h-14 text-2xl" : "w-14 h-20 text-3xl sm:w-16 sm:h-24 sm:text-4xl";
+          // Расчет размера: если букв много, уменьшаем их сильнее
+          const sizeClass = chars.length > 5
+            ? "w-10 h-16 text-2xl"
+            : "w-14 h-22 text-4xl sm:w-16 sm:h-24";
 
-          let styleClass = "bg-gray-900 border-white/10 text-gray-400";
+          let styleClass = "bg-gray-900 border-white/5 text-gray-500";
           if (status === 'success') {
-            styleClass = isTarget ? `${theme.bg} ${theme.text} scale-110 shadow-lg` : "opacity-30 blur-[1px]";
+            styleClass = isTarget ? `${theme.bg} ${theme.text} scale-110 shadow-2xl z-10` : "opacity-20 blur-[2px]";
           } else if (status === 'error' && selectedCharIndex === index) {
-            styleClass = "bg-red-500/20 border-red-500 text-red-500 animate-shake";
+            styleClass = "bg-red-900/40 border-red-500 text-red-500 animate-shake";
           }
 
           return (
-            <button key={index} onClick={() => handleCharClick(char, index)}
-              className={`flex-shrink-0 rounded-lg border-2 flex items-center justify-center font-serif transition-all duration-300 ${sizeClass} ${styleClass}`}
+            <button
+              key={index}
+              onClick={() => handleCharClick(char, index)}
+              className={`flex-shrink-0 rounded-2xl border-2 flex items-center justify-center font-serif transition-all duration-500 ${sizeClass} ${styleClass}`}
             >
               {char}
             </button>
@@ -93,21 +90,17 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
         })}
       </div>
 
-      <div className={`w-full max-w-xs text-center transition-all duration-700 ${status === 'success' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className="flex flex-col items-center gap-1 mb-4">
-           <h2 className="text-4xl font-black text-white leading-tight">{word}</h2>
-           <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{english_translation}</p>
-        </div>
-        {!hideDefaultButton && (
-          <button onClick={() => onComplete()} className={`w-full py-4 rounded-xl font-black uppercase ${theme.bg} ${theme.text}`}>
-            Continue <ArrowRight size={20} />
-          </button>
-        )}
+      {/* Блок результата: всегда занимает место, чтобы верстка не прыгала */}
+      <div className={`mt-10 text-center transition-all duration-700 ${status === 'success' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+        <h2 className="text-5xl font-black text-white mb-2 tracking-tight">{word}</h2>
+        <p className="text-gray-500 font-black uppercase tracking-[0.2em] text-[10px]">
+          {english_translation}
+        </p>
       </div>
 
       <style>{`
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        .animate-shake { animation: shake 0.3s ease-in-out; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+        .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
       `}</style>
     </div>
   );
