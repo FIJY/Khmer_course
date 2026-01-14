@@ -5,7 +5,7 @@ export default function VisualDecoder({ data, onComplete }) {
   const {
     word, target_char, hint, english_translation,
     letter_series, word_audio,
-    char_audio_map // <--- НОВОЕ: Карта звуков для всех букв { "ស": "letter_sa.mp3", ... }
+    char_audio_map
   } = data;
 
   const [status, setStatus] = useState('searching'); // searching | success | error
@@ -13,7 +13,7 @@ export default function VisualDecoder({ data, onComplete }) {
 
   const chars = word ? word.split('') : [];
 
-  // Логика цветов серии
+  // ТЕМА (Цвета для серий)
   const getTheme = () => {
     if (letter_series === 1) return {
          bg: "bg-orange-500", border: "border-orange-400", text: "text-black",
@@ -40,28 +40,45 @@ export default function VisualDecoder({ data, onComplete }) {
     if (status === 'success') return;
     setSelectedCharIndex(index);
 
-    // 1. Сначала ВСЕГДА играем звук буквы (если он есть в карте)
+    // 1. ИГРАЕМ ЗВУК БУКВЫ (Мгновенно)
     const charSound = char_audio_map?.[char];
     if (charSound) {
         playAudio(charSound);
     } else {
-        // Если звука нет в карте, играем клик или ошибку
-        playAudio('error.mp3');
+        // Если звука буквы нет, играем короткий клик, но НЕ error.mp3 сразу
+        // playAudio('click.mp3'); // (опционально)
     }
 
     if (char === target_char) {
-      // 2. Если угадали
+      // --- ПОБЕДА ---
       setStatus('success');
 
-      // Через 0.8 сек (после звука буквы) запускаем звук слова
-      if (word_audio) setTimeout(() => playAudio(word_audio), 800);
+      // Тайминг победы:
+      // 0ms: Звук буквы ("Са...")
+      // 800ms: Звук успеха ("Дзынь!")
+      // 1800ms: Звук слова ("Са-бай!")
+
+      setTimeout(() => playAudio('success.mp3'), 800);
+
+      if (word_audio) {
+          setTimeout(() => playAudio(word_audio), 1800);
+      }
 
     } else {
-      // 3. Если ошибка
+      // --- ОШИБКА ---
       setStatus('error');
-      // Играем звук ошибки чуть позже, чтобы не перебивать звук буквы
-      setTimeout(() => playAudio('error.mp3'), 400);
-      setTimeout(() => { setStatus('searching'); setSelectedCharIndex(null); }, 800);
+
+      // Тайминг ошибки:
+      // 0ms: Звук неправильной буквы ("Ка...")
+      // 800ms: Звук ошибки ("Бзззт")
+      // 1200ms: Сброс цвета
+
+      setTimeout(() => playAudio('error.mp3'), 800);
+
+      setTimeout(() => {
+          setStatus('searching');
+          setSelectedCharIndex(null);
+      }, 1200);
     }
   };
 
@@ -71,6 +88,7 @@ export default function VisualDecoder({ data, onComplete }) {
       {/* ИНСТРУКЦИЯ */}
       <div className="mb-10 text-center space-y-4">
         <h3 className="text-gray-600 font-black uppercase tracking-[0.2em] text-[10px]">Visual Decoder</h3>
+
         <div className="inline-flex flex-col items-center gap-2">
             <span className="text-white font-bold text-xl tracking-tight">{hint}</span>
             {status === 'success' && <div className="animate-in fade-in slide-in-from-top-2">{theme.badge}</div>}
@@ -78,25 +96,39 @@ export default function VisualDecoder({ data, onComplete }) {
       </div>
 
       {/* СЕТКА БУКВ
-          Анимация слияния: transition-all + gap меняется с 2 на 0
+          transition-all и duration-700 обеспечивают плавное скольжение.
+          gap меняется с gap-3 (раздвинуты) на gap-0 (слитны).
       */}
-      <div className={`flex flex-nowrap justify-center w-full overflow-x-auto pb-4 px-2 transition-all duration-1000 ease-in-out ${status === 'success' ? 'gap-0' : 'gap-3'}`}>
+      <div className={`
+        flex flex-nowrap justify-center w-full overflow-x-auto pb-4 px-2
+        transition-all duration-1000 ease-in-out
+        ${status === 'success' ? 'gap-0' : 'gap-3'}
+      `}>
 
         {chars.map((char, index) => {
           const isTarget = char === target_char;
-          let styleClass = "bg-gray-900 border-white/10 text-gray-400 hover:bg-gray-800 hover:border-white/30 hover:text-white";
+
+          // Базовые стили
+          let baseClasses = "flex-shrink-0 w-12 h-16 sm:w-16 sm:h-24 rounded-lg border-2 flex items-center justify-center text-3xl sm:text-4xl font-serif transition-all duration-700";
+          let stateClasses = "bg-gray-900 border-white/10 text-gray-400 hover:bg-gray-800 hover:border-white/30 hover:text-white";
 
           if (status === 'success') {
-            // При успехе убираем границы и делаем единый блок
-            styleClass = `${theme.text} border-transparent bg-transparent scale-110 z-20`;
-            if (!isTarget) styleClass += " opacity-50"; // Остальные буквы чуть приглушаем, но не блюрим полностью
+            // ПРИ УСПЕХЕ:
+            if (isTarget) {
+                // Целевая буква: Яркая, увеличивается, убираем границы чтобы сливалась
+                stateClasses = `${theme.text} border-transparent bg-transparent scale-110 z-20 font-bold`;
+            } else {
+                // Соседние буквы: Тоже убираем границы, делаем прозрачными, но они остаются частью слова
+                stateClasses = `${theme.text} border-transparent bg-transparent opacity-60 scale-95 blur-[1px] grayscale`;
+            }
           } else if (status === 'error' && selectedCharIndex === index) {
-            styleClass = "bg-red-500/20 border-red-500 text-red-500 animate-shake";
+            // ПРИ ОШИБКЕ: Тряска и красный цвет
+            stateClasses = "bg-red-500/20 border-red-500 text-red-500 animate-shake";
           }
 
           return (
             <button key={index} onClick={() => handleCharClick(char, index)}
-              className={`flex-shrink-0 w-12 h-16 sm:w-16 sm:h-24 rounded-lg border-2 flex items-center justify-center text-3xl sm:text-4xl font-serif transition-all duration-500 ${styleClass}`}
+              className={`${baseClasses} ${stateClasses}`}
             >
               {char}
             </button>
@@ -104,10 +136,10 @@ export default function VisualDecoder({ data, onComplete }) {
         })}
       </div>
 
-      {/* РЕЗУЛЬТАТ */}
-      <div className={`w-full max-w-xs text-center transition-all duration-700 ${status === 'success' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-        <div className="flex flex-col items-center gap-1 mb-8 mt-4">
-           {/* Слово дублируется здесь для ясности, или можно убрать, так как буквы сверху съехались */}
+      {/* РЕЗУЛЬТАТ (Появляется снизу) */}
+      <div className={`w-full max-w-xs text-center transition-all duration-1000 delay-300 ${status === 'success' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
+
+        <div className="flex flex-col items-center gap-1 mb-8 mt-6">
            <h2 className="text-4xl font-black text-white">{word}</h2>
            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{english_translation}</p>
         </div>
