@@ -2,11 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
-  Check, Play, Gem, Map as MapIcon,
-  BookText, User, BookOpen, Layers,
-  BrainCircuit, RefreshCw // Добавил иконку перезагрузки
+  Check, Play, Gem, Layers, BookOpen, RefreshCw
 } from 'lucide-react';
-import { getDueItems } from '../services/srsService';
+// Импорт Layout
+import MobileLayout from '../components/Layout/MobileLayout';
 
 const COURSE_LEVELS = [
   {
@@ -46,10 +45,9 @@ const COURSE_LEVELS = [
 export default function CourseMap() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // Добавил состояние ошибки
+  const [error, setError] = useState(null);
   const [completedLessons, setCompletedLessons] = useState([]);
   const [chapters, setChapters] = useState({});
-  const [dueCount, setDueCount] = useState(0);
 
   useEffect(() => { fetchAllData(); }, []);
 
@@ -73,15 +71,7 @@ export default function CourseMap() {
       const doneIds = progressData ? progressData.map(item => Number(item.lesson_id)) : [];
       setCompletedLessons(doneIds);
 
-      // 2. SRS
-      try {
-          const dueItems = await getDueItems(user.id);
-          setDueCount(dueItems.length);
-      } catch (srsErr) {
-          console.warn("SRS fetch failed, skipping:", srsErr);
-      }
-
-      // 3. Уроки
+      // 2. Уроки
       const { data: allLessons, error: lessonError } = await supabase
         .from('lessons')
         .select('*')
@@ -90,15 +80,13 @@ export default function CourseMap() {
       if (lessonError) throw lessonError;
       if (!allLessons) { setChapters({}); return; }
 
-      // 4. Группировка (Безопасная версия)
+      // 3. Группировка
       const chaptersMap = {};
 
-      // Обработка старых ID (<100)
       allLessons.filter(l => l.id < 100).forEach(l => {
         chaptersMap[l.id] = { ...l, subLessons: [] };
       });
 
-      // Обработка новых ID (>=100)
       allLessons.filter(l => l.id >= 100).forEach(l => {
         try {
             const chapterId = Math.floor(l.id / 100);
@@ -132,7 +120,6 @@ export default function CourseMap() {
     </div>
   );
 
-  // Если произошла ошибка - показываем кнопку перезагрузки
   if (error) return (
     <div className="h-[100dvh] bg-black flex flex-col items-center justify-center text-red-500 p-6 text-center">
         <h2 className="text-xl font-black mb-4">SYSTEM ERROR</h2>
@@ -142,7 +129,9 @@ export default function CourseMap() {
   );
 
   return (
-    <div className="min-h-screen bg-black text-white pb-40 font-sans">
+    // Оборачиваем в Layout (меню добавится само)
+    <MobileLayout>
+
       {/* HEADER */}
       <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-40">
         <h1 className="text-2xl font-black tracking-tighter uppercase italic">
@@ -155,7 +144,7 @@ export default function CourseMap() {
       </div>
 
       {/* КАРТА УРОВНЕЙ */}
-      <div className="max-w-xl mx-auto space-y-12 pb-20 mt-6">
+      <div className="space-y-12 pb-20 mt-6">
         {COURSE_LEVELS.map((level, levelIndex) => {
           const levelChapters = Object.values(chapters).filter(ch =>
             ch.id >= level.range[0] && ch.id <= level.range[1]
@@ -165,7 +154,7 @@ export default function CourseMap() {
 
           return (
             <div key={levelIndex} className="relative">
-              {/* Sticky Header */}
+              {/* Sticky Header Уровня */}
               <div className={`sticky top-[73px] z-30 py-4 px-6 backdrop-blur-xl border-b border-t ${level.border} bg-gradient-to-r ${level.bg} bg-black/60`}>
                 <div className="flex items-center gap-3">
                   <Layers size={20} className={level.color} />
@@ -251,30 +240,8 @@ export default function CourseMap() {
         })}
       </div>
 
-      {/* FOOTER */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-2xl border-t border-white/5 px-6 pt-4 pb-8 flex justify-between items-center z-50 max-w-lg mx-auto">
-        <button onClick={() => navigate('/map')} className="text-cyan-400 flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
-          <MapIcon size={24} />
-          <span className="text-[9px] font-black uppercase tracking-widest">Map</span>
-        </button>
+      {/* ФУТЕР УДАЛЕН - ОН ТЕПЕРЬ В MOBILE LAYOUT */}
 
-        <button onClick={() => navigate('/review')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
-          <div className="relative">
-            <BrainCircuit size={24} />
-            {dueCount > 0 && <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />}
-          </div>
-          <span className="text-[9px] font-black uppercase tracking-widest">Review</span>
-        </button>
-
-        <button onClick={() => navigate('/vocab')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
-          <BookText size={24} />
-          <span className="text-[9px] font-black uppercase tracking-widest">Vocab</span>
-        </button>
-        <button onClick={() => navigate('/profile')} className="text-gray-500 hover:text-white flex flex-col items-center gap-1.5 active:scale-95 transition-transform w-1/4">
-          <User size={24} />
-          <span className="text-[9px] font-black uppercase tracking-widest">Me</span>
-        </button>
-      </div>
-    </div>
+    </MobileLayout>
   );
 }
