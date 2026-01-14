@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
-  Volume2, ArrowRight, X, Gem, CheckCircle2,
-  AlertCircle, Trophy, BookOpen, ChevronLeft, RotateCcw, Frown
+  Volume2, ArrowRight, X, CheckCircle2,
+  Trophy, BookOpen, ChevronLeft, RotateCcw, Frown
 } from 'lucide-react';
 import { updateSRSItem } from '../services/srsService';
 import VisualDecoder from '../components/VisualDecoder';
@@ -21,6 +21,7 @@ export default function LessonPlayer() {
   const [score, setScore] = useState(0);
   const [quizCount, setQuizCount] = useState(0);
   const [canAdvance, setCanAdvance] = useState(false);
+  const [isLocked, setIsLocked] = useState(true); // Состояние задержки
   const [hasInteracted, setHasInteracted] = useState(false);
 
   const [isFlipped, setIsFlipped] = useState(false);
@@ -35,14 +36,21 @@ export default function LessonPlayer() {
 
   useEffect(() => {
     setCanAdvance(false);
+    setIsLocked(true);
     setHasInteracted(false);
     setSelectedOption(null);
     setIsFlipped(false);
 
-    if (items[step]?.type === 'theory') {
-        const timer = setTimeout(() => setCanAdvance(true), 3000);
-        return () => clearTimeout(timer);
-    }
+    // Универсальная задержка 1.5 секунды для любого слайда
+    const timer = setTimeout(() => {
+        setIsLocked(false);
+        // Если это теория, она разблокируется сразу по таймеру
+        if (items[step]?.type === 'theory') {
+            setCanAdvance(true);
+        }
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, [step, items]);
 
   const fetchLessonData = async () => {
@@ -54,9 +62,7 @@ export default function LessonPlayer() {
         .select('*').eq('lesson_id', id).order('order_index', { ascending: true });
 
       setItems(itemsData || []);
-      const totalQuizzes = itemsData.filter(i => i.type === 'quiz').length;
-      setQuizCount(totalQuizzes);
-
+      setQuizCount(itemsData.filter(i => i.type === 'quiz').length);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -109,7 +115,6 @@ export default function LessonPlayer() {
           <>
             <Frown size={80} className="text-red-500 mb-8 mx-auto" />
             <h1 className="text-3xl font-black italic uppercase mb-2 text-white">Review Needed</h1>
-            <p className="text-gray-400 mb-8">You need 70% to pass.</p>
             <Button variant="danger" onClick={() => window.location.reload()}>Try Again</Button>
           </>
         )}
@@ -124,7 +129,7 @@ export default function LessonPlayer() {
     <MobileLayout withNav={true}>
       <header className="p-4 flex-shrink-0 border-b border-white/5 bg-gray-900/20 z-20">
         <div className="flex justify-between items-center w-full">
-          <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white"><X size={24} /></button>
+          <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white transition-colors"><X size={24} /></button>
           <div className="text-center flex-1 px-4">
             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500 mb-1 truncate">{lessonInfo?.title}</h2>
             <div className="w-24 h-1 bg-gray-900 rounded-full overflow-hidden mx-auto">
@@ -197,7 +202,7 @@ export default function LessonPlayer() {
 
       <footer className="px-6 py-4 border-t border-white/5 bg-black/80 backdrop-blur-md z-20">
         <div className="flex gap-3">
-          {/* КНОПКА НАЗАД */}
+          {/* КНОПКА НАЗАД (Маленькая) */}
           <button
             onClick={() => setStep(s => s - 1)}
             disabled={step === 0}
@@ -206,14 +211,14 @@ export default function LessonPlayer() {
             <ChevronLeft size={24} />
           </button>
 
-          {/* КНОПКА ПРОДОЛЖИТЬ */}
+          {/* КНОПКА ПРОДОЛЖИТЬ (Большая из UI) */}
           <Button
             onClick={() => handleNext(selectedOption ? (selectedOption === current.correct_answer ? 5 : 1) : 3)}
-            disabled={!canAdvance}
+            disabled={!canAdvance || isLocked}
             className="flex-1"
           >
-            {canAdvance ? "Continue" : (type === 'vocab_card' ? "Flip Card" : "Wait...")}
-            {canAdvance && <ArrowRight size={20} />}
+            Continue
+            {!isLocked && canAdvance && <ArrowRight size={20} />}
           </Button>
         </div>
       </footer>
