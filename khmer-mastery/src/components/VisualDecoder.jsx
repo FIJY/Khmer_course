@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sun, Moon, Volume2 } from 'lucide-react';
 
 export default function VisualDecoder({ data, onComplete }) {
@@ -7,12 +7,19 @@ export default function VisualDecoder({ data, onComplete }) {
     letter_audio, letter_series, word_audio
   } = data;
 
+  // DEBUG: Посмотрим в консоли браузера (F12), что пришло
+  useEffect(() => {
+    console.log("🔍 VisualDecoder Data:", data);
+    console.log("🔊 Letter Audio File:", letter_audio);
+  }, [data]);
+
   const [status, setStatus] = useState('searching'); // searching | success | error
   const [selectedCharIndex, setSelectedCharIndex] = useState(null);
 
+  // Разбиваем слово на массив букв
   const chars = word ? word.split('') : [];
 
-  // --- SERIES LOGIC (Sun vs Moon) ---
+  // --- SERIES LOGIC ---
   const getTheme = () => {
     if (letter_series === 1) return {
          bg: "bg-orange-500", border: "border-orange-400", text: "text-black",
@@ -29,14 +36,33 @@ export default function VisualDecoder({ data, onComplete }) {
 
   const theme = getTheme();
 
+  const playAudio = (file) => {
+    if (!file) {
+      console.warn("⚠️ Audio file is missing in data!");
+      return;
+    }
+    console.log("▶️ Playing:", file);
+    const audio = new Audio(`/sounds/${file}`);
+    audio.play().catch(e => console.error("Audio error:", e));
+  };
+
   const handleCharClick = (char, index) => {
     if (status === 'success') return;
     setSelectedCharIndex(index);
 
     if (char === target_char) {
       setStatus('success');
-      playAudio(letter_audio || 'success.mp3');
+
+      // 1. Играем звук буквы (если есть) или успех
+      if (letter_audio) {
+          playAudio(letter_audio);
+      } else {
+          playAudio('success.mp3'); // Fallback
+      }
+
+      // 2. Через паузу играем слово целиком
       if (word_audio) setTimeout(() => playAudio(word_audio), 1200);
+
     } else {
       setStatus('error');
       playAudio('error.mp3');
@@ -44,34 +70,27 @@ export default function VisualDecoder({ data, onComplete }) {
     }
   };
 
-  const playAudio = (file) => {
-    if (!file) return;
-    new Audio(`/sounds/${file}`).play().catch(() => {});
-  };
-
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
+    <div className="w-full h-full flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
 
-      {/* 1. ИНСТРУКЦИЯ (Строгая) */}
-      <div className="mb-16 text-center space-y-4">
+      {/* 1. ИНСТРУКЦИЯ */}
+      <div className="mb-10 text-center space-y-4">
         <h3 className="text-gray-600 font-black uppercase tracking-[0.2em] text-[10px]">Visual Decoder</h3>
 
-        {/* Отображаем цель чисто текстом */}
         <div className="inline-flex flex-col items-center gap-2">
             <span className="text-white font-bold text-xl tracking-tight">{hint}</span>
-            {/* Показываем серию только когда нашли (или можно сразу, если хотим подсказку) */}
             {status === 'success' && <div className="animate-in fade-in slide-in-from-top-2">{theme.badge}</div>}
         </div>
       </div>
 
-      {/* 2. СЕТКА БУКВ (Чистая) */}
-      <div className="flex flex-wrap justify-center gap-3 mb-20">
+      {/* 2. СЕТКА БУКВ (ИСПРАВЛЕНО: flex-nowrap) */}
+      <div className="flex flex-nowrap justify-center gap-2 mb-16 w-full overflow-x-auto pb-4 px-2">
         {chars.map((char, index) => {
           const isTarget = char === target_char;
           let styleClass = "bg-gray-900 border-white/10 text-gray-400 hover:bg-gray-800 hover:border-white/30 hover:text-white";
 
           if (status === 'success') {
-            if (isTarget) styleClass = `${theme.bg} ${theme.border} ${theme.text} ${theme.shadow} scale-125 z-20 border-2`;
+            if (isTarget) styleClass = `${theme.bg} ${theme.border} ${theme.text} ${theme.shadow} scale-110 z-20 border-2`;
             else styleClass = "opacity-10 scale-90 blur-sm grayscale";
           } else if (status === 'error' && selectedCharIndex === index) {
             styleClass = "bg-red-500/20 border-red-500 text-red-500 animate-shake";
@@ -79,7 +98,8 @@ export default function VisualDecoder({ data, onComplete }) {
 
           return (
             <button key={index} onClick={() => handleCharClick(char, index)}
-              className={`w-14 h-20 sm:w-16 sm:h-24 rounded-lg border-2 flex items-center justify-center text-4xl font-serif transition-all duration-300 ${styleClass}`}
+              // shrink-0 запрещает кнопкам сжиматься до нечитаемости
+              className={`flex-shrink-0 w-12 h-16 sm:w-16 sm:h-24 rounded-lg border-2 flex items-center justify-center text-3xl sm:text-4xl font-serif transition-all duration-300 ${styleClass}`}
             >
               {char}
             </button>
