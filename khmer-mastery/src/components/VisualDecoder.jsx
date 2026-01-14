@@ -13,7 +13,7 @@ export default function VisualDecoder({ data, onComplete }) {
 
   const chars = word ? word.split('') : [];
 
-  // ТЕМА (Цвета для серий)
+  // ТЕМА
   const getTheme = () => {
     if (letter_series === 1) return {
          bg: "bg-orange-500", border: "border-orange-400", text: "text-black",
@@ -40,45 +40,35 @@ export default function VisualDecoder({ data, onComplete }) {
     if (status === 'success') return;
     setSelectedCharIndex(index);
 
-    // 1. ИГРАЕМ ЗВУК БУКВЫ (Мгновенно)
+    // 1. ЗВУК БУКВЫ (Сразу)
     const charSound = char_audio_map?.[char];
-    if (charSound) {
-        playAudio(charSound);
-    } else {
-        // Если звука буквы нет, играем короткий клик, но НЕ error.mp3 сразу
-        // playAudio('click.mp3'); // (опционально)
-    }
+    if (charSound) playAudio(charSound);
 
     if (char === target_char) {
       // --- ПОБЕДА ---
       setStatus('success');
 
-      // Тайминг победы:
-      // 0ms: Звук буквы ("Са...")
-      // 800ms: Звук успеха ("Дзынь!")
-      // 1800ms: Звук слова ("Са-бай!")
+      // ТАЙМИНГИ (Увеличили задержку)
+      // 0ms: Буква
+      // 1200ms: Звук успеха (было 800)
+      // 2500ms: Слово целиком (было 1800)
 
-      setTimeout(() => playAudio('success.mp3'), 800);
+      setTimeout(() => playAudio('success.mp3'), 1200);
 
       if (word_audio) {
-          setTimeout(() => playAudio(word_audio), 1800);
+          setTimeout(() => playAudio(word_audio), 2500);
       }
 
     } else {
       // --- ОШИБКА ---
       setStatus('error');
-
-      // Тайминг ошибки:
-      // 0ms: Звук неправильной буквы ("Ка...")
-      // 800ms: Звук ошибки ("Бзззт")
-      // 1200ms: Сброс цвета
-
-      setTimeout(() => playAudio('error.mp3'), 800);
+      // Даем букве договорить перед звуком ошибки
+      setTimeout(() => playAudio('error.mp3'), 1000);
 
       setTimeout(() => {
           setStatus('searching');
           setSelectedCharIndex(null);
-      }, 1200);
+      }, 1500);
     }
   };
 
@@ -96,39 +86,31 @@ export default function VisualDecoder({ data, onComplete }) {
       </div>
 
       {/* СЕТКА БУКВ
-          transition-all и duration-700 обеспечивают плавное скольжение.
-          gap меняется с gap-3 (раздвинуты) на gap-0 (слитны).
+          УБРАЛИ: gap-transition. Теперь всегда gap-3.
+          УБРАЛИ: Схлопывание границ. Карточки остаются карточками.
       */}
-      <div className={`
-        flex flex-nowrap justify-center w-full overflow-x-auto pb-4 px-2
-        transition-all duration-1000 ease-in-out
-        ${status === 'success' ? 'gap-0' : 'gap-3'}
-      `}>
+      <div className="flex flex-nowrap justify-center gap-3 w-full overflow-x-auto pb-4 px-2">
 
         {chars.map((char, index) => {
           const isTarget = char === target_char;
 
-          // Базовые стили
-          let baseClasses = "flex-shrink-0 w-12 h-16 sm:w-16 sm:h-24 rounded-lg border-2 flex items-center justify-center text-3xl sm:text-4xl font-serif transition-all duration-700";
-          let stateClasses = "bg-gray-900 border-white/10 text-gray-400 hover:bg-gray-800 hover:border-white/30 hover:text-white";
+          let styleClass = "bg-gray-900 border-white/10 text-gray-400 hover:bg-gray-800 hover:border-white/30 hover:text-white";
 
           if (status === 'success') {
-            // ПРИ УСПЕХЕ:
             if (isTarget) {
-                // Целевая буква: Яркая, увеличивается, убираем границы чтобы сливалась
-                stateClasses = `${theme.text} border-transparent bg-transparent scale-110 z-20 font-bold`;
+                // Целевую букву просто подсвечиваем цветом серии
+                styleClass = `${theme.bg} ${theme.text} border-transparent scale-110 z-20 shadow-lg`;
             } else {
-                // Соседние буквы: Тоже убираем границы, делаем прозрачными, но они остаются частью слова
-                stateClasses = `${theme.text} border-transparent bg-transparent opacity-60 scale-95 blur-[1px] grayscale`;
+                // Остальные просто чуть гасим
+                styleClass = "bg-gray-900/50 text-gray-600 border-transparent blur-[1px]";
             }
           } else if (status === 'error' && selectedCharIndex === index) {
-            // ПРИ ОШИБКЕ: Тряска и красный цвет
-            stateClasses = "bg-red-500/20 border-red-500 text-red-500 animate-shake";
+            styleClass = "bg-red-500/20 border-red-500 text-red-500 animate-shake";
           }
 
           return (
             <button key={index} onClick={() => handleCharClick(char, index)}
-              className={`${baseClasses} ${stateClasses}`}
+              className={`flex-shrink-0 w-12 h-16 sm:w-16 sm:h-24 rounded-lg border-2 flex items-center justify-center text-3xl sm:text-4xl font-serif transition-all duration-300 ${styleClass}`}
             >
               {char}
             </button>
@@ -136,10 +118,10 @@ export default function VisualDecoder({ data, onComplete }) {
         })}
       </div>
 
-      {/* РЕЗУЛЬТАТ (Появляется снизу) */}
-      <div className={`w-full max-w-xs text-center transition-all duration-1000 delay-300 ${status === 'success' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
+      {/* РЕЗУЛЬТАТ */}
+      <div className={`w-full max-w-xs text-center transition-all duration-1000 delay-500 ${status === 'success' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
 
-        <div className="flex flex-col items-center gap-1 mb-8 mt-6">
+        <div className="flex flex-col items-center gap-1 mb-8 mt-8">
            <h2 className="text-4xl font-black text-white">{word}</h2>
            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{english_translation}</p>
         </div>
