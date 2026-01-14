@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import {
-  Check, Play, Gem, RefreshCw, Lock
-} from 'lucide-react';
-import { getDueItems } from '../services/srsService';
+import { Check, Play, Gem, RefreshCw, Lock, Layers } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 
 const COURSE_LEVELS = [
@@ -75,29 +72,35 @@ export default function CourseMap() {
 
   return (
     <MobileLayout withNav={true}>
-      {/* HEADER */}
+      {/* HEADER - Фиксированный сверху внутри Layout */}
       <header className="p-6 border-b border-white/5 bg-black/50 backdrop-blur-md sticky top-0 z-30">
-        <h1 className="text-2xl font-black italic uppercase tracking-tighter">
-          Course <span className="text-cyan-500">Map</span>
+        <h1 className="text-2xl font-black italic uppercase tracking-tighter text-white">
+          Course <span className="text-cyan-400">Map</span>
         </h1>
       </header>
 
-      {/* MAP CONTENT */}
+      {/* MAP CONTENT - Прокручиваемая область */}
       <div className="p-6 space-y-12">
-        {COURSE_LEVELS.map((level, idx) => (
-          <section key={idx} className="space-y-6">
-            <div className={`p-6 rounded-[2rem] border ${level.border} bg-gradient-to-b ${level.bg}`}>
-              <h2 className={`text-xs font-black uppercase tracking-[0.2em] ${level.color} mb-1`}>
-                {level.title}
-              </h2>
-              <p className="text-gray-400 text-sm italic">{level.description}</p>
-            </div>
+        {COURSE_LEVELS.map((level, idx) => {
+          const levelLessons = lessons.filter(l => l.id >= level.range[0] && l.id <= level.range[1]);
+          if (levelLessons.length === 0) return null;
 
-            <div className="grid grid-cols-1 gap-4">
-              {lessons
-                .filter(l => l.id >= level.range[0] && l.id <= level.range[1])
-                .map((lesson) => {
+          return (
+            <section key={idx} className="space-y-6">
+              <div className={`p-6 rounded-[2rem] border ${level.border} bg-gradient-to-b ${level.bg}`}>
+                <div className="flex items-center gap-3 mb-2">
+                   <Layers size={18} className={level.color} />
+                   <h2 className={`text-xs font-black uppercase tracking-[0.2em] ${level.color}`}>
+                    {level.title}
+                  </h2>
+                </div>
+                <p className="text-gray-400 text-sm italic leading-tight">{level.description}</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {levelLessons.map((lesson) => {
                   const isCompleted = userProgress[lesson.id];
+                  // Простая логика блокировки: урок 1 открыт всегда, остальные — если пройден предыдущий
                   const isLocked = lesson.id > 1 && !userProgress[lesson.id - 1];
 
                   return (
@@ -118,17 +121,16 @@ export default function CourseMap() {
                       </div>
 
                       <div className="text-left">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] font-black text-cyan-500 uppercase tracking-widest">Lesson {lesson.id}</span>
-                        </div>
+                        <span className="text-[10px] font-black text-cyan-500 uppercase tracking-widest block mb-1">Lesson {lesson.id}</span>
                         <h3 className="text-lg font-black text-white leading-tight uppercase italic">{lesson.title}</h3>
                       </div>
                     </button>
                   );
                 })}
-            </div>
-          </section>
-        ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </MobileLayout>
   );
