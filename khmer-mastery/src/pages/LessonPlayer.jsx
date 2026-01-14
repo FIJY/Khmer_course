@@ -21,7 +21,7 @@ export default function LessonPlayer() {
   const [score, setScore] = useState(0);
   const [quizCount, setQuizCount] = useState(0);
   const [canAdvance, setCanAdvance] = useState(false);
-  const [isLocked, setIsLocked] = useState(true); // Состояние задержки
+  const [isLocked, setIsLocked] = useState(true);
   const [hasInteracted, setHasInteracted] = useState(false);
 
   const [isFlipped, setIsFlipped] = useState(false);
@@ -41,13 +41,10 @@ export default function LessonPlayer() {
     setSelectedOption(null);
     setIsFlipped(false);
 
-    // Универсальная задержка 1.5 секунды для любого слайда
+    // Задержка 1.5 сек для разблокировки кнопки Continue
     const timer = setTimeout(() => {
         setIsLocked(false);
-        // Если это теория, она разблокируется сразу по таймеру
-        if (items[step]?.type === 'theory') {
-            setCanAdvance(true);
-        }
+        if (items[step]?.type === 'theory') setCanAdvance(true);
     }, 1500);
 
     return () => clearTimeout(timer);
@@ -93,7 +90,7 @@ export default function LessonPlayer() {
 
   const playAudio = (audioFile) => {
     if (!audioFile) return;
-    if (audioRef.current) { audioRef.current.pause(); }
+    if (audioRef.current) audioRef.current.pause();
     const audio = new Audio(`/sounds/${audioFile}`);
     audioRef.current = audio;
     audio.play().catch(() => {});
@@ -153,7 +150,7 @@ export default function LessonPlayer() {
                 <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
                   <span className="text-gray-600 font-black text-[10px] uppercase mb-8 tracking-widest">Meaning</span>
                   <h2 className="text-3xl font-black italic">{current.front}</h2>
-                  {!hasInteracted && <div className="absolute bottom-6 text-cyan-500 text-xs font-bold animate-pulse uppercase">Tap to flip</div>}
+                  {!hasInteracted && <div className="absolute bottom-6 text-cyan-500 text-xs font-bold animate-pulse uppercase tracking-widest">Tap to flip</div>}
                 </div>
                 <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center">
                   <h2 className="text-4xl font-black mb-3">{current.back}</h2>
@@ -202,7 +199,6 @@ export default function LessonPlayer() {
 
       <footer className="px-6 py-4 border-t border-white/5 bg-black/80 backdrop-blur-md z-20">
         <div className="flex gap-3">
-          {/* КНОПКА НАЗАД (Маленькая) */}
           <button
             onClick={() => setStep(s => s - 1)}
             disabled={step === 0}
@@ -211,7 +207,6 @@ export default function LessonPlayer() {
             <ChevronLeft size={24} />
           </button>
 
-          {/* КНОПКА ПРОДОЛЖИТЬ (Большая из UI) */}
           <Button
             onClick={() => handleNext(selectedOption ? (selectedOption === current.correct_answer ? 5 : 1) : 3)}
             disabled={!canAdvance || isLocked}
