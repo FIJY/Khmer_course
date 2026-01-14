@@ -13,7 +13,6 @@ export default function VisualDecoder({ data, onComplete }) {
 
   const chars = word ? word.split('') : [];
 
-  // ТЕМА
   const getTheme = () => {
     if (letter_series === 1) return {
          bg: "bg-orange-500", border: "border-orange-400", text: "text-black",
@@ -32,7 +31,15 @@ export default function VisualDecoder({ data, onComplete }) {
 
   const playAudio = (file) => {
     if (!file) return;
+
+    // Глушим предыдущий звук, если он был
+    if (window.currentAudio) {
+        window.currentAudio.pause();
+        window.currentAudio.currentTime = 0;
+    }
+
     const audio = new Audio(`/sounds/${file}`);
+    window.currentAudio = audio; // Запоминаем текущий звук в глобальную переменную
     audio.play().catch(e => console.error("Audio error:", e));
   };
 
@@ -40,31 +47,39 @@ export default function VisualDecoder({ data, onComplete }) {
     if (status === 'success') return;
     setSelectedCharIndex(index);
 
-    // 1. ЗВУК БУКВЫ (Сразу)
     const charSound = char_audio_map?.[char];
-    if (charSound) playAudio(charSound);
 
     if (char === target_char) {
-      // --- ПОБЕДА ---
+      // --- 1. УСПЕХ (ВЕРНАЯ БУКВА) ---
       setStatus('success');
 
-      // ТАЙМИНГИ (Увеличили задержку)
-      // 0ms: Буква
-      // 1200ms: Звук успеха (было 800)
-      // 2500ms: Слово целиком (было 1800)
+      // ШАГ 1: Эмоция (Сразу)
+      playAudio('success.mp3');
 
-      setTimeout(() => playAudio('success.mp3'), 1200);
+      // ШАГ 2: Звук буквы (Через 0.8 сек)
+      if (charSound) {
+          setTimeout(() => playAudio(charSound), 800);
+      }
 
+      // ШАГ 3: Звук слова (Через 2.0 сек - даем букве прозвучать)
       if (word_audio) {
-          setTimeout(() => playAudio(word_audio), 2500);
+          setTimeout(() => playAudio(word_audio), 2000);
       }
 
     } else {
-      // --- ОШИБКА ---
+      // --- 2. ОШИБКА ---
       setStatus('error');
-      // Даем букве договорить перед звуком ошибки
-      setTimeout(() => playAudio('error.mp3'), 1000);
 
+      // ШАГ 1: Эмоция (Сразу)
+      playAudio('error.mp3');
+
+      // ШАГ 2: Звук буквы, на которую нажали (Через 0.6 сек)
+      // Это полезно: "Ты нажал не туда, послушай, что это было"
+      if (charSound) {
+          setTimeout(() => playAudio(charSound), 600);
+      }
+
+      // Сброс через 1.5 сек
       setTimeout(() => {
           setStatus('searching');
           setSelectedCharIndex(null);
@@ -85,12 +100,8 @@ export default function VisualDecoder({ data, onComplete }) {
         </div>
       </div>
 
-      {/* СЕТКА БУКВ
-          УБРАЛИ: gap-transition. Теперь всегда gap-3.
-          УБРАЛИ: Схлопывание границ. Карточки остаются карточками.
-      */}
+      {/* СЕТКА БУКВ */}
       <div className="flex flex-nowrap justify-center gap-3 w-full overflow-x-auto pb-4 px-2">
-
         {chars.map((char, index) => {
           const isTarget = char === target_char;
 
@@ -98,10 +109,8 @@ export default function VisualDecoder({ data, onComplete }) {
 
           if (status === 'success') {
             if (isTarget) {
-                // Целевую букву просто подсвечиваем цветом серии
                 styleClass = `${theme.bg} ${theme.text} border-transparent scale-110 z-20 shadow-lg`;
             } else {
-                // Остальные просто чуть гасим
                 styleClass = "bg-gray-900/50 text-gray-600 border-transparent blur-[1px]";
             }
           } else if (status === 'error' && selectedCharIndex === index) {
@@ -120,12 +129,10 @@ export default function VisualDecoder({ data, onComplete }) {
 
       {/* РЕЗУЛЬТАТ */}
       <div className={`w-full max-w-xs text-center transition-all duration-1000 delay-500 ${status === 'success' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
-
         <div className="flex flex-col items-center gap-1 mb-8 mt-8">
            <h2 className="text-4xl font-black text-white">{word}</h2>
            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{english_translation}</p>
         </div>
-
         <button onClick={() => onComplete()}
           className={`w-full py-4 rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition-all ${theme.bg} ${theme.text}`}
         >
