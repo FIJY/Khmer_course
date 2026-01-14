@@ -22,6 +22,22 @@ const COURSE_LEVELS = [
     color: "text-emerald-400",
     bg: "from-emerald-500/10 to-transparent",
     border: "border-emerald-500/20"
+  },
+  {
+    title: "LEVEL 3: GRAMMAR ENGINE",
+    description: "Stop memorizing phrases, start building sentences.",
+    range: [10, 14],
+    color: "text-purple-400",
+    bg: "from-purple-500/10 to-transparent",
+    border: "border-purple-500/20"
+  },
+  {
+    title: "LEVEL 4: VISUAL DECODER",
+    description: "Learn to read the Khmer script from scratch.",
+    range: [15, 19],
+    color: "text-orange-400",
+    bg: "from-orange-500/10 to-transparent",
+    border: "border-orange-500/20"
   }
 ];
 
