@@ -44,7 +44,7 @@ export default function LessonPlayer() {
     const timer = setTimeout(() => {
         setIsLocked(false);
         if (items[step]?.type === 'theory') setCanAdvance(true);
-    }, 1500);
+    }, 0);
 
     return () => clearTimeout(timer);
   }, [step, items]);
