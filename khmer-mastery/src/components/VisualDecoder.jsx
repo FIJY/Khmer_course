@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowRight, Sun, Moon, Volume2 } from 'lucide-react';
 
-// Добавлен hideDefaultButton в аргументы
 export default function VisualDecoder({ data, onComplete, hideDefaultButton = false }) {
   const {
     word, target_char, hint, english_translation,
@@ -28,33 +27,45 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
   };
   const theme = getTheme();
 
+  const playAudio = (file) => {
+    if (!file) return;
+    const audio = new Audio(`/sounds/${file}`);
+    audio.play().catch(e => console.error("Audio error:", e));
+  };
+
   const handleCharClick = (char, index) => {
     if (status === 'success') return;
     setSelectedCharIndex(index);
+    const charSound = char_audio_map?.[char];
+
     if (char === target_char) {
       setStatus('success');
-      onComplete(); // Сообщаем плееру о готовности
+      playAudio('success.mp3');
+      if (charSound) setTimeout(() => playAudio(charSound), 1000);
+      if (word_audio) setTimeout(() => playAudio(word_audio), 2200);
+      onComplete();
     } else {
       setStatus('error');
+      playAudio('error.mp3');
+      if (charSound) setTimeout(() => playAudio(charSound), 800);
       setTimeout(() => { setStatus('searching'); setSelectedCharIndex(null); }, 1500);
     }
   };
 
   return (
     <div className="w-full flex flex-col items-center justify-center p-4">
-      <div className="mb-8 text-center space-y-4">
+      <div className="mb-8 text-center space-y-2">
         <h3 className="text-gray-600 font-black uppercase tracking-[0.2em] text-[10px]">Visual Decoder</h3>
-        <div className="inline-flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-2">
             <span className="text-white font-bold text-xl tracking-tight">{hint}</span>
             {status === 'success' && theme.badge}
         </div>
       </div>
 
-      {/* Адаптивная сетка: буквы переносятся, если их много */}
+      {/* Сетка букв с переносом (flex-wrap) */}
       <div className="flex flex-wrap justify-center gap-3 w-full max-w-sm mb-8">
         {chars.map((char, index) => {
           const isTarget = char === target_char;
-          // Динамический размер: меньше букв — крупнее плитки
           const sizeClass = chars.length > 6 ? "w-10 h-14 text-2xl" : "w-14 h-20 text-3xl sm:w-16 sm:h-24 sm:text-4xl";
 
           let styleClass = "bg-gray-900 border-white/10 text-gray-400";
@@ -74,19 +85,22 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
         })}
       </div>
 
-      <div className={`w-full max-w-xs text-center transition-all duration-1000 ${status === 'success' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
-        <div className="flex flex-col items-center gap-1 mb-8 mt-4">
-           <h2 className="text-4xl font-black text-white">{word}</h2>
+      <div className={`w-full max-w-xs text-center transition-all duration-1000 ${status === 'success' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className="flex flex-col items-center gap-1 mb-4">
+           <h2 className="text-4xl font-black text-white leading-tight">{word}</h2>
            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{english_translation}</p>
         </div>
-
-        {/* Внутренняя кнопка теперь скрывается */}
         {!hideDefaultButton && (
           <button onClick={() => onComplete()} className={`w-full py-4 rounded-xl font-black uppercase ${theme.bg} ${theme.text}`}>
             Continue <ArrowRight size={20} />
           </button>
         )}
       </div>
+
+      <style>{`
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .animate-shake { animation: shake 0.3s ease-in-out; }
+      `}</style>
     </div>
   );
 }
