@@ -41,7 +41,6 @@ export default function LessonPlayer() {
     setSelectedOption(null);
     setIsFlipped(false);
 
-    // Задержка 1.5 сек для разблокировки кнопки Continue
     const timer = setTimeout(() => {
         setIsLocked(false);
         if (items[step]?.type === 'theory') setCanAdvance(true);
