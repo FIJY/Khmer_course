@@ -4,22 +4,16 @@ import { ArrowRight, Sun, Moon, Volume2 } from 'lucide-react';
 export default function VisualDecoder({ data, onComplete }) {
   const {
     word, target_char, hint, english_translation,
-    letter_audio, letter_series, word_audio
+    letter_series, word_audio,
+    char_audio_map // <--- НОВОЕ: Карта звуков для всех букв { "ស": "letter_sa.mp3", ... }
   } = data;
-
-  // DEBUG: Посмотрим в консоли браузера (F12), что пришло
-  useEffect(() => {
-    console.log("🔍 VisualDecoder Data:", data);
-    console.log("🔊 Letter Audio File:", letter_audio);
-  }, [data]);
 
   const [status, setStatus] = useState('searching'); // searching | success | error
   const [selectedCharIndex, setSelectedCharIndex] = useState(null);
 
-  // Разбиваем слово на массив букв
   const chars = word ? word.split('') : [];
 
-  // --- SERIES LOGIC ---
+  // Логика цветов серии
   const getTheme = () => {
     if (letter_series === 1) return {
          bg: "bg-orange-500", border: "border-orange-400", text: "text-black",
@@ -37,11 +31,7 @@ export default function VisualDecoder({ data, onComplete }) {
   const theme = getTheme();
 
   const playAudio = (file) => {
-    if (!file) {
-      console.warn("⚠️ Audio file is missing in data!");
-      return;
-    }
-    console.log("▶️ Playing:", file);
+    if (!file) return;
     const audio = new Audio(`/sounds/${file}`);
     audio.play().catch(e => console.error("Audio error:", e));
   };
@@ -50,56 +40,63 @@ export default function VisualDecoder({ data, onComplete }) {
     if (status === 'success') return;
     setSelectedCharIndex(index);
 
+    // 1. Сначала ВСЕГДА играем звук буквы (если он есть в карте)
+    const charSound = char_audio_map?.[char];
+    if (charSound) {
+        playAudio(charSound);
+    } else {
+        // Если звука нет в карте, играем клик или ошибку
+        playAudio('error.mp3');
+    }
+
     if (char === target_char) {
+      // 2. Если угадали
       setStatus('success');
 
-      // 1. Играем звук буквы (если есть) или успех
-      if (letter_audio) {
-          playAudio(letter_audio);
-      } else {
-          playAudio('success.mp3'); // Fallback
-      }
-
-      // 2. Через паузу играем слово целиком
-      if (word_audio) setTimeout(() => playAudio(word_audio), 1200);
+      // Через 0.8 сек (после звука буквы) запускаем звук слова
+      if (word_audio) setTimeout(() => playAudio(word_audio), 800);
 
     } else {
+      // 3. Если ошибка
       setStatus('error');
-      playAudio('error.mp3');
-      setTimeout(() => { setStatus('searching'); setSelectedCharIndex(null); }, 600);
+      // Играем звук ошибки чуть позже, чтобы не перебивать звук буквы
+      setTimeout(() => playAudio('error.mp3'), 400);
+      setTimeout(() => { setStatus('searching'); setSelectedCharIndex(null); }, 800);
     }
   };
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
 
-      {/* 1. ИНСТРУКЦИЯ */}
+      {/* ИНСТРУКЦИЯ */}
       <div className="mb-10 text-center space-y-4">
         <h3 className="text-gray-600 font-black uppercase tracking-[0.2em] text-[10px]">Visual Decoder</h3>
-
         <div className="inline-flex flex-col items-center gap-2">
             <span className="text-white font-bold text-xl tracking-tight">{hint}</span>
             {status === 'success' && <div className="animate-in fade-in slide-in-from-top-2">{theme.badge}</div>}
         </div>
       </div>
 
-      {/* 2. СЕТКА БУКВ (ИСПРАВЛЕНО: flex-nowrap) */}
-      <div className="flex flex-nowrap justify-center gap-2 mb-16 w-full overflow-x-auto pb-4 px-2">
+      {/* СЕТКА БУКВ
+          Анимация слияния: transition-all + gap меняется с 2 на 0
+      */}
+      <div className={`flex flex-nowrap justify-center w-full overflow-x-auto pb-4 px-2 transition-all duration-1000 ease-in-out ${status === 'success' ? 'gap-0' : 'gap-3'}`}>
+
         {chars.map((char, index) => {
           const isTarget = char === target_char;
           let styleClass = "bg-gray-900 border-white/10 text-gray-400 hover:bg-gray-800 hover:border-white/30 hover:text-white";
 
           if (status === 'success') {
-            if (isTarget) styleClass = `${theme.bg} ${theme.border} ${theme.text} ${theme.shadow} scale-110 z-20 border-2`;
-            else styleClass = "opacity-10 scale-90 blur-sm grayscale";
+            // При успехе убираем границы и делаем единый блок
+            styleClass = `${theme.text} border-transparent bg-transparent scale-110 z-20`;
+            if (!isTarget) styleClass += " opacity-50"; // Остальные буквы чуть приглушаем, но не блюрим полностью
           } else if (status === 'error' && selectedCharIndex === index) {
             styleClass = "bg-red-500/20 border-red-500 text-red-500 animate-shake";
           }
 
           return (
             <button key={index} onClick={() => handleCharClick(char, index)}
-              // shrink-0 запрещает кнопкам сжиматься до нечитаемости
-              className={`flex-shrink-0 w-12 h-16 sm:w-16 sm:h-24 rounded-lg border-2 flex items-center justify-center text-3xl sm:text-4xl font-serif transition-all duration-300 ${styleClass}`}
+              className={`flex-shrink-0 w-12 h-16 sm:w-16 sm:h-24 rounded-lg border-2 flex items-center justify-center text-3xl sm:text-4xl font-serif transition-all duration-500 ${styleClass}`}
             >
               {char}
             </button>
@@ -107,9 +104,10 @@ export default function VisualDecoder({ data, onComplete }) {
         })}
       </div>
 
-      {/* 3. РЕЗУЛЬТАТ */}
-      <div className={`w-full max-w-xs text-center transition-all duration-500 ${status === 'success' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-        <div className="flex flex-col items-center gap-1 mb-8">
+      {/* РЕЗУЛЬТАТ */}
+      <div className={`w-full max-w-xs text-center transition-all duration-700 ${status === 'success' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+        <div className="flex flex-col items-center gap-1 mb-8 mt-4">
+           {/* Слово дублируется здесь для ясности, или можно убрать, так как буквы сверху съехались */}
            <h2 className="text-4xl font-black text-white">{word}</h2>
            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">{english_translation}</p>
         </div>
