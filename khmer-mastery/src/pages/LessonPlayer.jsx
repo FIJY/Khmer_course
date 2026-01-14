@@ -99,21 +99,25 @@ export default function LessonPlayer() {
 
   if (isFinished) {
     return (
-      <MobileLayout withNav={true} className="justify-center items-center text-center p-8">
-        {lessonPassed ? (
-          <>
-            <Trophy size={80} className="text-emerald-400 mb-8 mx-auto animate-bounce" />
-            <h1 className="text-4xl font-black italic uppercase mb-2 text-white">Complete!</h1>
-            <p className="text-gray-400 mb-8">Score: {score}/{quizCount}</p>
-            <Button onClick={() => navigate('/map')}>Back to Map</Button>
-          </>
-        ) : (
-          <>
-            <Frown size={80} className="text-red-500 mb-8 mx-auto" />
-            <h1 className="text-3xl font-black italic uppercase mb-2 text-white">Review Needed</h1>
-            <Button variant="danger" onClick={() => window.location.reload()}>Try Again</Button>
-          </>
-        )}
+      <MobileLayout withNav={true}>
+        {/* Обертка flex-1 и justify-center заставит контент встать ровно по центру
+            и прижать меню к самому низу */}
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+          {lessonPassed ? (
+            <>
+              <Trophy size={80} className="text-emerald-400 mb-8 animate-bounce" />
+              <h1 className="text-4xl font-black italic uppercase mb-2 text-white">Complete!</h1>
+              <p className="text-gray-400 mb-8 text-xl font-bold">Score: {score}/{quizCount}</p>
+              <Button onClick={() => navigate('/map')}>Back to Map</Button>
+            </>
+          ) : (
+            <>
+              <Frown size={80} className="text-red-500 mb-8" />
+              <h1 className="text-3xl font-black italic uppercase mb-2 text-white">Review Needed</h1>
+              <Button variant="danger" onClick={() => window.location.reload()}>Try Again</Button>
+            </>
+          )}
+        </div>
       </MobileLayout>
     );
   }
