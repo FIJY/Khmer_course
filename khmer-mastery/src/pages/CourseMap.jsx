@@ -22,22 +22,6 @@ const COURSE_LEVELS = [
     color: "text-emerald-400",
     bg: "from-emerald-500/10 to-transparent",
     border: "border-emerald-500/20"
-  },
-  {
-    title: "LEVEL 3: GRAMMAR ENGINE",
-    description: "Stop memorizing phrases, start building sentences.",
-    range: [10, 14],
-    color: "text-purple-400",
-    bg: "from-purple-500/10 to-transparent",
-    border: "border-purple-500/20"
-  },
-  {
-    title: "LEVEL 4: VISUAL DECODER",
-    description: "Learn to read the Khmer script from scratch.",
-    range: [15, 19],
-    color: "text-orange-400",
-    bg: "from-orange-500/10 to-transparent",
-    border: "border-orange-500/20"
   }
 ];
 
@@ -55,7 +39,6 @@ export default function CourseMap() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate('/login'); return; }
 
-      // 1. Прогресс
       const { data: progressData } = await supabase
         .from('user_progress')
         .select('lesson_id')
@@ -65,7 +48,6 @@ export default function CourseMap() {
       const doneIds = progressData ? progressData.map(item => Number(item.lesson_id)) : [];
       setCompletedLessons(doneIds);
 
-      // 2. Уроки
       const { data: allLessons } = await supabase
         .from('lessons')
         .select('*')
@@ -73,7 +55,6 @@ export default function CourseMap() {
 
       if (!allLessons) { setChapters({}); return; }
 
-      // 3. Группировка уроков по главам
       const chaptersMap = {};
 
       allLessons.filter(l => l.id < 100).forEach(l => {
@@ -86,7 +67,7 @@ export default function CourseMap() {
           chaptersMap[chapterId] = {
             id: chapterId,
             title: `Chapter ${chapterId}`,
-            description: 'Essential survival module',
+            description: 'Coming soon...',
             subLessons: []
           };
         }
@@ -110,9 +91,9 @@ export default function CourseMap() {
 
   return (
     <MobileLayout withNav={true}>
-      {/* HEADER */}
+      {/* HEADER: Делаем его липким, чтобы не уезжал при скролле */}
       <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-40">
-        <h1 className="text-2xl font-black tracking-tighter uppercase italic">
+        <h1 className="text-2xl font-black tracking-tighter uppercase italic text-white">
           Khmer <span className="text-cyan-400">Mastery</span>
         </h1>
         <div className="bg-gray-900 px-4 py-2 rounded-full flex items-center gap-2 border border-white/10">
@@ -121,8 +102,7 @@ export default function CourseMap() {
         </div>
       </div>
 
-      {/* КАРТА УРОВНЕЙ */}
-      <div className="space-y-12 pb-20 mt-6">
+      <div className="space-y-12 mt-6 pb-10">
         {COURSE_LEVELS.map((level, levelIndex) => {
           const levelChapters = Object.values(chapters).filter(ch =>
             ch.id >= level.range[0] && ch.id <= level.range[1]
@@ -139,7 +119,7 @@ export default function CourseMap() {
                     <h2 className={`text-sm font-black uppercase tracking-[0.2em] ${level.color}`}>
                       {level.title}
                     </h2>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide opacity-70">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase opacity-70">
                       {level.description}
                     </p>
                   </div>
@@ -150,61 +130,58 @@ export default function CourseMap() {
                 {levelChapters.map((chapter) => {
                   const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
                   const isChapterFullDone = subLessonIds.length > 0
-                    ? subLessonIds.every(id => completedLessons.includes(id))
-                    : completedLessons.includes(Number(chapter.id));
+                    && subLessonIds.every(id => completedLessons.includes(id));
 
                   return (
                     <div key={chapter.id} className="relative pl-4 border-l-2 border-white/5">
                       <div className={`absolute -left-[9px] top-10 w-4 h-4 rounded-full border-4 bg-black transition-colors ${isChapterFullDone ? 'border-emerald-500' : 'border-gray-800'}`} />
 
                       <div className={`bg-gray-900/40 border rounded-[2.5rem] p-6 transition-all duration-500
-                        ${isChapterFullDone ? 'border-emerald-500/30 bg-emerald-950/5' : 'border-white/5'}`}>
+                        ${isChapterFullDone ? 'border-emerald-500/30' : 'border-white/5'}`}>
 
                         <div className="flex justify-between items-start mb-6">
-                          <div className="max-w-[70%]">
+                          <div className="max-w-[70%] text-white">
                             <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1 block">
                               Chapter {chapter.id}
                             </span>
                             <h3 className={`text-xl font-black uppercase tracking-tight leading-none mb-2 ${isChapterFullDone ? 'text-emerald-400' : 'text-white'}`}>
                               {chapter.title}
                             </h3>
-                            <p className="text-gray-500 text-xs italic leading-tight">{chapter.description || chapter.desc}</p>
+                            <p className="text-gray-500 text-xs italic leading-tight">{chapter.description}</p>
                           </div>
 
                           <button
                             onClick={() => navigate(`/lesson/${chapter.id}/preview`)}
-                            className={`p-4 rounded-2xl border transition-all active:scale-90
-                              ${isChapterFullDone
-                                ? 'bg-emerald-600 border-emerald-400 text-white'
-                                : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400'}`}
+                            className={`p-3 rounded-2xl border transition-all active:scale-90
+                              ${isChapterFullDone ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-500/30'}`}
                           >
-                            {isChapterFullDone ? <Check size={20} strokeWidth={3} /> : <BookOpen size={20} />}
+                            <BookOpen size={20} />
                           </button>
                         </div>
 
                         {chapter.subLessons.length > 0 && (
-                          <div className="space-y-2 pt-4 border-t border-white/5">
+                          <div className="space-y-2">
                             {chapter.subLessons.map((sub) => {
                               const isDone = completedLessons.includes(Number(sub.id));
                               return (
                                 <button
                                   key={sub.id}
                                   onClick={() => navigate(`/lesson/${sub.id}`)}
-                                  className={`w-full flex items-center justify-between p-4 rounded-xl transition-all border text-left group
+                                  className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border text-left group
                                     ${isDone
                                       ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
                                       : 'bg-black/20 border-white/5 text-gray-400 hover:bg-white/5'}`}
                                 >
-                                  <div className="flex items-center gap-3">
-                                    <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center border-2
-                                      ${isDone ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-800'}`}>
-                                      {isDone ? <Check size={14} strokeWidth={4} /> : <Play size={12} fill="currentColor" />}
+                                  <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border
+                                      ${isDone ? 'border-emerald-500 bg-emerald-500 text-black' : 'border-white/10 bg-black text-transparent'}`}>
+                                      <Check size={10} strokeWidth={4} />
                                     </div>
-                                    <span className="text-[11px] font-black uppercase tracking-widest">
+                                    <span className="text-xs font-bold uppercase tracking-wider truncate group-hover:text-white transition-colors">
                                       {sub.title}
                                     </span>
                                   </div>
-                                  <ChevronRight size={16} className={`transition-transform group-hover:translate-x-1 ${isDone ? 'text-emerald-500' : 'opacity-10'}`} />
+                                  <ChevronRight size={14} className={isDone ? 'text-emerald-500' : 'text-gray-700'} />
                                 </button>
                               );
                             })}
