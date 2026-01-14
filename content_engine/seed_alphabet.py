@@ -136,7 +136,7 @@ async def seed_alphabet():
 if __name__ == "__main__":
     asyncio.run(seed_alphabet())
 
-OUTPUT_DIR = "public/sounds"
+OUTPUT_DIR = "khmer-mastery/public/sounds"
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
