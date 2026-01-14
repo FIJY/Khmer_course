@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
   Volume2, ArrowRight, X, Gem, CheckCircle2,
-  AlertCircle, Trophy, BookOpen, ChevronLeft // <--- 1. Добавлена иконка
+  AlertCircle, Trophy, BookOpen, ChevronLeft
 } from 'lucide-react';
 import { updateSRSItem } from '../services/srsService';
 import VisualDecoder from '../components/VisualDecoder';
@@ -66,7 +66,7 @@ export default function LessonPlayer() {
     }
   };
 
-  // --- 2. НОВАЯ ФУНКЦИЯ НАЗАД ---
+  // ФУНКЦИЯ НАЗАД
   const handlePrev = () => {
     if (step > 0) {
       setStep(step - 1);
@@ -77,13 +77,10 @@ export default function LessonPlayer() {
 
   const playAudio = (audioFile) => {
     if (!audioFile) return;
-
-    // Мягкий сброс звука перед новым
     if (window.currentAudio) {
         window.currentAudio.pause();
         window.currentAudio.currentTime = 0;
     }
-
     const audio = new Audio(`/sounds/${audioFile}`);
     window.currentAudio = audio;
     audio.play().catch(() => {});
@@ -129,20 +126,22 @@ export default function LessonPlayer() {
     <div className="h-[100dvh] bg-black flex justify-center font-sans overflow-hidden">
       <div className="w-full max-w-lg h-full flex flex-col relative bg-black shadow-2xl border-x border-white/5">
 
-        {/* HEADER */}
+        {/* HEADER: КНОПКА НАЗАД ТЕПЕРЬ ВСЕГДА В КОДЕ */}
         <header className="p-4 flex-shrink-0 border-b border-white/5 bg-gray-900/20 z-20">
           <div className="flex justify-between items-center w-full">
-
-            {/* 3. КНОПКИ НАВИГАЦИИ (ЛЕВЫЙ УГОЛ) */}
             <div className="flex items-center gap-2">
                 <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white transition-colors">
                     <X size={24} />
                 </button>
-                {step > 0 && (
-                    <button onClick={handlePrev} className="p-2 text-gray-400 hover:text-white transition-colors flex items-center gap-1">
-                        <ChevronLeft size={24} />
-                    </button>
-                )}
+
+                {/* Кнопка есть ВСЕГДА, но если step === 0, она прозрачная */}
+                <button
+                  onClick={handlePrev}
+                  disabled={step === 0}
+                  className={`p-2 transition-colors flex items-center gap-1 ${step === 0 ? 'opacity-0 pointer-events-none' : 'text-gray-400 hover:text-white'}`}
+                >
+                    <ChevronLeft size={24} />
+                </button>
             </div>
 
             <div className="text-center flex-1 px-4">
@@ -159,12 +158,12 @@ export default function LessonPlayer() {
         <main className="flex-1 overflow-y-auto px-6 py-4 flex flex-col items-center z-10 custom-scrollbar">
           <div className="w-full my-auto py-8">
 
-            {/* --- VISUAL DECODER --- */}
+            {/* VISUAL DECODER */}
             {type === 'visual_decoder' && (
               <VisualDecoder data={current} onComplete={() => handleNext(5)} />
             )}
 
-            {/* --- VOCAB CARD --- */}
+            {/* VOCAB CARD */}
             {type === 'vocab_card' && (
               <div className="w-full cursor-pointer" onClick={() => { setIsFlipped(!isFlipped); if(!isFlipped) playAudio(current.audio); }}>
                 <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
@@ -182,7 +181,7 @@ export default function LessonPlayer() {
               </div>
             )}
 
-            {/* --- QUIZ (4. НОВАЯ ЛОГИКА: ЗВУК СНАЧАЛА) --- */}
+            {/* QUIZ */}
             {type === 'quiz' && (
               <div className="w-full">
                  <h2 className="text-xl font-black mb-10 italic uppercase text-center tracking-tighter leading-tight">{current.question}</h2>
@@ -200,18 +199,10 @@ export default function LessonPlayer() {
                        <button key={i} disabled={!!selectedOption}
                          onClick={() => {
                             setSelectedOption(opt);
-
-                            // А. Играем звук УСПЕХА/ОШИБКИ сразу (мгновенная реакция)
                             playAudio(isCorrect ? 'success.mp3' : 'error.mp3');
-
-                            // Б. Ищем озвучку слова
                             const wordAudio = getAudioForOption(opt);
-
-                            // В. Если слово есть, играем его ПОСЛЕ (через 0.8с)
                             if (wordAudio) {
-                                setTimeout(() => {
-                                    playAudio(wordAudio);
-                                }, 800);
+                                setTimeout(() => { playAudio(wordAudio); }, 800);
                             }
                          }}
                          className={`w-full p-5 border rounded-2xl text-left font-bold transition-all text-sm ${btnClass}`}
@@ -224,7 +215,7 @@ export default function LessonPlayer() {
               </div>
             )}
 
-            {/* --- THEORY --- */}
+            {/* THEORY */}
             {type === 'theory' && (
               <div className="w-full bg-gray-900 border border-white/10 p-10 rounded-[3.5rem] text-center">
                 <BookOpen className="text-cyan-500/20 mx-auto mb-4" size={32} />
