@@ -112,17 +112,33 @@ export default function LessonPlayer() {
 
         {type === 'vocab_card' && (
           <div className="w-full cursor-pointer" onClick={() => {
+            // Если карточка еще не перевернута — играем звук при клике
+            if (!isFlipped) {
+              playLocalAudio(current.audio);
+            }
             setIsFlipped(!isFlipped);
             setCanAdvance(true);
-            if (!isFlipped) playLocalAudio(current.audio);
           }}>
             <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+              {/* ПЕРЕДНЯЯ СТОРОНА */}
               <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
                 <h2 className="text-3xl font-black italic text-white">{current.front}</h2>
               </div>
+
+              {/* ЗАДНЯЯ СТОРОНА */}
               <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
                 <h2 className="text-4xl font-black mb-3">{current.back}</h2>
-                <div className="p-5 bg-cyan-500 rounded-full text-black"><Volume2 size={28} /></div>
+
+                {/* КНОПКА ПОВТОРНОГО ПРОСЛУШИВАНИЯ */}
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation(); // Остановка всплытия, чтобы карточка не перевернулась
+                    playLocalAudio(current.audio);
+                  }}
+                  className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg"
+                >
+                  <Volume2 size={28} />
+                </div>
               </div>
             </div>
           </div>
