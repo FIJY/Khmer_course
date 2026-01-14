@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
   Volume2, ArrowRight, X, Gem, CheckCircle2,
-  AlertCircle, Trophy, BookOpen
+  AlertCircle, Trophy, BookOpen, ChevronLeft // <--- 1. Добавлена иконка
 } from 'lucide-react';
 import { updateSRSItem } from '../services/srsService';
 import VisualDecoder from '../components/VisualDecoder';
@@ -66,20 +66,37 @@ export default function LessonPlayer() {
     }
   };
 
+  // --- 2. НОВАЯ ФУНКЦИЯ НАЗАД ---
+  const handlePrev = () => {
+    if (step > 0) {
+      setStep(step - 1);
+      setIsFlipped(false);
+      setSelectedOption(null);
+    }
+  };
+
   const playAudio = (audioFile) => {
     if (!audioFile) return;
-    // Останавливаем все предыдущие звуки (чтобы не было каши)
-    window.currentAudio?.pause();
+
+    // Мягкий сброс звука перед новым
+    if (window.currentAudio) {
+        window.currentAudio.pause();
+        window.currentAudio.currentTime = 0;
+    }
+
     const audio = new Audio(`/sounds/${audioFile}`);
     window.currentAudio = audio;
     audio.play().catch(() => {});
   };
 
-  // 🔥 НОВАЯ ФУНКЦИЯ: Ищет аудио для текста квиза в материалах урока
   const getAudioForOption = (text) => {
-    // 1. Ищем, есть ли карточка с таким словом в этом уроке
+    if (!text) return null;
+    const cleanText = text.trim();
     const vocabCard = items.find(item =>
-      item.type === 'vocab_card' && item.data.back === text
+      item.type === 'vocab_card' && (
+         item.data.back?.trim() === cleanText ||
+         item.data.front?.trim() === cleanText
+      )
     );
     if (vocabCard?.data?.audio) return vocabCard.data.audio;
     return null;
@@ -115,7 +132,19 @@ export default function LessonPlayer() {
         {/* HEADER */}
         <header className="p-4 flex-shrink-0 border-b border-white/5 bg-gray-900/20 z-20">
           <div className="flex justify-between items-center w-full">
-            <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white transition-colors"><X size={24} /></button>
+
+            {/* 3. КНОПКИ НАВИГАЦИИ (ЛЕВЫЙ УГОЛ) */}
+            <div className="flex items-center gap-2">
+                <button onClick={() => navigate('/map')} className="p-2 text-gray-500 hover:text-white transition-colors">
+                    <X size={24} />
+                </button>
+                {step > 0 && (
+                    <button onClick={handlePrev} className="p-2 text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                        <ChevronLeft size={24} />
+                    </button>
+                )}
+            </div>
+
             <div className="text-center flex-1 px-4">
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500 mb-1 truncate">{lessonInfo?.title}</h2>
               <div className="w-24 h-1 bg-gray-900 rounded-full overflow-hidden mx-auto">
@@ -153,7 +182,7 @@ export default function LessonPlayer() {
               </div>
             )}
 
-            {/* --- QUIZ (ОБНОВЛЕННАЯ ЛОГИКА) --- */}
+            {/* --- QUIZ (4. НОВАЯ ЛОГИКА: ЗВУК СНАЧАЛА) --- */}
             {type === 'quiz' && (
               <div className="w-full">
                  <h2 className="text-xl font-black mb-10 italic uppercase text-center tracking-tighter leading-tight">{current.question}</h2>
@@ -172,16 +201,18 @@ export default function LessonPlayer() {
                          onClick={() => {
                             setSelectedOption(opt);
 
-                            // 1. Ищем и играем озвучку слова
-                            const wordAudio = getAudioForOption(opt);
-                            if (wordAudio) {
-                                playAudio(wordAudio);
-                            }
+                            // А. Играем звук УСПЕХА/ОШИБКИ сразу (мгновенная реакция)
+                            playAudio(isCorrect ? 'success.mp3' : 'error.mp3');
 
-                            // 2. Через паузу играем звук успеха/неудачи
-                            setTimeout(() => {
-                                playAudio(isCorrect ? 'success.mp3' : 'error.mp3');
-                            }, 700);
+                            // Б. Ищем озвучку слова
+                            const wordAudio = getAudioForOption(opt);
+
+                            // В. Если слово есть, играем его ПОСЛЕ (через 0.8с)
+                            if (wordAudio) {
+                                setTimeout(() => {
+                                    playAudio(wordAudio);
+                                }, 800);
+                            }
                          }}
                          className={`w-full p-5 border rounded-2xl text-left font-bold transition-all text-sm ${btnClass}`}
                        >
