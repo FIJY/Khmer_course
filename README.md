@@ -1,0 +1,357 @@
+diff --git a/khmer-mastery/README.md b/khmer-mastery/README.md
+index 18bc70ebe277fbfe6e55e6f9a0ae7e2c3e4bdd83..828a983f764351f42cd82525ec85d26d0b43f71e 100644
+--- a/khmer-mastery/README.md
++++ b/khmer-mastery/README.md
+@@ -1,16 +1,343 @@
+-# React + Vite
++# Khmer Mastery (React + Vite)
+ 
+-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
++Khmer Mastery is a mobile-first learning app for Khmer. It combines lesson content, quizzes, a dictionary, and a spaced-repetition review flow (SRS) on top of Supabase for auth and data storage.
+ 
+-Currently, two official plugins are available:
++## Project structure
+ 
+-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
++- `src/pages/` — route-level screens (map, lessons, review, profile, vocab)
++- `src/components/` — reusable UI/layout components
++- `src/services/` — data helpers (e.g., SRS logic)
++- `public/sounds/` — generated audio assets (seed scripts write here)
++- `content_engine/` (repo root) — scripts for seeding lessons and alphabet data
+ 
+-## React Compiler
++## Local development
+ 
+-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
++```bash
++npm install
++npm run dev
++```
+ 
+-## Expanding the ESLint configuration
++## Environment variables
+ 
+-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
++Create a `.env` file at the **repo root** (`/workspace/Khmer_course/.env`) and add the following variables.
++
++### Required for the React app
++
++```
++VITE_SUPABASE_URL=...            # Supabase project URL
++VITE_SUPABASE_ANON_KEY=...       # Supabase anon public key
++```
++
++### Required for seeding scripts (content_engine)
++
++```
++SUPABASE_SERVICE_ROLE_KEY=...    # Service role key (write access)
++```
++
++### Optional fallbacks used by scripts
++
++```
++SUPABASE_URL=...
++SUPABASE_KEY=...
++```
++
++> The React app reads `VITE_` variables only. Seeding scripts prefer `SUPABASE_SERVICE_ROLE_KEY` when present.
++
++## Supabase schema (current usage)
++
++Below is the schema implied by the app and seeding scripts. Add/adjust columns in Supabase to match.
++
++### `modules`
++Used for course structure (chapters).
++
++| column | type | notes |
++| --- | --- | --- |
++| id | int / uuid | primary key |
++| title | text | e.g., `SURVIVAL` |
++| level_label | text | e.g., `Level 1` |
++| description | text | marketing copy |
++| is_paid | boolean | paid gating |
++| order_index | int | sorting in the map |
++
++### `lessons`
++Lesson metadata and map structure.
++
++| column | type | notes |
++| --- | --- | --- |
++| id | int | lesson ID (supports chapters via 1xx) |
++| module_id | int | FK to `modules.id` |
++| title | text | lesson name |
++| description | text | lesson summary |
++| order_index | int | order inside module |
++
++### `lesson_items`
++Lesson content items (cards, theory, quizzes, visual decoder).
++
++| column | type | notes |
++| --- | --- | --- |
++| id | int | primary key |
++| lesson_id | int | FK to `lessons.id` |
++| type | text | `vocab_card`, `quiz`, `theory`, `visual_decoder` |
++| order_index | int | item order |
++| data | jsonb | payload for each type |
++
++**Common `data` keys**
++- `vocab_card`: `{ front, back, pronunciation, audio, dictionary_id }`
++- `quiz`: `{ question, options, correct_answer }`
++- `theory`: `{ title, text }`
++- `visual_decoder`: `{ word, target_char, hint, english_translation, letter_series, word_audio, char_audio_map }`
++
++### `user_progress`
++Lesson completion tracking.
++
++| column | type | notes |
++| --- | --- | --- |
++| id | int | primary key |
++| user_id | uuid | Supabase auth user |
++| lesson_id | int | FK to `lessons.id` |
++| is_completed | boolean | completion flag |
++
++### `user_srs`
++Spaced repetition state per user + item.
++
++| column | type | notes |
++| --- | --- | --- |
++| id | int | primary key |
++| user_id | uuid | Supabase auth user |
++| item_id | int | FK to `lesson_items.id` |
++| interval | int | days until next review |
++| ease_factor | float | SM-2 style factor |
++| next_review | timestamptz | due date |
++| status | text | `learning` / `graduated` |
++
++> Unique constraint: `(user_id, item_id)` for upserts.
++
++### `dictionary`
++Global word bank used for reviews and audio.
++
++| column | type | notes |
++| --- | --- | --- |
++| id | int | primary key |
++| khmer | text | Khmer text |
++| english | text | English gloss |
++| pronunciation | text | optional |
++| item_type | text | `word`, `phrase`, `number`, `sentence` |
++
++> Unique constraint: `khmer` for upserts.
++
++### `alphabet`
++Alphabet symbols and metadata.
++
++| column | type | notes |
++| --- | --- | --- |
++| id | text | character itself (e.g., `ក`) |
++| name_en | text | transliteration |
++| type | text | `consonant`, `vowel_dependent`, `diacritic`, etc. |
++| series | int | 1/2 for consonants |
++| frequency_rank | int | frequency ordering |
++| audio_url | text | audio filename |
++| description | text | used for diacritics rules |
++
++### `study_materials`
++Generated chapter summary/guidebook content.
++
++| column | type | notes |
++| --- | --- | --- |
++| id | int | primary key |
++| chapter_id | int | module/chapter reference |
++| title | text | material title |
++| content | text | markdown content |
++| type | text | `summary` etc. |
++
++### `user_srs_items` (legacy)
++Referenced only for cleanup in the seeding script. Keep if used by older data.
++
++## Seeding content
++
++Seeding scripts live in `content_engine/`. They expect the `.env` file at the repo root.
++
++Examples:
++
++```bash
++python content_engine/seed_structure.py
++python content_engine/seed_lesson_1.py
++python content_engine/seed_alphabet.py
++```
++
++## Notes
++
++- The app relies on Supabase auth for session handling.
++- Audio assets are referenced from `/public/sounds` and are generated by seeding scripts.
++
++---
++
++# Khmer Mastery (React + Vite) — Русский
++
++Khmer Mastery — мобильное учебное приложение для кхмерского языка. В нем есть уроки, квизы, словарь и повторение по SRS на базе Supabase (авторизация и хранилище данных).
++
++## Структура проекта
++
++- `src/pages/` — экраны (карта, уроки, повторение, профиль, словарь)
++- `src/components/` — переиспользуемые UI/Layout компоненты
++- `src/services/` — вспомогательная логика (например, SRS)
++- `public/sounds/` — аудио-ассеты (генерируются скриптами)
++- `content_engine/` (в корне репо) — скрипты посева уроков и алфавита
++
++## Локальная разработка
++
++```bash
++npm install
++npm run dev
++```
++
++## Переменные окружения
++
++Создайте `.env` в **корне репозитория** (`/workspace/Khmer_course/.env`) и добавьте:
++
++### Обязательно для React-приложения
++
++```
++VITE_SUPABASE_URL=...            # URL проекта Supabase
++VITE_SUPABASE_ANON_KEY=...       # публичный anon ключ Supabase
++```
++
++### Обязательно для скриптов посева (content_engine)
++
++```
++SUPABASE_SERVICE_ROLE_KEY=...    # Service Role ключ (запись/удаление)
++```
++
++### Опциональные fallback-переменные для скриптов
++
++```
++SUPABASE_URL=...
++SUPABASE_KEY=...
++```
++
++> React читает только `VITE_` переменные. Скрипты посева предпочитают `SUPABASE_SERVICE_ROLE_KEY`, если он задан.
++
++## Схема Supabase (используется сейчас)
++
++Ниже — схема, выведенная из кода приложения и скриптов посева. Настройте таблицы/колонки в Supabase соответствующим образом.
++
++### `modules`
++Структура курса (главы).
++
++| колонка | тип | примечание |
++| --- | --- | --- |
++| id | int / uuid | primary key |
++| title | text | например, `SURVIVAL` |
++| level_label | text | например, `Level 1` |
++| description | text | описание |
++| is_paid | boolean | платность |
++| order_index | int | сортировка |
++
++### `lessons`
++Метаданные уроков и структура карты.
++
++| колонка | тип | примечание |
++| --- | --- | --- |
++| id | int | ID урока (поддержка глав через 1xx) |
++| module_id | int | FK на `modules.id` |
++| title | text | название |
++| description | text | краткое описание |
++| order_index | int | порядок внутри главы |
++
++### `lesson_items`
++Контент урока (карточки, теория, квизы, visual decoder).
++
++| колонка | тип | примечание |
++| --- | --- | --- |
++| id | int | primary key |
++| lesson_id | int | FK на `lessons.id` |
++| type | text | `vocab_card`, `quiz`, `theory`, `visual_decoder` |
++| order_index | int | порядок элементов |
++| data | jsonb | payload для типа |
++
++**Типовые ключи `data`**
++- `vocab_card`: `{ front, back, pronunciation, audio, dictionary_id }`
++- `quiz`: `{ question, options, correct_answer }`
++- `theory`: `{ title, text }`
++- `visual_decoder`: `{ word, target_char, hint, english_translation, letter_series, word_audio, char_audio_map }`
++
++### `user_progress`
++Прогресс по урокам.
++
++| колонка | тип | примечание |
++| --- | --- | --- |
++| id | int | primary key |
++| user_id | uuid | пользователь Supabase |
++| lesson_id | int | FK на `lessons.id` |
++| is_completed | boolean | флаг завершения |
++
++### `user_srs`
++Состояние SRS для пользователя и карточки.
++
++| колонка | тип | примечание |
++| --- | --- | --- |
++| id | int | primary key |
++| user_id | uuid | пользователь Supabase |
++| item_id | int | FK на `lesson_items.id` |
++| interval | int | интервал (дни) |
++| ease_factor | float | коэффициент SM-2 |
++| next_review | timestamptz | дата следующего повтора |
++| status | text | `learning` / `graduated` |
++
++> Уникальный индекс: `(user_id, item_id)` для upsert.
++
++### `dictionary`
++Глобальный словарь для повторения и аудио.
++
++| колонка | тип | примечание |
++| --- | --- | --- |
++| id | int | primary key |
++| khmer | text | кхмерский текст |
++| english | text | перевод |
++| pronunciation | text | опционально |
++| item_type | text | `word`, `phrase`, `number`, `sentence` |
++
++> Уникальный индекс: `khmer` для upsert.
++
++### `alphabet`
++Алфавит и метаданные.
++
++| колонка | тип | примечание |
++| --- | --- | --- |
++| id | text | сам символ (например, `ក`) |
++| name_en | text | транслитерация |
++| type | text | `consonant`, `vowel_dependent`, `diacritic`, и т.д. |
++| series | int | 1/2 для согласных |
++| frequency_rank | int | частотность |
++| audio_url | text | имя аудио |
++| description | text | используется для правил диакритик |
++
++### `study_materials`
++Сводные материалы по главам.
++
++| колонка | тип | примечание |
++| --- | --- | --- |
++| id | int | primary key |
++| chapter_id | int | связь с модулем/главой |
++| title | text | заголовок |
++| content | text | markdown |
++| type | text | `summary` и т.д. |
++
++### `user_srs_items` (legacy)
++Используется только для очистки в скрипте посева. Оставьте, если есть старые данные.
++
++## Посев контента
++
++Скрипты посева находятся в `content_engine/`. Они ожидают `.env` в корне репо.
++
++Примеры:
++
++```bash
++python content_engine/seed_structure.py
++python content_engine/seed_lesson_1.py
++python content_engine/seed_alphabet.py
++```
++
++## Примечания
++
++- Приложение использует Supabase auth для сессий.
++- Аудио хранится в `/public/sounds` и генерируется скриптами посева.
