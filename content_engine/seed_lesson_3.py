@@ -1,5 +1,4 @@
 import asyncio
-from database_engine import seed_lesson
 
 CHAPTER_3_DATA = {
     301: {
@@ -63,7 +62,7 @@ CHAPTER_3_DATA = {
             {"type": "quiz", "data": {
                 "question": "Translate: Fifty (50)",
                 "options": ["ហាសិប (Ha-Sep)", "ហុកសិប (Hok-Sep)", "ម្ភៃ (Ma-Phei)"],
-                "correct_answer": "ហាសិб (Ha-Sep)",
+                "correct_answer": "ហាសិប (Ha-Sep)",
                 "explanation": "50 is Ha-Sep. 20 is Ma-Phei."
             }},
             # БЛОК 5: СОТНИ И ТЫСЯЧИ (Market Scales)
@@ -91,10 +90,16 @@ CHAPTER_3_DATA = {
 
 
 async def main():
+    from database_engine import seed_lesson
+
     print("🌟 Starting Global Chapter 3 Import (Money & Numbers)...")
     for lesson_id, info in CHAPTER_3_DATA.items():
         await seed_lesson(lesson_id, info["title"], info["desc"], info["content"])
     print("🚀 All sub-lessons for Chapter 3 are synced! Word count in profile should increase.")
+
+
+def get_lessons():
+    return CHAPTER_3_DATA
 
 
 if __name__ == "__main__":
