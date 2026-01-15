@@ -56,3 +56,5 @@ Return ONLY this content list:
 ## Notes
 - Use `letter_series: "unknown"` for vowels/diacritics or when the series is not known.
 - Audio fields can be left blank; audio will be generated later by the import script.
+- If you save the lesson as JSON for `seed_lesson_json.py`, you can include metadata:
+  `{ "lesson_id": 101, "title": "...", "desc": "...", "module_id": 1, "order_index": 0, "content": [...] }`.
