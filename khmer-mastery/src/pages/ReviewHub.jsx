@@ -13,14 +13,19 @@ export default function ReviewHub() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ due: 0, total: 0, mastered: 0 });
+  const [error, setError] = useState(null);
 
   useEffect(() => { fetchReviewData(); }, []);
 
   const fetchReviewData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        navigate('/login');
+        return;
+      }
 
       const dueItems = await getDueItems(user.id);
       const { data: allSrs } = await supabase.from('user_srs').select('status').eq('user_id', user.id);
@@ -29,9 +34,24 @@ export default function ReviewHub() {
       const mastered = allSrs?.filter(i => i.status === 'graduated').length || 0;
 
       setStats({ due: dueItems.length, total, mastered });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setError('Unable to load review stats right now.');
+    }
     finally { setLoading(false); }
   };
+
+  if (error) {
+    return (
+      <div className="h-screen bg-black text-white flex flex-col items-center justify-center text-center px-6 gap-4">
+        <p className="text-red-400 text-xs font-black uppercase tracking-widest">Review Error</p>
+        <p className="text-gray-400 text-xs">{error}</p>
+        <Button onClick={fetchReviewData} className="bg-orange-500 border-none">
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   if (loading) return <div className="h-screen bg-black text-white flex items-center justify-center font-black tracking-widest uppercase italic">Loading Hub...</div>;
 
