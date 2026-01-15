@@ -66,6 +66,21 @@ export default function CourseMap() {
 
   const hasChapters = Object.keys(chapters).length > 0;
 
+  if (error) return (
+    <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
+      <p className="text-sm font-bold uppercase tracking-widest text-red-400">Map Error</p>
+      <p className="text-gray-400 text-xs">{error}</p>
+      <button
+        onClick={refresh}
+        className="px-4 py-2 rounded-full border border-white/10 text-xs font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300"
+      >
+        Retry
+      </button>
+    </div>
+  );
+
+  const hasChapters = Object.keys(chapters).length > 0;
+
   return (
     <MobileLayout withNav={true}>
       {/* Sticky header to stay visible while scrolling */}
