@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import React from 'react';
 import {
-  Check, Play, Gem, Layers, BookOpen, RefreshCw, ChevronRight
+  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
+import useCourseMap from '../hooks/useCourseMap';
 
 const COURSE_LEVELS = [
   {
@@ -42,61 +41,14 @@ const COURSE_LEVELS = [
 ];
 
 export default function CourseMap() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [completedLessons, setCompletedLessons] = useState([]);
-  const [chapters, setChapters] = useState({});
-
-  useEffect(() => { fetchAllData(); }, []);
-
-  const fetchAllData = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
-
-      const { data: progressData } = await supabase
-        .from('user_progress')
-        .select('lesson_id')
-        .eq('user_id', user.id)
-        .eq('is_completed', true);
-
-      const doneIds = progressData ? progressData.map(item => Number(item.lesson_id)) : [];
-      setCompletedLessons(doneIds);
-
-      const { data: allLessons } = await supabase
-        .from('lessons')
-        .select('*')
-        .order('id', { ascending: true });
-
-      if (!allLessons) { setChapters({}); return; }
-
-      const chaptersMap = {};
-
-      allLessons.filter(l => l.id < 100).forEach(l => {
-        chaptersMap[l.id] = { ...l, subLessons: [] };
-      });
-
-      allLessons.filter(l => l.id >= 100).forEach(l => {
-        const chapterId = Math.floor(l.id / 100);
-        if (!chaptersMap[chapterId]) {
-          chaptersMap[chapterId] = {
-            id: chapterId,
-            title: `Chapter ${chapterId}`,
-            description: 'Coming soon...',
-            subLessons: []
-          };
-        }
-        chaptersMap[chapterId].subLessons.push({ id: l.id, title: l.title });
-      });
-
-      setChapters(chaptersMap);
-    } catch (e) {
-      console.error("CRITICAL MAP ERROR:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    loading,
+    completedLessons,
+    chapters,
+    error,
+    navigate,
+    refresh
+  } = useCourseMap();
 
   if (loading) return (
     <div className="h-screen bg-black flex flex-col items-center justify-center text-cyan-400 font-black italic tracking-widest gap-4">
@@ -104,6 +56,21 @@ export default function CourseMap() {
       <span>LOADING WORLD MAP...</span>
     </div>
   );
+
+  if (error) return (
+    <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
+      <p className="text-sm font-bold uppercase tracking-widest text-red-400">Map Error</p>
+      <p className="text-gray-400 text-xs">{error}</p>
+      <button
+        onClick={refresh}
+        className="px-4 py-2 rounded-full border border-white/10 text-xs font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300"
+      >
+        Retry
+      </button>
+    </div>
+  );
+
+  const hasChapters = Object.keys(chapters).length > 0;
 
   return (
     <MobileLayout withNav={true}>
@@ -119,7 +86,13 @@ export default function CourseMap() {
       </div>
 
       <div className="space-y-12 mt-6 pb-10">
-        {COURSE_LEVELS.map((level, levelIndex) => {
+        {!hasChapters ? (
+          <div className="text-center opacity-60 py-20 flex flex-col items-center">
+            <RefreshCw size={36} className="mb-4 text-gray-600" />
+            <p className="text-gray-400 text-xs uppercase font-black tracking-widest">No lessons available yet</p>
+            <p className="text-gray-600 text-[10px] mt-2">Check back soon for new content.</p>
+          </div>
+        ) : COURSE_LEVELS.map((level, levelIndex) => {
           const levelChapters = Object.values(chapters).filter(ch =>
             ch.id >= level.range[0] && ch.id <= level.range[1]
           );

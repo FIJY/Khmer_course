@@ -26,9 +26,17 @@ export default function ReviewPlayer() {
     getCardMode
   } = useReviewSession();
 
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic uppercase">Building Quiz...</div>;
+    return (
+      <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
+        <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
+        <h1 className="text-3xl font-black text-white italic uppercase mb-2">{emptyTitle}</h1>
+        <p className="text-gray-400 text-xs">{emptyBody}</p>
+        <Button onClick={() => navigate('/review')} className="mt-8">Back to Hub</Button>
+      </MobileLayout>
+    );
+  }
 
-  if (isFinished || sessionData.length === 0) {
+  if (isFinished) {
     return (
       <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
         <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
