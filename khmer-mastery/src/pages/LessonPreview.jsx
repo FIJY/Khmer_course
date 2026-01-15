@@ -11,23 +11,45 @@ export default function LessonPreview() {
   const [lesson, setLesson] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
         const { data: lessonData } = await supabase.from('lessons').select('*').eq('id', id).single();
         setLesson(lessonData);
         const { data: itemsData } = await supabase.from('lesson_items')
           .select('*').eq('lesson_id', id).order('order_index', { ascending: true });
         setItems(itemsData || []);
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        console.error(e);
+        setError('Unable to load the lesson preview.');
+      }
       finally { setLoading(false); }
     };
     fetchData();
   }, [id]);
 
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic">LOADING PREVIEW...</div>;
+
+  if (error) {
+    return (
+      <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
+        <p className="text-red-400 text-xs font-black uppercase tracking-widest">Preview Error</p>
+        <p className="text-gray-400 text-xs">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 rounded-full border border-white/10 text-xs font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const vocabItems = items.filter(i => i.type === 'vocab_card');
 
   return (
     <MobileLayout withNav={true}>
@@ -44,7 +66,11 @@ export default function LessonPreview() {
 
         <div className="space-y-3 mb-10">
           <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-4 px-1">Vocabulary List</h3>
-          {items.filter(i => i.type === 'vocab_card').map((item, idx) => (
+          {vocabItems.length === 0 ? (
+            <div className="text-center opacity-60 py-8">
+              <p className="text-gray-500 italic">No vocabulary items yet</p>
+            </div>
+          ) : vocabItems.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between bg-gray-900/50 border border-white/5 p-4 rounded-2xl">
               <div>
                 <h4 className="text-lg font-black text-white">{item.data.back}</h4>

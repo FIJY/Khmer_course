@@ -5,12 +5,14 @@ export default function useVocab() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => { fetchVocab(); }, []);
 
   const fetchVocab = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { data, error } = await supabase
         .from('lesson_items')
         .select('*')
@@ -21,6 +23,7 @@ export default function useVocab() {
       setItems(data || []);
     } catch (e) {
       console.error(e);
+      setError('Unable to load vocabulary right now.');
     } finally {
       setLoading(false);
     }
@@ -40,6 +43,7 @@ export default function useVocab() {
   return {
     items,
     loading,
+    error,
     filter,
     setFilter,
     filteredItems,

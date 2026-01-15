@@ -32,12 +32,14 @@ export default function useCourseMap() {
   const [loading, setLoading] = useState(true);
   const [completedLessons, setCompletedLessons] = useState([]);
   const [chapters, setChapters] = useState({});
+  const [error, setError] = useState(null);
 
   useEffect(() => { fetchAllData(); }, []);
 
   const fetchAllData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate('/login');
@@ -58,9 +60,15 @@ export default function useCourseMap() {
         .select('*')
         .order('id', { ascending: true });
 
+      if (!allLessons || allLessons.length === 0) {
+        setChapters({});
+        return;
+      }
+
       setChapters(buildChaptersMap(allLessons));
     } catch (e) {
       console.error('CRITICAL MAP ERROR:', e);
+      setError('Unable to load the course map. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -70,6 +78,7 @@ export default function useCourseMap() {
     loading,
     completedLessons,
     chapters,
+    error,
     navigate,
     refresh: fetchAllData
   };

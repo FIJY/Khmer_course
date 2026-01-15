@@ -45,6 +45,7 @@ export default function CourseMap() {
     loading,
     completedLessons,
     chapters,
+    error,
     navigate
   } = useCourseMap();
 
@@ -54,6 +55,21 @@ export default function CourseMap() {
       <span>LOADING WORLD MAP...</span>
     </div>
   );
+
+  if (error) return (
+    <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
+      <p className="text-sm font-bold uppercase tracking-widest text-red-400">Map Error</p>
+      <p className="text-gray-400 text-xs">{error}</p>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-4 py-2 rounded-full border border-white/10 text-xs font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300"
+      >
+        Reload Map
+      </button>
+    </div>
+  );
+
+  const hasChapters = Object.keys(chapters).length > 0;
 
   return (
     <MobileLayout withNav={true}>
@@ -69,7 +85,13 @@ export default function CourseMap() {
       </div>
 
       <div className="space-y-12 mt-6 pb-10">
-        {COURSE_LEVELS.map((level, levelIndex) => {
+        {!hasChapters ? (
+          <div className="text-center opacity-60 py-20 flex flex-col items-center">
+            <RefreshCw size={36} className="mb-4 text-gray-600" />
+            <p className="text-gray-400 text-xs uppercase font-black tracking-widest">No lessons available yet</p>
+            <p className="text-gray-600 text-[10px] mt-2">Check back soon for new content.</p>
+          </div>
+        ) : COURSE_LEVELS.map((level, levelIndex) => {
           const levelChapters = Object.values(chapters).filter(ch =>
             ch.id >= level.range[0] && ch.id <= level.range[1]
           );
