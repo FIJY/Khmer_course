@@ -66,7 +66,11 @@ const en = {
     reviewNeeded: 'Review Needed',
     score: 'Score: {score}/{total}',
     progress: 'Step {current} of {total}',
-    hintContinue: 'Complete this step to continue.'
+    hintContinue: 'Complete this step to continue.',
+    cardEnglish: 'English',
+    cardKhmer: 'Khmer',
+    pronunciationLabel: 'Pronunciation',
+    audioUnavailable: 'Audio unavailable'
   },
   vocab: {
     title: 'Dictionary',

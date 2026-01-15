@@ -88,6 +88,13 @@ export default function LessonPlayer() {
 
   const current = items[step]?.data;
   const type = items[step]?.type;
+  const khmerPattern = /[\u1780-\u17FF]/;
+  const frontText = current?.front ?? '';
+  const backText = current?.back ?? '';
+  const frontHasKhmer = khmerPattern.test(frontText);
+  const backHasKhmer = khmerPattern.test(backText);
+  const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
+  const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
 
   return (
     <MobileLayout
@@ -134,23 +141,36 @@ export default function LessonPlayer() {
             <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
               {/* Front side */}
               <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
-                <h2 className="text-3xl font-black italic text-white">{current.front}</h2>
+                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardEnglish')}</p>
+                <h2 className="text-3xl font-black italic text-white">{englishText}</h2>
               </div>
 
               {/* Back side */}
               <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
-                <h2 className="text-4xl font-black mb-3">{current.back}</h2>
+                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
+                <h2 className="text-4xl font-black mb-2">{khmerText}</h2>
+                {current.pronunciation && (
+                  <p className="text-xs text-gray-400 font-semibold tracking-wide mb-4">
+                    {t('lesson.pronunciationLabel')}: {current.pronunciation}
+                  </p>
+                )}
 
                 {/* Replay audio button */}
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent flip on audio replay
-                    playLocalAudio(current.audio);
-                  }}
-                  className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg"
-                >
-                  <Volume2 size={28} />
-                </div>
+                {current.audio ? (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent flip on audio replay
+                      playLocalAudio(current.audio);
+                    }}
+                    className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg"
+                  >
+                    <Volume2 size={28} />
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                    {t('lesson.audioUnavailable')}
+                  </p>
+                )}
               </div>
             </div>
           </div>
