@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
 import { X, BookOpen, Volume2, Play } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
+import EmptyState from '../components/UI/EmptyState';
+import { fetchLessonById, fetchLessonItemsByLessonId } from '../data/lessons';
+import { t } from '../i18n';
 
 export default function LessonPreview() {
   const { id } = useParams();
@@ -11,23 +15,38 @@ export default function LessonPreview() {
   const [lesson, setLesson] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const { data: lessonData } = await supabase.from('lessons').select('*').eq('id', id).single();
-        setLesson(lessonData);
-        const { data: itemsData } = await supabase.from('lesson_items')
-          .select('*').eq('lesson_id', id).order('order_index', { ascending: true });
-        setItems(itemsData || []);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    };
-    fetchData();
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const lessonData = await fetchLessonById(id);
+      setLesson(lessonData);
+      const itemsData = await fetchLessonItemsByLessonId(id);
+      setItems(itemsData);
+    } catch (e) {
+      console.error(e);
+      setError('Unable to load the lesson preview.');
+    }
+    finally { setLoading(false); }
   }, [id]);
 
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic">LOADING PREVIEW...</div>;
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  if (loading) return <LoadingState label={t('loading.preview')} />;
+
+  if (error) {
+    return (
+      <ErrorState
+        title={t('errors.preview')}
+        message={error}
+        onRetry={fetchData}
+      />
+    );
+  }
+
+  const vocabItems = items.filter(i => i.type === 'vocab_card');
 
   return (
     <MobileLayout withNav={true}>
@@ -43,8 +62,23 @@ export default function LessonPreview() {
         </div>
 
         <div className="space-y-3 mb-10">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-4 px-1">Vocabulary List</h3>
-          {items.filter(i => i.type === 'vocab_card').map((item, idx) => (
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-4 px-1">{t('empty.vocabList')}</h3>
+          {vocabItems.length === 0 ? (
+            <EmptyState
+              title={t('empty.vocab')}
+              actions={(
+                <>
+                  <Button variant="outline" onClick={() => navigate('/map')}>
+                    {t('actions.backToMap')}
+                  </Button>
+                  <Button onClick={() => navigate(`/lesson/${id}`)}>
+                    {t('actions.startLesson')} <Play size={18} fill="currentColor" />
+                  </Button>
+                </>
+              )}
+              className="py-8"
+            />
+          ) : vocabItems.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between bg-gray-900/50 border border-white/5 p-4 rounded-2xl">
               <div>
                 <h4 className="text-lg font-black text-white">{item.data.back}</h4>
@@ -55,9 +89,11 @@ export default function LessonPreview() {
           ))}
         </div>
 
-        <Button onClick={() => navigate(`/lesson/${id}`)}>
-          Start Lesson <Play size={18} fill="currentColor" />
-        </Button>
+        {vocabItems.length > 0 && (
+          <Button onClick={() => navigate(`/lesson/${id}`)}>
+            {t('actions.startLesson')} <Play size={18} fill="currentColor" />
+          </Button>
+        )}
       </main>
     </MobileLayout>
   );

@@ -1,5 +1,4 @@
 import asyncio
-from database_engine import seed_lesson
 
 CHAPTER_4_DATA = {
     401: {
@@ -81,10 +80,16 @@ CHAPTER_4_DATA = {
 
 
 async def main():
+    from database_engine import seed_lesson
+
     print("🌟 Starting Final Survival Import (Chapter 4)...")
     for lesson_id, info in CHAPTER_4_DATA.items():
         await seed_lesson(lesson_id, info["title"], info["desc"], info["content"])
     print("🚀 All Chapter 4 items are synced! Check your profile for updated word counts.")
+
+
+def get_lessons():
+    return CHAPTER_4_DATA
 
 
 if __name__ == "__main__":
