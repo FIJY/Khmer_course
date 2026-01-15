@@ -21,6 +21,20 @@ export default function useLessonPlayer() {
   const [error, setError] = useState(null);
   const audioRef = useRef(null);
 
+  const normalizeItemData = useCallback((data) => {
+    if (!data) return {};
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch (parseError) {
+        console.warn('Failed to parse lesson item data', parseError);
+        return {};
+      }
+    }
+    if (typeof data === 'object') return data;
+    return {};
+  }, []);
+
   const fetchLessonData = useCallback(async () => {
     try {
       setLoading(true);
@@ -35,9 +49,10 @@ export default function useLessonPlayer() {
       setLessonInfo(lesson);
       const itemsData = await fetchLessonItemsByLessonId(id);
       const normalizedItems = itemsData.map(item => {
-        if (item.type !== 'quiz') return item;
-        const options = Array.isArray(item.data?.options) ? item.data.options.filter(Boolean) : [];
-        const correctAnswer = item.data?.correct_answer;
+        const safeData = normalizeItemData(item.data);
+        if (item.type !== 'quiz') return { ...item, data: safeData };
+        const options = Array.isArray(safeData.options) ? safeData.options.filter(Boolean) : [];
+        const correctAnswer = safeData.correct_answer;
         const mergedOptions = [...options];
         if (correctAnswer && !mergedOptions.includes(correctAnswer)) {
           mergedOptions.push(correctAnswer);
@@ -46,7 +61,7 @@ export default function useLessonPlayer() {
         return {
           ...item,
           data: {
-            ...item.data,
+            ...safeData,
             options: uniqueOptions
           }
         };
@@ -59,7 +74,7 @@ export default function useLessonPlayer() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, normalizeItemData]);
 
   useEffect(() => { fetchLessonData(); }, [fetchLessonData]);
 
