@@ -1,136 +1,90 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
-import { getDueItems, updateSRSItem } from '../services/srsService';
 import {
   X, Volume2, ArrowRight, CheckCircle2, AlertCircle,
   Settings, Ear, Eye, BrainCircuit, Shuffle
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import useReviewSession from '../hooks/useReviewSession';
 
 export default function ReviewPlayer() {
   const navigate = useNavigate();
-
-  // --- STATE ---
-  const [sessionData, setSessionData] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [isFinished, setIsFinished] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-
-  const [settings, setSettings] = useState({
-    mode: 'mix',
-    showPhonetics: true,
-    autoPlay: true,
-    sessionLimit: 20
-  });
-
-  const audioRef = useRef(null);
-
-  useEffect(() => { initSession(); }, []);
-
-  useEffect(() => {
-    if (!loading && !isFinished && sessionData.length > 0 && settings.autoPlay) {
-      const item = sessionData[currentIndex];
-      if (settings.mode === 'listen' || settings.autoPlay) {
-        const timer = setTimeout(() => {
-          if(item?.target?.audio) playAudio(item.target.audio);
-        }, 500);
-        return () => clearTimeout(timer);
-      }
+  const getQuestionCopy = (mode, cardTarget) => {
+    if (mode === 'read') {
+      return {
+        questionMain: cardTarget.back || cardTarget.khmer,
+        questionSub: 'How do you read this?',
+        showBigAudioBtn: true
+      };
     }
-  }, [currentIndex, loading, isFinished, sessionData]);
-
-  const initSession = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      const dueItems = await getDueItems(user.id);
-
-      if (dueItems.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      const { data: allVocab } = await supabase
-        .from('dictionary')
-        .select('*')
-        .neq('english', 'Quiz Answer')
-        .neq('english', '')
-        .limit(100);
-
-      if (!allVocab || allVocab.length < 4) {
-          setLoading(false); return;
-      }
-
-      const session = dueItems.slice(0, settings.sessionLimit).map(item => {
-        const target = item.data || item.lesson_items?.data;
-        if (!target || !target.front) return null;
-
-        const distractors = allVocab
-          .filter(v => v.english !== target.front && v.english !== target.english)
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 3);
-
-        return {
-          srs_id: item.srs_id || item.id,
-          target,
-          options: shuffle([target, ...distractors])
-        };
-      }).filter(Boolean);
-
-      setSessionData(session);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+    if (mode === 'recall') {
+      return {
+        questionMain: cardTarget.front || cardTarget.english,
+        questionSub: 'Select the Khmer translation',
+        showBigAudioBtn: false
+      };
     }
+    return {
+      questionMain: 'Listen...',
+      questionSub: 'What did you hear?',
+      showBigAudioBtn: true
+    };
   };
-
-  const shuffle = (array) => [...array].sort(() => 0.5 - Math.random());
-
-  const playAudio = (file) => {
-    if(!file) return;
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    const audio = new Audio(`/sounds/${file}`);
-    audioRef.current = audio;
-    audio.play().catch(() => {});
-  };
-
-  const handleAnswer = async (option) => {
-    const current = sessionData[currentIndex];
-    setSelectedOption(option);
-
-    const targetEng = current.target.front || current.target.english;
-    const optionEng = option.front || option.english;
-    const isCorrect = optionEng === targetEng;
-
-    playAudio(isCorrect ? 'success.mp3' : 'error.mp3');
-    await updateSRSItem((await supabase.auth.getUser()).data.user.id, current.srs_id, isCorrect ? 4 : 1);
-  };
-
-  const nextCard = () => {
-    if (currentIndex < sessionData.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setSelectedOption(null);
-    } else {
-      setIsFinished(true);
-    }
-  };
-
-  const getCardMode = () => {
-    if (settings.mode === 'mix') {
-      const modes = ['read', 'recall', 'listen'];
-      return modes[Math.floor(Math.random() * modes.length)];
-    }
-    return settings.mode;
-  };
+  const {
+    loading,
+    sessionData,
+    currentIndex,
+    selectedOption,
+    isFinished,
+    showSettings,
+    settings,
+    setSettings,
+    setShowSettings,
+    error,
+    emptyReason,
+    playAudio,
+    handleAnswer,
+    nextCard,
+    getCardMode,
+    refresh
+  } = useReviewSession();
 
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic uppercase">Building Quiz...</div>;
 
-  if (isFinished || sessionData.length === 0) {
+  if (error) {
+    return (
+      <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
+        <AlertCircle size={56} className="text-red-500 mb-4 mx-auto" />
+        <h1 className="text-2xl font-black text-white italic uppercase mb-2">Review Error</h1>
+        <p className="text-gray-400 text-xs">{error}</p>
+        <div className="mt-6 flex gap-3 justify-center">
+          <Button onClick={refresh}>Retry</Button>
+          <Button variant="outline" onClick={() => navigate('/review')}>Back to Hub</Button>
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  if (sessionData.length === 0) {
+    const emptyTitle = emptyReason === 'insufficient_vocab'
+      ? 'Not enough vocab yet'
+      : 'All caught up!';
+    const emptyBody = emptyReason === 'insufficient_vocab'
+      ? 'Add more vocabulary before starting a review session.'
+      : 'You have no cards due right now.';
+
+    return (
+      <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
+        <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
+        <h1 className="text-3xl font-black text-white italic uppercase mb-2">{emptyTitle}</h1>
+        <p className="text-gray-400 text-xs">{emptyBody}</p>
+        <Button onClick={() => navigate('/review')} className="mt-8">Back to Hub</Button>
+      </MobileLayout>
+    );
+  }
+
+  if (isFinished) {
     return (
       <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
         <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
@@ -144,11 +98,9 @@ export default function ReviewPlayer() {
   const target = currentItem.target;
   const activeMode = getCardMode();
 
-  let questionMain = "";
-  let questionSub = "";
-  let showBigAudioBtn = false;
+  const { questionMain, questionSub, showBigAudioBtn } = getQuestionCopy(activeMode, target);
 
-  let renderOptionContent = (opt) => {
+  const renderOptionContent = (opt) => {
     const eng = opt.english || opt.front || "???";
     const khm = opt.back || opt.khmer || "???";
     const pron = opt.pronunciation || "";
@@ -165,19 +117,6 @@ export default function ReviewPlayer() {
     }
     return <span className="text-sm font-bold">{eng}</span>;
   };
-
-  if (activeMode === 'read') {
-     questionMain = target.back || target.khmer;
-     questionSub = "How do you read this?";
-     showBigAudioBtn = true;
-  } else if (activeMode === 'recall') {
-     questionMain = target.front || target.english;
-     questionSub = "Select the Khmer translation";
-  } else if (activeMode === 'listen') {
-     questionMain = "Listen...";
-     questionSub = "What did you hear?";
-     showBigAudioBtn = true;
-  }
 
   const isAnswered = selectedOption !== null;
   const isCorrectAnswer = (opt) => (opt.front || opt.english) === (target.front || target.english);

@@ -1,70 +1,58 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import React from 'react';
 import { Volume2, ArrowRight, X, CheckCircle2, Trophy, BookOpen, ChevronLeft, Frown } from 'lucide-react';
-import { updateSRSItem } from '../services/srsService';
 import VisualDecoder from '../components/VisualDecoder';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import useLessonPlayer from '../hooks/useLessonPlayer';
 
 export default function LessonPlayer() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [lessonInfo, setLessonInfo] = useState(null);
-  const [items, setItems] = useState([]);
-  const [step, setStep] = useState(0);
-  const [score, setScore] = useState(0);
-  const [quizCount, setQuizCount] = useState(0);
-  const [canAdvance, setCanAdvance] = useState(false);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [isFinished, setIsFinished] = useState(false);
-  const [lessonPassed, setLessonPassed] = useState(false);
-  const audioRef = useRef(null);
-
-  useEffect(() => { fetchLessonData(); }, [id]);
-
-  useEffect(() => {
-    setCanAdvance(false);
-    setSelectedOption(null);
-    setIsFlipped(false);
-    if (items[step]?.type === 'theory') setCanAdvance(true);
-  }, [step, items]);
-
-  const fetchLessonData = async () => {
-    try {
-      setLoading(true);
-      const { data: lesson } = await supabase.from('lessons').select('*').eq('id', id).single();
-      setLessonInfo(lesson);
-      const { data: itemsData } = await supabase.from('lesson_items').select('*').eq('lesson_id', id).order('order_index', { ascending: true });
-      setItems(itemsData || []);
-      setQuizCount(itemsData?.filter(i => i.type === 'quiz').length || 0);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
-
-  const handleNext = async (quality = 3) => {
-    if (step < items.length - 1) {
-        setStep(step + 1);
-    } else {
-      setLessonPassed(quizCount === 0 || (score / quizCount) >= 0.7);
-      setIsFinished(true);
-    }
-  };
-
-  const playLocalAudio = (file) => {
-    if (!file) return;
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    const audio = new Audio(`/sounds/${file}`);
-    audioRef.current = audio;
-    audio.play().catch(() => {});
-  };
+  const {
+    navigate,
+    lessonInfo,
+    items,
+    step,
+    score,
+    quizCount,
+    canAdvance,
+    isFlipped,
+    loading,
+    error,
+    selectedOption,
+    isFinished,
+    lessonPassed,
+    handleNext,
+    playLocalAudio,
+    handleVocabCardFlip,
+    handleQuizAnswer,
+    goBack,
+    setCanAdvance,
+    refresh
+  } = useLessonPlayer();
 
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic">SYNCING...</div>;
+
+  if (error) {
+    return (
+      <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
+        <p className="text-red-400 text-xs font-black uppercase tracking-widest">Lesson Error</p>
+        <p className="text-gray-400 text-xs">{error}</p>
+        <div className="flex gap-3">
+          <Button onClick={refresh}>Retry</Button>
+          <Button variant="outline" onClick={() => navigate('/map')}>Back to Map</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
+        <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Lesson Empty</p>
+        <p className="text-gray-500 text-xs">This lesson doesn't have content yet.</p>
+        <Button onClick={() => navigate('/map')}>Back to Map</Button>
+      </div>
+    );
+  }
 
   if (isFinished) {
     return (
@@ -81,7 +69,7 @@ export default function LessonPlayer() {
             <>
               <Frown size={80} className="text-red-500 mb-8" />
               <h1 className="text-3xl font-black italic uppercase mb-2 text-white">Review Needed</h1>
-              <Button variant="danger" onClick={() => window.location.reload()}>Try Again</Button>
+              <Button variant="danger" onClick={refresh}>Try Again</Button>
             </>
           )}
         </div>
@@ -100,7 +88,7 @@ export default function LessonPlayer() {
           <div className="text-center flex-1 px-4">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-cyan-500 mb-1 truncate">{lessonInfo?.title}</h2>
             <div className="w-24 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden">
-              <div className="h-full bg-cyan-500 transition-all" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
+              <div className="h-full bg-cyan-500 transition-all" style={{ width: `${items.length ? ((step + 1) / items.length) * 100 : 0}%` }} />
             </div>
           </div>
           <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs w-10"><CheckCircle2 size={16}/> {score}</div>
@@ -111,14 +99,7 @@ export default function LessonPlayer() {
         {type === 'visual_decoder' && <VisualDecoder data={current} onComplete={() => setCanAdvance(true)} hideDefaultButton={true} />}
 
         {type === 'vocab_card' && (
-          <div className="w-full cursor-pointer" onClick={() => {
-            // Если карточка еще не перевернута — играем звук при клике
-            if (!isFlipped) {
-              playLocalAudio(current.audio);
-            }
-            setIsFlipped(!isFlipped);
-            setCanAdvance(true);
-          }}>
+          <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
             <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
               {/* ПЕРЕДНЯЯ СТОРОНА */}
               <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
@@ -148,13 +129,7 @@ export default function LessonPlayer() {
           <div className="w-full space-y-3">
              <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current.question}</h2>
              {current.options.map((opt, i) => (
-               <button key={i} disabled={!!selectedOption} onClick={() => {
-                  setSelectedOption(opt);
-                  setCanAdvance(true);
-                  const correct = opt === current.correct_answer;
-                  if(correct) setScore(s => s + 1);
-                  playLocalAudio(correct ? 'success.mp3' : 'error.mp3');
-               }}
+               <button key={i} disabled={!!selectedOption} onClick={() => handleQuizAnswer(opt, current.correct_answer)}
                  className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${selectedOption === opt ? (opt === current.correct_answer ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-red-600 border-red-400 text-white') : 'bg-gray-900 border-white/5 text-white'}`}
                >
                  {opt}
@@ -174,10 +149,10 @@ export default function LessonPlayer() {
 
       <footer className="p-6 border-t border-white/5 bg-black/80">
         <div className="flex gap-3">
-          <button onClick={() => setStep(s => s - 1)} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`}>
+          <button onClick={goBack} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`}>
             <ChevronLeft size={24} />
           </button>
-          <Button onClick={() => handleNext(selectedOption === current?.correct_answer ? 5 : 1)} disabled={!canAdvance} className="flex-1">
+          <Button onClick={handleNext} disabled={!canAdvance} className="flex-1">
             Continue <ArrowRight size={20} />
           </Button>
         </div>

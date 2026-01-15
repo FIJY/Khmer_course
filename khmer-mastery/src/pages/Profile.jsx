@@ -10,12 +10,14 @@ export default function Profile() {
   const [profile, setProfile] = useState({ email: '', joined: '' });
   const [stats, setStats] = useState({ lessons: 0, words: 0, gems: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => { fetchProfileData(); }, []);
 
   const fetchProfileData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate('/login'); return; }
 
@@ -24,7 +26,10 @@ export default function Profile() {
 
       setProfile({ email: user.email, joined: new Date(user.created_at).toLocaleDateString() });
       setStats({ lessons: progress?.length || 0, words: words?.length || 0, gems: (progress?.length || 0) * 50 });
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      setError('Unable to load your profile.');
+    }
     finally { setLoading(false); }
   };
 
@@ -45,6 +50,18 @@ export default function Profile() {
 
   if (loading) return <div className="h-screen bg-black text-cyan-400 flex items-center justify-center font-black italic">LOADING PROFILE...</div>;
 
+  if (error) {
+    return (
+      <div className="h-screen bg-black text-white flex flex-col items-center justify-center text-center px-6 gap-4">
+        <p className="text-red-400 text-xs font-black uppercase tracking-widest">Profile Error</p>
+        <p className="text-gray-400 text-xs">{error}</p>
+        <Button onClick={fetchProfileData} className="bg-cyan-500 border-none">
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <MobileLayout>
       {/* HEADER */}
@@ -54,8 +71,12 @@ export default function Profile() {
               <User size={40} className="text-black" />
            </div>
            <div>
-              <h2 className="text-xl font-black text-white truncate w-48">{profile.email.split('@')[0]}</h2>
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Member since {profile.joined}</p>
+              <h2 className="text-xl font-black text-white truncate w-48">
+                {profile.email ? profile.email.split('@')[0] : 'Learner'}
+              </h2>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
+                Member since {profile.joined || '—'}
+              </p>
            </div>
         </div>
       </div>
