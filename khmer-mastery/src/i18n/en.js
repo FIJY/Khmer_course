@@ -42,6 +42,11 @@ const en = {
     reviewInsufficientBody: 'Add more vocabulary before starting a review session.',
     lessonContent: "This lesson doesn't have content yet."
   },
+  preview: {
+    notesTitle: 'Lesson Notes',
+    cultureLabel: 'Culture note',
+    pronunciationLabel: 'Pronunciation'
+  },
   review: {
     title: 'Review Center',
     subtitle: 'Keep your memory sharp',

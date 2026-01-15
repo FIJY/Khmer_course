@@ -47,6 +47,7 @@ export default function LessonPreview() {
   }
 
   const vocabItems = items.filter(i => i.type === 'vocab_card');
+  const theoryItems = items.filter(i => i.type === 'theory');
 
   return (
     <MobileLayout withNav={true}>
@@ -60,6 +61,26 @@ export default function LessonPreview() {
           <h1 className="text-3xl font-black uppercase italic mb-2 text-white">{lesson?.title}</h1>
           <p className="text-gray-500 italic">{lesson?.description}</p>
         </div>
+
+        {theoryItems.length > 0 && (
+          <div className="space-y-4 mb-10">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-4 px-1">
+              {t('preview.notesTitle')}
+            </h3>
+            {theoryItems.map((item, idx) => (
+              <div key={idx} className="bg-gray-900/40 border border-white/5 p-4 rounded-2xl space-y-2">
+                <h4 className="text-sm font-black text-white uppercase tracking-wide">{item.data.title}</h4>
+                <p className="text-sm text-gray-300">{item.data.text}</p>
+                {item.data.culture_note && (
+                  <p className="text-xs text-cyan-300">
+                    <span className="font-black uppercase tracking-wide mr-2">{t('preview.cultureLabel')}:</span>
+                    {item.data.culture_note}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="space-y-3 mb-10">
           <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-4 px-1">{t('empty.vocabList')}</h3>
@@ -83,6 +104,12 @@ export default function LessonPreview() {
               <div>
                 <h4 className="text-lg font-black text-white">{item.data.back}</h4>
                 <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{item.data.front}</p>
+                {item.data.pronunciation && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    <span className="uppercase font-black tracking-widest mr-2">{t('preview.pronunciationLabel')}:</span>
+                    {item.data.pronunciation}
+                  </p>
+                )}
               </div>
               <Volume2 size={18} className="text-cyan-500" />
             </div>

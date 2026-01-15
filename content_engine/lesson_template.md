@@ -19,6 +19,7 @@ Rules:
 4) Include at least 2 vocab_card items and exactly 1 visual_decoder.
 5) Keep blocks logically grouped by theme.
 6) Add a cultural or usage note inside one theory block (field: culture_note).
+7) If the lesson includes "yes/no" or polite replies, include both male and female variants.
 
 Item formats:
 - theory: {title, text, culture_note?}
