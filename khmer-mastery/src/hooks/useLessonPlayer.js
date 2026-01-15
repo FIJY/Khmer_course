@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { fetchLessonById, fetchLessonItemsByLessonId } from '../data/lessons';
+import { fetchCurrentUser } from '../data/auth';
+import { markLessonCompleted } from '../data/progress';
 
 export default function useLessonPlayer() {
   const { id } = useParams();
@@ -32,8 +34,25 @@ export default function useLessonPlayer() {
       }
       setLessonInfo(lesson);
       const itemsData = await fetchLessonItemsByLessonId(id);
-      setItems(itemsData);
-      setQuizCount(itemsData.filter(i => i.type === 'quiz').length || 0);
+      const normalizedItems = itemsData.map(item => {
+        if (item.type !== 'quiz') return item;
+        const options = Array.isArray(item.data?.options) ? item.data.options.filter(Boolean) : [];
+        const correctAnswer = item.data?.correct_answer;
+        const mergedOptions = [...options];
+        if (correctAnswer && !mergedOptions.includes(correctAnswer)) {
+          mergedOptions.push(correctAnswer);
+        }
+        const uniqueOptions = [...new Set(mergedOptions)];
+        return {
+          ...item,
+          data: {
+            ...item.data,
+            options: uniqueOptions
+          }
+        };
+      });
+      setItems(normalizedItems);
+      setQuizCount(normalizedItems.filter(i => i.type === 'quiz').length || 0);
     } catch (err) {
       console.error(err);
       setError('Unable to load this lesson.');
@@ -51,11 +70,27 @@ export default function useLessonPlayer() {
     if (items[step]?.type === 'theory') setCanAdvance(true);
   }, [step, items]);
 
+  useEffect(() => {
+    const persistCompletion = async () => {
+      if (!isFinished || !lessonPassed) return;
+      try {
+        const user = await fetchCurrentUser();
+        if (user) {
+          await markLessonCompleted(user.id, id);
+        }
+      } catch (err) {
+        console.error('Failed to save lesson completion', err);
+      }
+    };
+    persistCompletion();
+  }, [id, isFinished, lessonPassed]);
+
   const handleNext = () => {
     if (step < items.length - 1) {
       setStep(step + 1);
     } else {
-      setLessonPassed(quizCount === 0 || (score / quizCount) >= 0.7);
+      const didPass = quizCount === 0 || score === quizCount;
+      setLessonPassed(didPass);
       setIsFinished(true);
     }
   };
@@ -79,12 +114,15 @@ export default function useLessonPlayer() {
     setCanAdvance(true);
   };
 
-  const handleQuizAnswer = (option, correctAnswer) => {
+  const handleQuizAnswer = (option, correctAnswer, correctAudio) => {
     setSelectedOption(option);
     setCanAdvance(true);
     const correct = option === correctAnswer;
     if (correct) setScore(s => s + 1);
     playLocalAudio(correct ? 'success.mp3' : 'error.mp3');
+    if (correctAudio) {
+      setTimeout(() => playLocalAudio(correctAudio), 900);
+    }
   };
 
   const goBack = () => setStep(s => s - 1);

@@ -19,3 +19,14 @@ export const fetchCompletedLessonCount = async (userId) => {
   if (error) throw error;
   return data?.length || 0;
 };
+
+export const markLessonCompleted = async (userId, lessonId) => {
+  const { error } = await supabase
+    .from('user_progress')
+    .upsert({
+      user_id: userId,
+      lesson_id: lessonId,
+      is_completed: true
+    }, { onConflict: 'user_id,lesson_id' });
+  if (error) throw error;
+};

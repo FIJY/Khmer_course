@@ -35,6 +35,7 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
     if (status === 'success') return;
     setSelectedCharIndex(index);
     const charSound = char_audio_map?.[char];
+    const fallbackSound = charSound || char_audio_map?.[target_char];
 
     if (char === target_char) {
       setStatus('success');
@@ -45,7 +46,7 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
     } else {
       setStatus('error');
       playAudio('error.mp3');
-      if (charSound) setTimeout(() => playAudio(charSound), 800);
+      if (fallbackSound) setTimeout(() => playAudio(fallbackSound), 900);
       setTimeout(() => { setStatus('searching'); setSelectedCharIndex(null); }, 1500);
     }
   };
