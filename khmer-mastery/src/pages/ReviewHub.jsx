@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { fetchCurrentUser } from '../data/auth';
+import { fetchSrsStatusCounts } from '../data/review';
 import { getDueItems } from '../services/srsService';
 import {
   BrainCircuit, Trophy, TrendingUp, Play, Check
@@ -8,42 +9,61 @@ import {
 // Unified UI Components
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
+import { t } from '../i18n';
 
 export default function ReviewHub() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ due: 0, total: 0, mastered: 0 });
+  const [error, setError] = useState(null);
+  const [titleFirst, titleSecond = 'Center'] = t('review.title').split(' ');
 
   useEffect(() => { fetchReviewData(); }, []);
 
   const fetchReviewData = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      setError(null);
+      const user = await fetchCurrentUser();
+      if (!user) {
+        navigate('/login');
+        return;
+      }
 
       const dueItems = await getDueItems(user.id);
-      const { data: allSrs } = await supabase.from('user_srs').select('status').eq('user_id', user.id);
-
-      const total = allSrs?.length || 0;
-      const mastered = allSrs?.filter(i => i.status === 'graduated').length || 0;
+      const { total, mastered } = await fetchSrsStatusCounts(user.id);
 
       setStats({ due: dueItems.length, total, mastered });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setError('Unable to load review stats right now.');
+    }
     finally { setLoading(false); }
   };
 
-  if (loading) return <div className="h-screen bg-black text-white flex items-center justify-center font-black tracking-widest uppercase italic">Loading Hub...</div>;
+  if (error) {
+    return (
+      <ErrorState
+        title={t('errors.review')}
+        message={error}
+        onRetry={fetchReviewData}
+      />
+    );
+  }
+
+  if (loading) return <LoadingState label={t('loading.hub')} />;
 
   return (
     <MobileLayout>
       {/* HEADER */}
       <div className="p-6 pt-10">
         <h1 className="text-3xl font-black italic tracking-tighter uppercase mb-1 text-white">
-          Review <span className="text-orange-500">Center</span>
+          {titleFirst} <span className="text-orange-500">{titleSecond}</span>
         </h1>
         <p className="text-gray-500 text-xs font-bold uppercase tracking-widest italic">
-          Keep your memory sharp
+          {t('review.subtitle')}
         </p>
       </div>
 
@@ -54,7 +74,7 @@ export default function ReviewHub() {
           <div className="relative z-10">
             <h2 className="text-6xl font-black text-white mb-2">{stats.due}</h2>
             <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px] mb-8">
-              Cards due today
+              {t('review.cardsDue')}
             </p>
 
             <Button
@@ -63,9 +83,9 @@ export default function ReviewHub() {
               className={stats.due > 0 ? "bg-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.3)] border-none" : ""}
             >
               {stats.due > 0 ? (
-                <> <Play size={20} fill="currentColor" /> Start Session </>
+                <> <Play size={20} fill="currentColor" /> {t('actions.startSession')} </>
               ) : (
-                <> <Check size={20} /> All Caught Up </>
+                <> <Check size={20} /> {t('empty.reviewCaughtUp')} </>
               )}
             </Button>
           </div>
@@ -77,12 +97,12 @@ export default function ReviewHub() {
           <div className="bg-gray-900/50 p-6 rounded-3xl border border-white/5">
             <Trophy className="text-emerald-500 mb-3" size={24} />
             <h3 className="text-2xl font-black text-white">{stats.mastered}</h3>
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Mastered</p>
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{t('review.mastered')}</p>
           </div>
           <div className="bg-gray-900/50 p-6 rounded-3xl border border-white/5">
             <TrendingUp className="text-cyan-500 mb-3" size={24} />
             <h3 className="text-2xl font-black text-white">{stats.total}</h3>
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Total Learned</p>
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{t('review.totalLearned')}</p>
           </div>
         </div>
       </div>
