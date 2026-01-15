@@ -33,7 +33,8 @@ export default function LessonPlayer() {
     setCanAdvance,
     refresh
   } = useLessonPlayer();
-  const lessonPronunciations = items.reduce((map, item) => {
+  const safeItems = Array.isArray(items) ? items : [];
+  const lessonPronunciations = safeItems.reduce((map, item) => {
     const data = item?.data;
     if (!data?.pronunciation) return map;
     const front = data.front ?? '';
@@ -62,7 +63,7 @@ export default function LessonPlayer() {
     );
   }
 
-  if (!items.length) {
+  if (!safeItems.length) {
     return (
       <ErrorState
         title={t('errors.lessonEmpty')}
@@ -99,8 +100,8 @@ export default function LessonPlayer() {
     );
   }
 
-  const current = items[step]?.data;
-  const type = items[step]?.type;
+  const current = safeItems[step]?.data;
+  const type = safeItems[step]?.type;
   if (!current) {
     return (
       <ErrorState
@@ -160,10 +161,10 @@ export default function LessonPlayer() {
           <div className="text-center flex-1 px-4">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-cyan-500 mb-1 truncate">{lessonInfo?.title}</h2>
             <div className="w-24 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden">
-              <div className="h-full bg-cyan-500 transition-all" style={{ width: `${items.length ? ((step + 1) / items.length) * 100 : 0}%` }} />
+              <div className="h-full bg-cyan-500 transition-all" style={{ width: `${safeItems.length ? ((step + 1) / safeItems.length) * 100 : 0}%` }} />
             </div>
             <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest mt-2">
-              {t('lesson.progress', { current: step + 1, total: items.length })}
+              {t('lesson.progress', { current: step + 1, total: safeItems.length })}
             </p>
           </div>
           <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs w-10"><CheckCircle2 size={16}/> {score}</div>

@@ -23,8 +23,9 @@ export default function LessonPreview() {
       setError(null);
       const lessonData = await fetchLessonById(id);
       setLesson(lessonData);
-      const itemsData = await fetchLessonItemsByLessonId(id);
-      setItems(itemsData);
+      const lessonId = lessonData?.lesson_id ?? lessonData?.id ?? id;
+      const itemsData = await fetchLessonItemsByLessonId(lessonId);
+      setItems(Array.isArray(itemsData) ? itemsData : []);
     } catch (e) {
       console.error(e);
       setError('Unable to load the lesson preview.');
@@ -46,8 +47,9 @@ export default function LessonPreview() {
     );
   }
 
-  const vocabItems = items.filter(i => i.type === 'vocab_card');
-  const theoryItems = items.filter(i => i.type === 'theory');
+  const safeItems = Array.isArray(items) ? items : [];
+  const vocabItems = safeItems.filter(i => i.type === 'vocab_card');
+  const theoryItems = safeItems.filter(i => i.type === 'theory');
 
   return (
     <MobileLayout withNav={true}>
@@ -59,7 +61,7 @@ export default function LessonPreview() {
         <div className="text-center mb-10">
           <BookOpen className="text-cyan-500 mx-auto mb-4" size={48} />
           <h1 className="text-3xl font-black uppercase italic mb-2 text-white">{lesson?.title}</h1>
-          <p className="text-gray-500 italic">{lesson?.description}</p>
+          <p className="text-gray-500 italic">{lesson?.description ?? lesson?.desc ?? ''}</p>
         </div>
 
         {theoryItems.length > 0 && (
@@ -92,7 +94,7 @@ export default function LessonPreview() {
                   <Button variant="outline" onClick={() => navigate('/map')}>
                     {t('actions.backToMap')}
                   </Button>
-                  <Button onClick={() => navigate(`/lesson/${id}`)}>
+                  <Button onClick={() => navigate(`/lesson/${lesson?.lesson_id ?? lesson?.id ?? id}`)}>
                     {t('actions.startLesson')} <Play size={18} fill="currentColor" />
                   </Button>
                 </>
@@ -115,7 +117,7 @@ export default function LessonPreview() {
         </div>
 
         {vocabItems.length > 0 && (
-          <Button onClick={() => navigate(`/lesson/${id}`)}>
+          <Button onClick={() => navigate(`/lesson/${lesson?.lesson_id ?? lesson?.id ?? id}`)}>
             {t('actions.startLesson')} <Play size={18} fill="currentColor" />
           </Button>
         )}

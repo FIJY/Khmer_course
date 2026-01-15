@@ -19,6 +19,7 @@ export default function useLessonPlayer() {
   const [isFinished, setIsFinished] = useState(false);
   const [lessonPassed, setLessonPassed] = useState(false);
   const [error, setError] = useState(null);
+  const [lessonId, setLessonId] = useState(id);
   const audioRef = useRef(null);
 
   const normalizeItemData = useCallback((data) => {
@@ -47,8 +48,10 @@ export default function useLessonPlayer() {
         return;
       }
       setLessonInfo(lesson);
-      const itemsData = await fetchLessonItemsByLessonId(id);
-      const normalizedItems = itemsData.map(item => {
+      const resolvedLessonId = lesson?.lesson_id ?? lesson?.id ?? id;
+      setLessonId(resolvedLessonId);
+      const itemsData = await fetchLessonItemsByLessonId(resolvedLessonId);
+      const normalizedItems = (Array.isArray(itemsData) ? itemsData : []).map(item => {
         const safeData = normalizeItemData(item.data);
         if (item.type !== 'quiz') return { ...item, data: safeData };
         const options = Array.isArray(safeData.options) ? safeData.options.filter(Boolean) : [];
@@ -91,14 +94,14 @@ export default function useLessonPlayer() {
       try {
         const user = await fetchCurrentUser();
         if (user) {
-          await markLessonCompleted(user.id, id);
+          await markLessonCompleted(user.id, lessonId);
         }
       } catch (err) {
         console.error('Failed to save lesson completion', err);
       }
     };
     persistCompletion();
-  }, [id, isFinished, lessonPassed]);
+  }, [id, isFinished, lessonId, lessonPassed]);
 
   const handleNext = () => {
     if (step < items.length - 1) {
