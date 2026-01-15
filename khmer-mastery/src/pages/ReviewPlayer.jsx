@@ -1,141 +1,97 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
-import { getDueItems, updateSRSItem } from '../services/srsService';
 import {
   X, Volume2, ArrowRight, CheckCircle2, AlertCircle,
   Settings, Ear, Eye, BrainCircuit, Shuffle
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import LoadingState from '../components/UI/LoadingState';
+import useReviewSession from '../hooks/useReviewSession';
+import { t } from '../i18n';
 
 export default function ReviewPlayer() {
   const navigate = useNavigate();
-
-  // --- STATE ---
-  const [sessionData, setSessionData] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [isFinished, setIsFinished] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-
-  const [settings, setSettings] = useState({
-    mode: 'mix',
-    showPhonetics: true,
-    autoPlay: true,
-    sessionLimit: 20
-  });
-
-  const audioRef = useRef(null);
-
-  useEffect(() => { initSession(); }, []);
-
-  useEffect(() => {
-    if (!loading && !isFinished && sessionData.length > 0 && settings.autoPlay) {
-      const item = sessionData[currentIndex];
-      if (settings.mode === 'listen' || settings.autoPlay) {
-        const timer = setTimeout(() => {
-          if(item?.target?.audio) playAudio(item.target.audio);
-        }, 500);
-        return () => clearTimeout(timer);
-      }
+  const getQuestionCopy = (mode, cardTarget) => {
+    if (mode === 'read') {
+      return {
+        questionMain: cardTarget.back || cardTarget.khmer,
+        questionSub: t('review.promptRead'),
+        showBigAudioBtn: true
+      };
     }
-  }, [currentIndex, loading, isFinished, sessionData]);
-
-  const initSession = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      const dueItems = await getDueItems(user.id);
-
-      if (dueItems.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      const { data: allVocab } = await supabase
-        .from('dictionary')
-        .select('*')
-        .neq('english', 'Quiz Answer')
-        .neq('english', '')
-        .limit(100);
-
-      if (!allVocab || allVocab.length < 4) {
-          setLoading(false); return;
-      }
-
-      const session = dueItems.slice(0, settings.sessionLimit).map(item => {
-        const target = item.data || item.lesson_items?.data;
-        if (!target || !target.front) return null;
-
-        const distractors = allVocab
-          .filter(v => v.english !== target.front && v.english !== target.english)
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 3);
-
-        return {
-          srs_id: item.srs_id || item.id,
-          target,
-          options: shuffle([target, ...distractors])
-        };
-      }).filter(Boolean);
-
-      setSessionData(session);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+    if (mode === 'recall') {
+      return {
+        questionMain: cardTarget.front || cardTarget.english,
+        questionSub: t('review.promptRecall'),
+        showBigAudioBtn: false
+      };
     }
+    return {
+      questionMain: t('review.listenMain'),
+      questionSub: t('review.promptListen'),
+      showBigAudioBtn: true
+    };
   };
+  const {
+    loading,
+    sessionData,
+    currentIndex,
+    selectedOption,
+    isFinished,
+    showSettings,
+    settings,
+    setSettings,
+    setShowSettings,
+    error,
+    emptyReason,
+    playAudio,
+    handleAnswer,
+    nextCard,
+    getCardMode,
+    refresh
+  } = useReviewSession();
 
-  const shuffle = (array) => [...array].sort(() => 0.5 - Math.random());
+  if (loading) return <LoadingState label={t('loading.review')} />;
 
-  const playAudio = (file) => {
-    if(!file) return;
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    const audio = new Audio(`/sounds/${file}`);
-    audioRef.current = audio;
-    audio.play().catch(() => {});
-  };
+  if (error) {
+    return (
+      <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
+        <AlertCircle size={56} className="text-red-500 mb-4 mx-auto" />
+        <h1 className="text-2xl font-black text-white italic uppercase mb-2">{t('errors.review')}</h1>
+        <p className="text-gray-400 text-xs">{error}</p>
+        <div className="mt-6 flex gap-3 justify-center">
+          <Button onClick={refresh}>{t('actions.retry')}</Button>
+          <Button variant="outline" onClick={() => navigate('/review')}>{t('actions.backToHub')}</Button>
+        </div>
+      </MobileLayout>
+    );
+  }
 
-  const handleAnswer = async (option) => {
-    const current = sessionData[currentIndex];
-    setSelectedOption(option);
+  if (sessionData.length === 0) {
+    const emptyTitle = emptyReason === 'insufficient_vocab'
+      ? t('empty.reviewInsufficient')
+      : t('empty.reviewCaughtUp');
+    const emptyBody = emptyReason === 'insufficient_vocab'
+      ? t('empty.reviewInsufficientBody')
+      : t('empty.reviewCaughtUpBody');
 
-    const targetEng = current.target.front || current.target.english;
-    const optionEng = option.front || option.english;
-    const isCorrect = optionEng === targetEng;
-
-    playAudio(isCorrect ? 'success.mp3' : 'error.mp3');
-    await updateSRSItem((await supabase.auth.getUser()).data.user.id, current.srs_id, isCorrect ? 4 : 1);
-  };
-
-  const nextCard = () => {
-    if (currentIndex < sessionData.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setSelectedOption(null);
-    } else {
-      setIsFinished(true);
-    }
-  };
-
-  const getCardMode = () => {
-    if (settings.mode === 'mix') {
-      const modes = ['read', 'recall', 'listen'];
-      return modes[Math.floor(Math.random() * modes.length)];
-    }
-    return settings.mode;
-  };
-
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic uppercase">Building Quiz...</div>;
-
-  if (isFinished || sessionData.length === 0) {
     return (
       <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
         <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
-        <h1 className="text-3xl font-black text-white italic uppercase mb-2">Session Complete!</h1>
-        <Button onClick={() => navigate('/review')} className="mt-8">Back to Hub</Button>
+        <h1 className="text-3xl font-black text-white italic uppercase mb-2">{emptyTitle}</h1>
+        <p className="text-gray-400 text-xs">{emptyBody}</p>
+        <Button onClick={() => navigate('/review')} className="mt-8">{t('actions.backToHub')}</Button>
+      </MobileLayout>
+    );
+  }
+
+  if (isFinished) {
+    return (
+      <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
+        <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
+        <h1 className="text-3xl font-black text-white italic uppercase mb-2">{t('review.sessionComplete')}</h1>
+        <Button onClick={() => navigate('/review')} className="mt-8">{t('actions.backToHub')}</Button>
       </MobileLayout>
     );
   }
@@ -144,11 +100,9 @@ export default function ReviewPlayer() {
   const target = currentItem.target;
   const activeMode = getCardMode();
 
-  let questionMain = "";
-  let questionSub = "";
-  let showBigAudioBtn = false;
+  const { questionMain, questionSub, showBigAudioBtn } = getQuestionCopy(activeMode, target);
 
-  let renderOptionContent = (opt) => {
+  const renderOptionContent = (opt) => {
     const eng = opt.english || opt.front || "???";
     const khm = opt.back || opt.khmer || "???";
     const pron = opt.pronunciation || "";
@@ -166,30 +120,35 @@ export default function ReviewPlayer() {
     return <span className="text-sm font-bold">{eng}</span>;
   };
 
-  if (activeMode === 'read') {
-     questionMain = target.back || target.khmer;
-     questionSub = "How do you read this?";
-     showBigAudioBtn = true;
-  } else if (activeMode === 'recall') {
-     questionMain = target.front || target.english;
-     questionSub = "Select the Khmer translation";
-  } else if (activeMode === 'listen') {
-     questionMain = "Listen...";
-     questionSub = "What did you hear?";
-     showBigAudioBtn = true;
-  }
-
   const isAnswered = selectedOption !== null;
   const isCorrectAnswer = (opt) => (opt.front || opt.english) === (target.front || target.english);
 
+  const footerContent = (
+    <div className="p-6 pt-6 pb-8 bg-black/90 backdrop-blur-xl border-t border-white/10">
+      <Button
+        onClick={isAnswered ? nextCard : undefined}
+        disabled={!isAnswered}
+        variant={isAnswered && isCorrectAnswer(selectedOption) ? "primary" : "secondary"}
+        className={!isAnswered ? "opacity-60" : ""}
+      >
+        {isAnswered
+          ? (isCorrectAnswer(selectedOption) ? t('actions.continue') : t('actions.gotIt'))
+          : t('actions.chooseAnswer')} <ArrowRight size={20} />
+      </Button>
+    </div>
+  );
+
   return (
-    <MobileLayout withNav={false}>
+    <MobileLayout withNav={false} footer={footerContent}>
         {/* HEADER */}
         <div className="p-4 flex justify-between items-center bg-gray-900/50 z-10">
            <button onClick={() => navigate('/review')} className="p-2"><X size={24} className="text-gray-500 hover:text-white" /></button>
            <div className="h-1 w-24 bg-gray-800 rounded-full overflow-hidden mx-4">
               <div className="h-full bg-cyan-500 transition-all" style={{width: `${(currentIndex / sessionData.length) * 100}%`}}></div>
            </div>
+           <span className="text-[9px] text-gray-600 font-black uppercase tracking-widest">
+             {t('review.progress', { current: currentIndex + 1, total: sessionData.length })}
+           </span>
            <button onClick={() => setShowSettings(true)} className="p-2 bg-gray-800 rounded-full text-cyan-400 hover:bg-gray-700 transition-colors">
              <Settings size={18} />
            </button>
@@ -301,14 +260,6 @@ export default function ReviewPlayer() {
            })}
         </div>
 
-        {/* BOTTOM ACTION BAR */}
-        {isAnswered && (
-           <div className="absolute bottom-0 left-0 right-0 p-6 pt-6 pb-8 bg-black/90 backdrop-blur-xl border-t border-white/10 animate-in slide-in-from-bottom-full z-20">
-             <Button onClick={nextCard} variant={isCorrectAnswer(selectedOption) ? "primary" : "secondary"}>
-                {isCorrectAnswer(selectedOption) ? 'Continue' : 'Got it'} <ArrowRight size={20} />
-             </Button>
-           </div>
-        )}
     </MobileLayout>
   );
 }
