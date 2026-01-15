@@ -121,13 +121,18 @@ export default function ReviewPlayer() {
   const isAnswered = selectedOption !== null;
   const isCorrectAnswer = (opt) => (opt.front || opt.english) === (target.front || target.english);
 
-  const footerContent = isAnswered ? (
+  const footerContent = (
     <div className="p-6 pt-6 pb-8 bg-black/90 backdrop-blur-xl border-t border-white/10">
-      <Button onClick={nextCard} variant={isCorrectAnswer(selectedOption) ? "primary" : "secondary"}>
-        {isCorrectAnswer(selectedOption) ? 'Continue' : 'Got it'} <ArrowRight size={20} />
+      <Button
+        onClick={isAnswered ? nextCard : undefined}
+        disabled={!isAnswered}
+        variant={isAnswered && isCorrectAnswer(selectedOption) ? "primary" : "secondary"}
+        className={!isAnswered ? "opacity-60" : ""}
+      >
+        {isAnswered ? (isCorrectAnswer(selectedOption) ? 'Continue' : 'Got it') : 'Choose an answer'} <ArrowRight size={20} />
       </Button>
     </div>
-  ) : null;
+  );
 
   return (
     <MobileLayout withNav={false} footer={footerContent}>
