@@ -18,6 +18,7 @@ if not key:
 
 VOICE = "km-KH-PisethNeural"
 SPEED = "-10%"
+KHMER_PATTERN = re.compile(r"[\u1780-\u17FF]")
 # Путь к папке sounds в твоем React-проекте
 AUDIO_DIR = Path(__file__).resolve().parent.parent / "khmer-mastery" / "public" / "sounds"
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
@@ -38,6 +39,24 @@ def get_item_type(khmer_text, english_text):
     if any(char.isdigit() for char in english_text): return 'number'
     if clean in ["សួស្តី", "ជំរាបសួរ", "អរគុណ", "បាទ", "ចាស"]: return 'phrase'
     return 'word'
+
+
+def resolve_khmer_english(item_type, data):
+    if item_type == "vocab_card":
+        front = data.get("front", "") or ""
+        back = data.get("back", "") or ""
+        front_has_khmer = KHMER_PATTERN.search(front)
+        back_has_khmer = KHMER_PATTERN.search(back)
+        if front_has_khmer and not back_has_khmer:
+            return front, back
+        if back_has_khmer and not front_has_khmer:
+            return back, front
+        if back:
+            return back, front
+        return front, back
+    if item_type == "quiz":
+        return data.get("correct_answer", "") or "", "Quiz Answer"
+    return "", ""
 
 
 async def generate_audio(text, filename):
@@ -101,25 +120,38 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
     for idx, item in enumerate(content_list):
         # Если это словарная карточка или квиз, обрабатываем аудио и словарь
         if item['type'] in ['vocab_card', 'quiz']:
-            khmer = item['data'].get('back') or item['data'].get('correct_answer')
-            english = item['data'].get('front') or "Quiz Answer"
+            khmer, english = resolve_khmer_english(item['type'], item['data'])
+            khmer = khmer or item['data'].get('correct_answer') or ""
+            english = english or item['data'].get('front') or item['data'].get('back') or "Quiz Answer"
 
             # Очистка текста
             if khmer:
                 clean_khmer = khmer.split(' (')[0].replace('?', '').strip()
-                safe_english = re.sub(r'[\\/*?:"<>|]', "", english).lower().strip().replace(' ', '_')
+                safe_label = english or clean_khmer or "audio"
+                safe_english = re.sub(r'[\\/*?:"<>|]', "", safe_label).lower().strip().replace(' ', '_')
                 audio_name = f"{safe_english}.mp3"
 
                 # Генерируем аудио
                 await generate_audio(clean_khmer, audio_name)
 
                 # Записываем в общий словарь (dictionary)
+                pronunciation = item['data'].get('pronunciation', '').strip()
+                if not pronunciation:
+                    try:
+                        existing = supabase.table("dictionary").select("pronunciation").eq("khmer", clean_khmer).limit(1).execute()
+                        if existing.data and existing.data[0].get("pronunciation"):
+                            pronunciation = existing.data[0]["pronunciation"]
+                            item['data']['pronunciation'] = pronunciation
+                    except Exception:
+                        pass
+
                 dict_entry = {
                     "khmer": clean_khmer,
                     "english": english,
-                    "pronunciation": item['data'].get('pronunciation', ''),
                     "item_type": get_item_type(clean_khmer, english)
                 }
+                if pronunciation:
+                    dict_entry["pronunciation"] = pronunciation
                 # on_conflict="khmer" значит: если слово уже есть, обновим его перевод
                 res = supabase.table("dictionary").upsert(dict_entry, on_conflict="khmer").execute()
 
