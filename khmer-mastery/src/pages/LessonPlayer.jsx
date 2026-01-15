@@ -89,12 +89,27 @@ export default function LessonPlayer() {
   const khmerPattern = /[\u1780-\u17FF]/;
   const current = items[step]?.data;
   const type = items[step]?.type;
+  if (!current) {
+    return (
+      <ErrorState
+        title={t('errors.lessonEmpty')}
+        message={t('empty.lessonContent')}
+        onRetry={refresh}
+        secondaryAction={(
+          <Button variant="outline" onClick={() => navigate('/map')}>
+            {t('actions.backToMap')}
+          </Button>
+        )}
+      />
+    );
+  }
   const frontText = current?.front ?? '';
   const backText = current?.back ?? '';
   const frontHasKhmer = khmerPattern.test(frontText);
   const backHasKhmer = khmerPattern.test(backText);
   const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
+  const quizOptions = Array.isArray(current?.options) ? current.options : [];
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
     items.forEach(item => {
@@ -203,8 +218,8 @@ export default function LessonPlayer() {
 
         {type === 'quiz' && (
           <div className="w-full space-y-3">
-             <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current.question}</h2>
-             {current.options.map((opt, i) => {
+             <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
+             {quizOptions.map((opt, i) => {
                const { text, pronunciation } = getQuizOption(opt);
                const pronunciationText = pronunciation || '—';
                return (
