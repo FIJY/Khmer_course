@@ -95,6 +95,16 @@ export default function LessonPlayer() {
   const backHasKhmer = khmerPattern.test(backText);
   const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
+  const getQuizOption = (opt) => {
+    if (opt && typeof opt === 'object') {
+      return {
+        text: opt.text ?? opt.value ?? opt.label ?? opt.answer ?? '',
+        pronunciation: opt.pronunciation ?? ''
+      };
+    }
+    const pronunciationMap = current?.option_pronunciations || current?.pronunciations || {};
+    return { text: opt, pronunciation: pronunciationMap?.[opt] ?? '' };
+  };
 
   return (
     <MobileLayout
@@ -180,13 +190,20 @@ export default function LessonPlayer() {
         {type === 'quiz' && (
           <div className="w-full space-y-3">
              <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current.question}</h2>
-             {current.options.map((opt, i) => (
+             {current.options.map((opt, i) => {
+               const { text, pronunciation } = getQuizOption(opt);
+               const pronunciationText = pronunciation || '—';
+               return (
                <button key={i} disabled={!!selectedOption} onClick={() => handleQuizAnswer(opt, current.correct_answer, current.audio)}
                  className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${selectedOption === opt ? (opt === current.correct_answer ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-red-600 border-red-400 text-white') : 'bg-gray-900 border-white/5 text-white'}`}
                >
-                 {opt}
+                 <div className="flex flex-col gap-1">
+                   <span className="text-2xl font-black">{text}</span>
+                   <span className="text-xl font-semibold text-cyan-100 tracking-wide">{pronunciationText}</span>
+                 </div>
                </button>
-             ))}
+               );
+             })}
           </div>
         )}
 
