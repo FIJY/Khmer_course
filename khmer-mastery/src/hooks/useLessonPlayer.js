@@ -19,7 +19,22 @@ export default function useLessonPlayer() {
   const [isFinished, setIsFinished] = useState(false);
   const [lessonPassed, setLessonPassed] = useState(false);
   const [error, setError] = useState(null);
+  const [lessonId, setLessonId] = useState(id);
   const audioRef = useRef(null);
+
+  const normalizeItemData = useCallback((data) => {
+    if (!data) return {};
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch (parseError) {
+        console.warn('Failed to parse lesson item data', parseError);
+        return {};
+      }
+    }
+    if (typeof data === 'object') return data;
+    return {};
+  }, []);
 
   const fetchLessonData = useCallback(async () => {
     try {
@@ -33,11 +48,14 @@ export default function useLessonPlayer() {
         return;
       }
       setLessonInfo(lesson);
-      const itemsData = await fetchLessonItemsByLessonId(id);
-      const normalizedItems = itemsData.map(item => {
-        if (item.type !== 'quiz') return item;
-        const options = Array.isArray(item.data?.options) ? item.data.options.filter(Boolean) : [];
-        const correctAnswer = item.data?.correct_answer;
+      const resolvedLessonId = lesson?.lesson_id ?? lesson?.id ?? id;
+      setLessonId(resolvedLessonId);
+      const itemsData = await fetchLessonItemsByLessonId(resolvedLessonId);
+      const normalizedItems = (Array.isArray(itemsData) ? itemsData : []).map(item => {
+        const safeData = normalizeItemData(item.data);
+        if (item.type !== 'quiz') return { ...item, data: safeData };
+        const options = Array.isArray(safeData.options) ? safeData.options.filter(Boolean) : [];
+        const correctAnswer = safeData.correct_answer;
         const mergedOptions = [...options];
         if (correctAnswer && !mergedOptions.includes(correctAnswer)) {
           mergedOptions.push(correctAnswer);
@@ -46,7 +64,7 @@ export default function useLessonPlayer() {
         return {
           ...item,
           data: {
-            ...item.data,
+            ...safeData,
             options: uniqueOptions
           }
         };
@@ -59,7 +77,7 @@ export default function useLessonPlayer() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, normalizeItemData]);
 
   useEffect(() => { fetchLessonData(); }, [fetchLessonData]);
 
@@ -76,14 +94,14 @@ export default function useLessonPlayer() {
       try {
         const user = await fetchCurrentUser();
         if (user) {
-          await markLessonCompleted(user.id, id);
+          await markLessonCompleted(user.id, lessonId);
         }
       } catch (err) {
         console.error('Failed to save lesson completion', err);
       }
     };
     persistCompletion();
-  }, [id, isFinished, lessonPassed]);
+  }, [id, isFinished, lessonId, lessonPassed]);
 
   const handleNext = () => {
     if (step < items.length - 1) {

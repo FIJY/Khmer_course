@@ -8,6 +8,8 @@ import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
 
+const KHMER_PATTERN = /[\u1780-\u17FF]/;
+
 export default function LessonPlayer() {
   const {
     navigate,
@@ -31,6 +33,18 @@ export default function LessonPlayer() {
     setCanAdvance,
     refresh
   } = useLessonPlayer();
+  const safeItems = Array.isArray(items) ? items : [];
+  const lessonPronunciations = safeItems.reduce((map, item) => {
+    const data = item?.data;
+    if (!data?.pronunciation) return map;
+    const front = data.front ?? '';
+    const back = data.back ?? '';
+    const khmerWord = KHMER_PATTERN.test(front) ? front : (KHMER_PATTERN.test(back) ? back : '');
+    if (khmerWord) {
+      map[khmerWord] = data.pronunciation;
+    }
+    return map;
+  }, {});
 
   if (loading) return <LoadingState label={t('loading.lesson')} />;
 
@@ -49,7 +63,7 @@ export default function LessonPlayer() {
     );
   }
 
-  if (!items.length) {
+  if (!safeItems.length) {
     return (
       <ErrorState
         title={t('errors.lessonEmpty')}
@@ -86,29 +100,29 @@ export default function LessonPlayer() {
     );
   }
 
-  const khmerPattern = /[\u1780-\u17FF]/;
-  const current = items[step]?.data;
-  const type = items[step]?.type;
+  const current = safeItems[step]?.data;
+  const type = safeItems[step]?.type;
+  if (!current) {
+    return (
+      <ErrorState
+        title={t('errors.lessonEmpty')}
+        message={t('empty.lessonContent')}
+        onRetry={refresh}
+        secondaryAction={(
+          <Button variant="outline" onClick={() => navigate('/map')}>
+            {t('actions.backToMap')}
+          </Button>
+        )}
+      />
+    );
+  }
   const frontText = current?.front ?? '';
   const backText = current?.back ?? '';
-  const frontHasKhmer = khmerPattern.test(frontText);
-  const backHasKhmer = khmerPattern.test(backText);
+  const frontHasKhmer = KHMER_PATTERN.test(frontText);
+  const backHasKhmer = KHMER_PATTERN.test(backText);
   const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
-  const lessonPronunciations = React.useMemo(() => {
-    const map = {};
-    items.forEach(item => {
-      const data = item?.data;
-      if (!data?.pronunciation) return;
-      const front = data.front ?? '';
-      const back = data.back ?? '';
-      const khmerWord = khmerPattern.test(front) ? front : (khmerPattern.test(back) ? back : '');
-      if (khmerWord) {
-        map[khmerWord] = data.pronunciation;
-      }
-    });
-    return map;
-  }, [items]);
+  const quizOptions = Array.isArray(current?.options) ? current.options : [];
   const getQuizOption = (opt) => {
     if (opt && typeof opt === 'object') {
       return {
@@ -147,10 +161,10 @@ export default function LessonPlayer() {
           <div className="text-center flex-1 px-4">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-cyan-500 mb-1 truncate">{lessonInfo?.title}</h2>
             <div className="w-24 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden">
-              <div className="h-full bg-cyan-500 transition-all" style={{ width: `${items.length ? ((step + 1) / items.length) * 100 : 0}%` }} />
+              <div className="h-full bg-cyan-500 transition-all" style={{ width: `${safeItems.length ? ((step + 1) / safeItems.length) * 100 : 0}%` }} />
             </div>
             <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest mt-2">
-              {t('lesson.progress', { current: step + 1, total: items.length })}
+              {t('lesson.progress', { current: step + 1, total: safeItems.length })}
             </p>
           </div>
           <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs w-10"><CheckCircle2 size={16}/> {score}</div>
@@ -203,8 +217,8 @@ export default function LessonPlayer() {
 
         {type === 'quiz' && (
           <div className="w-full space-y-3">
-             <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current.question}</h2>
-             {current.options.map((opt, i) => {
+             <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
+             {quizOptions.map((opt, i) => {
                const { text, pronunciation } = getQuizOption(opt);
                const pronunciationText = pronunciation || '—';
                return (
