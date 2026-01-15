@@ -3,7 +3,8 @@ from textwrap import dedent
 
 
 def build_prompt(
-    lesson_id: str,
+    lesson_number: str,
+    sublesson_ids: str,
     theme: str,
     target_char: str,
     series: str,
@@ -18,7 +19,8 @@ def build_prompt(
         You are generating a Python lesson content list for content_engine/seed_lesson_X.py.
         Return only the list named content (no explanations).
 
-        Lesson id: {lesson_id}
+        Lesson number: {lesson_number}
+        Sub-lesson ids: {sublesson_ids}
         Lesson theme: {theme}
         Level: Beginner (A0)
         Alphabet focus: {target_char} (series {series})
@@ -59,7 +61,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate a GPT prompt for a seed_lesson content list."
     )
-    parser.add_argument("--lesson-id", required=True, help="Lesson id (e.g., 101)")
+    parser.add_argument("--lesson-number", required=True, help="Main lesson number (e.g., 1)")
+    parser.add_argument(
+        "--sublesson-ids",
+        required=True,
+        help="Comma-separated sub-lesson ids (e.g., 101,102,103)",
+    )
     parser.add_argument("--theme", required=True, help="Lesson theme")
     parser.add_argument("--target-char", required=True, help="Khmer character to focus on")
     parser.add_argument("--series", required=True, choices=["1", "2"], help="Letter series")
@@ -90,7 +97,8 @@ def main():
     args = parser.parse_args()
     print(
         build_prompt(
-            lesson_id=args.lesson_id,
+            lesson_number=args.lesson_number,
+            sublesson_ids=args.sublesson_ids,
             theme=args.theme,
             target_char=args.target_char,
             series=args.series,

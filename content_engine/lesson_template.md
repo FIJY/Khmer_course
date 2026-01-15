@@ -7,6 +7,8 @@ Use this structure when asking GPT to generate lesson content for `seed_lesson_X
 You are generating a Python lesson content list for content_engine/seed_lesson_X.py.
 Return only the list named content (no explanations).
 
+Lesson number: <LESSON_NUMBER> (example: 1)
+Sub-lesson ids: <SUBLESSON_IDS> (example: 101, 102, 103)
 Lesson theme: <THEME>
 Level: Beginner (A0)
 Alphabet focus: <TARGET_CHAR> (series <1|2>)
