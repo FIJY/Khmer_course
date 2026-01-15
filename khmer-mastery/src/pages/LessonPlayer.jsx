@@ -92,8 +92,9 @@ export default function LessonPlayer() {
   if (!current) {
     return (
       <ErrorState
-        title={t('errors.lesson')}
+        title={t('errors.lessonEmpty')}
         message={t('empty.lessonContent')}
+        onRetry={refresh}
         secondaryAction={(
           <Button variant="outline" onClick={() => navigate('/map')}>
             {t('actions.backToMap')}
