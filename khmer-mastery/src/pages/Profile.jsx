@@ -65,18 +65,6 @@ export default function Profile() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="h-screen bg-black text-white flex flex-col items-center justify-center text-center px-6 gap-4">
-        <p className="text-red-400 text-xs font-black uppercase tracking-widest">Profile Error</p>
-        <p className="text-gray-400 text-xs">{error}</p>
-        <Button onClick={fetchProfileData} className="bg-cyan-500 border-none">
-          Retry
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <MobileLayout>
       {/* HEADER */}

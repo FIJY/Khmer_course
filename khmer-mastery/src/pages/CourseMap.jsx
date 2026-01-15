@@ -64,20 +64,7 @@ export default function CourseMap() {
     );
   }
 
-  const hasChapters = Object.keys(chapters).length > 0;
-
-  if (error) return (
-    <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
-      <p className="text-sm font-bold uppercase tracking-widest text-red-400">Map Error</p>
-      <p className="text-gray-400 text-xs">{error}</p>
-      <button
-        onClick={refresh}
-        className="px-4 py-2 rounded-full border border-white/10 text-xs font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300"
-      >
-        Retry
-      </button>
-    </div>
-  );
+  const hasLessonGroups = Object.keys(chapters).length > 0;
 
   const hasChapters = Object.keys(chapters).length > 0;
 
@@ -95,7 +82,7 @@ export default function CourseMap() {
       </div>
 
       <div className="space-y-12 mt-6 pb-10">
-        {!hasChapters ? (
+        {!hasLessonGroups ? (
           <div className="text-center opacity-60 py-20 flex flex-col items-center">
             <RefreshCw size={36} className="mb-4 text-gray-600" />
             <p className="text-gray-400 text-xs uppercase font-black tracking-widest">No lessons available yet</p>
