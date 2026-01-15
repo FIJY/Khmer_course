@@ -121,8 +121,16 @@ export default function ReviewPlayer() {
   const isAnswered = selectedOption !== null;
   const isCorrectAnswer = (opt) => (opt.front || opt.english) === (target.front || target.english);
 
+  const footerContent = isAnswered ? (
+    <div className="p-6 pt-6 pb-8 bg-black/90 backdrop-blur-xl border-t border-white/10">
+      <Button onClick={nextCard} variant={isCorrectAnswer(selectedOption) ? "primary" : "secondary"}>
+        {isCorrectAnswer(selectedOption) ? 'Continue' : 'Got it'} <ArrowRight size={20} />
+      </Button>
+    </div>
+  ) : null;
+
   return (
-    <MobileLayout withNav={false}>
+    <MobileLayout withNav={false} footer={footerContent}>
         {/* HEADER */}
         <div className="p-4 flex justify-between items-center bg-gray-900/50 z-10">
            <button onClick={() => navigate('/review')} className="p-2"><X size={24} className="text-gray-500 hover:text-white" /></button>
@@ -240,14 +248,6 @@ export default function ReviewPlayer() {
            })}
         </div>
 
-        {/* BOTTOM ACTION BAR */}
-        {isAnswered && (
-           <div className="absolute bottom-0 left-0 right-0 p-6 pt-6 pb-8 bg-black/90 backdrop-blur-xl border-t border-white/10 animate-in slide-in-from-bottom-full z-20">
-             <Button onClick={nextCard} variant={isCorrectAnswer(selectedOption) ? "primary" : "secondary"}>
-                {isCorrectAnswer(selectedOption) ? 'Continue' : 'Got it'} <ArrowRight size={20} />
-             </Button>
-           </div>
-        )}
     </MobileLayout>
   );
 }

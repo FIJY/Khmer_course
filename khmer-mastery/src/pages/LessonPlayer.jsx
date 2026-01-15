@@ -81,7 +81,21 @@ export default function LessonPlayer() {
   const type = items[step]?.type;
 
   return (
-    <MobileLayout withNav={true}>
+    <MobileLayout
+      withNav={true}
+      footer={(
+        <footer className="p-6 border-t border-white/5 bg-black/80">
+          <div className="flex gap-3">
+            <button onClick={goBack} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`}>
+              <ChevronLeft size={24} />
+            </button>
+            <Button onClick={handleNext} disabled={!canAdvance} className="flex-1">
+              Continue <ArrowRight size={20} />
+            </Button>
+          </div>
+        </footer>
+      )}
+    >
       <header className="p-4 border-b border-white/5 bg-gray-900/20">
         <div className="flex justify-between items-center">
           <button onClick={() => navigate('/map')} className="p-2 text-gray-500"><X size={24} /></button>
@@ -147,16 +161,6 @@ export default function LessonPlayer() {
         )}
       </main>
 
-      <footer className="p-6 border-t border-white/5 bg-black/80">
-        <div className="flex gap-3">
-          <button onClick={goBack} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`}>
-            <ChevronLeft size={24} />
-          </button>
-          <Button onClick={handleNext} disabled={!canAdvance} className="flex-1">
-            Continue <ArrowRight size={20} />
-          </Button>
-        </div>
-      </footer>
     </MobileLayout>
   );
 }
