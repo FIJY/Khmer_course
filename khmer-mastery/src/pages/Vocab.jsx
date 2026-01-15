@@ -1,42 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
 import { Globe, Search, Volume2, ScrollText } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
+import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
+import useVocab from '../hooks/useVocab';
 
 export default function Vocab() {
   const navigate = useNavigate();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('');
-
-  useEffect(() => { fetchVocab(); }, []);
-
-  const fetchVocab = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('lesson_items')
-        .select('*')
-        .eq('type', 'vocab_card')
-        .order('lesson_id', { ascending: true });
-
-      if (error) throw error;
-      setItems(data || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
-
-  const playAudio = (filename) => {
-    if (filename) new Audio(`/sounds/${filename}`).play().catch(() => {});
-  };
-
-  const filteredItems = items.filter(item => {
-    const term = filter.toLowerCase();
-    const front = item.data?.front?.toLowerCase() || '';
-    const back = item.data?.back?.toLowerCase() || '';
-    return front.includes(term) || back.includes(term);
-  });
+  const {
+    items,
+    loading,
+    error,
+    filter,
+    setFilter,
+    filteredItems,
+    playAudio,
+    refresh
+  } = useVocab();
 
   return (
     <MobileLayout>
@@ -46,7 +28,9 @@ export default function Vocab() {
           <Globe className="text-cyan-500" size={24} />
           <h1 className="text-3xl font-black italic tracking-tighter uppercase text-white">Dictionary</h1>
         </div>
-        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{items.length} words available</p>
+        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+          {items.length} words available
+        </p>
       </div>
 
       {/* SEARCH */}
@@ -66,7 +50,22 @@ export default function Vocab() {
       {/* WORD LIST */}
       <div className="px-6 mt-6 space-y-3 pb-10">
         {loading ? (
-          <div className="text-center text-gray-600 py-10 animate-pulse uppercase font-black text-xs">Loading...</div>
+          <LoadingState label="Loading dictionary..." fullScreen={false} className="py-10" />
+        ) : error ? (
+          <ErrorState
+            title="Dictionary Error"
+            message={error}
+            onRetry={refresh}
+            fullScreen={false}
+          />
+        ) : items.length === 0 ? (
+          <div className="text-center opacity-50 py-20 flex flex-col items-center">
+            <ScrollText size={48} className="mb-4 text-gray-600" />
+            <p className="text-gray-500 italic">No vocabulary yet</p>
+            <Button variant="outline" className="mt-4" onClick={() => navigate('/map')}>
+              Back to Map
+            </Button>
+          </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center opacity-50 py-20 flex flex-col items-center">
             <ScrollText size={48} className="mb-4 text-gray-600" />

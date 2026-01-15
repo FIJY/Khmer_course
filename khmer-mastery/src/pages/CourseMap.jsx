@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import React from 'react';
 import {
-  Check, Play, Gem, Layers, BookOpen, RefreshCw, ChevronRight
+  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
+import useCourseMap from '../hooks/useCourseMap';
 
 const COURSE_LEVELS = [
   {
@@ -42,72 +43,32 @@ const COURSE_LEVELS = [
 ];
 
 export default function CourseMap() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [completedLessons, setCompletedLessons] = useState([]);
-  const [chapters, setChapters] = useState({});
+  const {
+    loading,
+    completedLessons,
+    chapters,
+    error,
+    navigate,
+    refresh
+  } = useCourseMap();
 
-  useEffect(() => { fetchAllData(); }, []);
+  if (loading) return <LoadingState label="Loading world map..." className="gap-4" />;
 
-  const fetchAllData = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login'); return; }
+  if (error) {
+    return (
+      <ErrorState
+        title="Map Error"
+        message={error}
+        onRetry={refresh}
+      />
+    );
+  }
 
-      const { data: progressData } = await supabase
-        .from('user_progress')
-        .select('lesson_id')
-        .eq('user_id', user.id)
-        .eq('is_completed', true);
-
-      const doneIds = progressData ? progressData.map(item => Number(item.lesson_id)) : [];
-      setCompletedLessons(doneIds);
-
-      const { data: allLessons } = await supabase
-        .from('lessons')
-        .select('*')
-        .order('id', { ascending: true });
-
-      if (!allLessons) { setChapters({}); return; }
-
-      const chaptersMap = {};
-
-      allLessons.filter(l => l.id < 100).forEach(l => {
-        chaptersMap[l.id] = { ...l, subLessons: [] };
-      });
-
-      allLessons.filter(l => l.id >= 100).forEach(l => {
-        const chapterId = Math.floor(l.id / 100);
-        if (!chaptersMap[chapterId]) {
-          chaptersMap[chapterId] = {
-            id: chapterId,
-            title: `Chapter ${chapterId}`,
-            description: 'Coming soon...',
-            subLessons: []
-          };
-        }
-        chaptersMap[chapterId].subLessons.push({ id: l.id, title: l.title });
-      });
-
-      setChapters(chaptersMap);
-    } catch (e) {
-      console.error("CRITICAL MAP ERROR:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) return (
-    <div className="h-screen bg-black flex flex-col items-center justify-center text-cyan-400 font-black italic tracking-widest gap-4">
-      <RefreshCw size={32} className="animate-spin" />
-      <span>LOADING WORLD MAP...</span>
-    </div>
-  );
+  const hasLessonGroups = Object.keys(chapters).length > 0;
 
   return (
     <MobileLayout withNav={true}>
-      {/* HEADER: Делаем его липким, чтобы не уезжал при скролле */}
+      {/* Sticky header to stay visible while scrolling */}
       <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-40">
         <h1 className="text-2xl font-black tracking-tighter uppercase italic text-white">
           Khmer <span className="text-cyan-400">Mastery</span>
@@ -119,7 +80,13 @@ export default function CourseMap() {
       </div>
 
       <div className="space-y-12 mt-6 pb-10">
-        {COURSE_LEVELS.map((level, levelIndex) => {
+        {!hasLessonGroups ? (
+          <div className="text-center opacity-60 py-20 flex flex-col items-center">
+            <RefreshCw size={36} className="mb-4 text-gray-600" />
+            <p className="text-gray-400 text-xs uppercase font-black tracking-widest">No lessons available yet</p>
+            <p className="text-gray-600 text-[10px] mt-2">Check back soon for new content.</p>
+          </div>
+        ) : COURSE_LEVELS.map((level, levelIndex) => {
           const levelChapters = Object.values(chapters).filter(ch =>
             ch.id >= level.range[0] && ch.id <= level.range[1]
           );
