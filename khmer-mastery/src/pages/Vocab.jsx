@@ -1,42 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
 import { Globe, Search, Volume2, ScrollText } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
+import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
+import EmptyState from '../components/UI/EmptyState';
+import useVocab from '../hooks/useVocab';
+import { t } from '../i18n';
 
 export default function Vocab() {
   const navigate = useNavigate();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('');
-
-  useEffect(() => { fetchVocab(); }, []);
-
-  const fetchVocab = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('lesson_items')
-        .select('*')
-        .eq('type', 'vocab_card')
-        .order('lesson_id', { ascending: true });
-
-      if (error) throw error;
-      setItems(data || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
-
-  const playAudio = (filename) => {
-    if (filename) new Audio(`/sounds/${filename}`).play().catch(() => {});
-  };
-
-  const filteredItems = items.filter(item => {
-    const term = filter.toLowerCase();
-    const front = item.data?.front?.toLowerCase() || '';
-    const back = item.data?.back?.toLowerCase() || '';
-    return front.includes(term) || back.includes(term);
-  });
+  const {
+    items,
+    loading,
+    error,
+    filter,
+    setFilter,
+    filteredItems,
+    playAudio,
+    refresh
+  } = useVocab();
 
   return (
     <MobileLayout>
@@ -44,9 +28,11 @@ export default function Vocab() {
       <div className="p-6 sticky top-0 z-30 bg-black/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-3 mb-2">
           <Globe className="text-cyan-500" size={24} />
-          <h1 className="text-3xl font-black italic tracking-tighter uppercase text-white">Dictionary</h1>
+          <h1 className="text-3xl font-black italic tracking-tighter uppercase text-white">{t('vocab.title')}</h1>
         </div>
-        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{items.length} words available</p>
+        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+          {t('vocab.wordsAvailable', { count: items.length })}
+        </p>
       </div>
 
       {/* SEARCH */}
@@ -55,7 +41,7 @@ export default function Vocab() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
           <input
             type="text"
-            placeholder="Search words..."
+            placeholder={t('vocab.searchPlaceholder')}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="w-full bg-gray-900/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-cyan-500/50 outline-none transition-all font-bold"
@@ -66,12 +52,29 @@ export default function Vocab() {
       {/* WORD LIST */}
       <div className="px-6 mt-6 space-y-3 pb-10">
         {loading ? (
-          <div className="text-center text-gray-600 py-10 animate-pulse uppercase font-black text-xs">Loading...</div>
+          <LoadingState label={t('loading.dictionary')} fullScreen={false} className="py-10" />
+        ) : error ? (
+          <ErrorState
+            title={t('errors.dictionary')}
+            message={error}
+            onRetry={refresh}
+            fullScreen={false}
+          />
+        ) : items.length === 0 ? (
+          <EmptyState
+            title={t('empty.vocab')}
+            icon={<ScrollText size={48} />}
+            actions={(
+              <Button variant="outline" onClick={() => navigate('/map')}>
+                {t('actions.backToMap')}
+              </Button>
+            )}
+          />
         ) : filteredItems.length === 0 ? (
-          <div className="text-center opacity-50 py-20 flex flex-col items-center">
-            <ScrollText size={48} className="mb-4 text-gray-600" />
-            <p className="text-gray-500 italic">No results found</p>
-          </div>
+          <EmptyState
+            title={t('empty.results')}
+            icon={<ScrollText size={48} />}
+          />
         ) : (
           filteredItems.map((item, i) => (
             <div

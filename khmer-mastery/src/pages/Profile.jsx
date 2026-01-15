@@ -4,27 +4,39 @@ import { supabase } from '../supabaseClient';
 import { User, Trophy, Zap, Target, Flame, Trash2, LogOut } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
+import EmptyState from '../components/UI/EmptyState';
+import { fetchCurrentUser } from '../data/auth';
+import { fetchCompletedLessonCount } from '../data/progress';
+import { fetchUserSrsCount } from '../data/profile';
+import { t } from '../i18n';
 
 export default function Profile() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState({ email: '', joined: '' });
   const [stats, setStats] = useState({ lessons: 0, words: 0, gems: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => { fetchProfileData(); }, []);
 
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      setError(null);
+      const user = await fetchCurrentUser();
       if (!user) { navigate('/login'); return; }
 
-      const { data: progress } = await supabase.from('user_progress').select('id').eq('user_id', user.id).eq('is_completed', true);
-      const { data: words } = await supabase.from('user_srs').select('id').eq('user_id', user.id);
+      const lessonsCompleted = await fetchCompletedLessonCount(user.id);
+      const wordsLearned = await fetchUserSrsCount(user.id);
 
       setProfile({ email: user.email, joined: new Date(user.created_at).toLocaleDateString() });
-      setStats({ lessons: progress?.length || 0, words: words?.length || 0, gems: (progress?.length || 0) * 50 });
-    } catch (err) { console.error(err); }
+      setStats({ lessons: lessonsCompleted, words: wordsLearned, gems: lessonsCompleted * 50 });
+    } catch (err) {
+      console.error(err);
+      setError('Unable to load your profile.');
+    }
     finally { setLoading(false); }
   };
 
@@ -43,7 +55,19 @@ export default function Profile() {
     } catch (err) { alert("Error resetting progress"); }
   };
 
-  if (loading) return <div className="h-screen bg-black text-cyan-400 flex items-center justify-center font-black italic">LOADING PROFILE...</div>;
+  if (loading) return <LoadingState label={t('loading.profile')} />;
+
+  if (error) {
+    return (
+      <ErrorState
+        title={t('errors.profile')}
+        message={error}
+        onRetry={fetchProfileData}
+      />
+    );
+  }
+
+  const isEmptyStats = stats.lessons === 0 && stats.words === 0;
 
   return (
     <MobileLayout>
@@ -54,14 +78,30 @@ export default function Profile() {
               <User size={40} className="text-black" />
            </div>
            <div>
-              <h2 className="text-xl font-black text-white truncate w-48">{profile.email.split('@')[0]}</h2>
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Member since {profile.joined}</p>
+              <h2 className="text-xl font-black text-white truncate w-48">
+                {profile.email ? profile.email.split('@')[0] : 'Learner'}
+              </h2>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
+                {t('profile.memberSince', { date: profile.joined || '—' })}
+              </p>
            </div>
         </div>
       </div>
 
       <div className="p-6 space-y-6">
         {/* STATS GRID */}
+        {isEmptyStats && (
+          <EmptyState
+            title={t('empty.lessons')}
+            description={t('empty.lessonsSubtext')}
+            actions={(
+              <Button variant="outline" onClick={() => navigate('/map')}>
+                {t('actions.backToMap')}
+              </Button>
+            )}
+            className="py-6"
+          />
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-900/50 p-5 rounded-[2rem] border border-white/5">
              <Trophy className="text-emerald-500 mb-2" size={20} />
