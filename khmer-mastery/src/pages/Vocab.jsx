@@ -5,7 +5,9 @@ import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
+import EmptyState from '../components/UI/EmptyState';
 import useVocab from '../hooks/useVocab';
+import { t } from '../i18n';
 
 export default function Vocab() {
   const navigate = useNavigate();
@@ -26,10 +28,10 @@ export default function Vocab() {
       <div className="p-6 sticky top-0 z-30 bg-black/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-3 mb-2">
           <Globe className="text-cyan-500" size={24} />
-          <h1 className="text-3xl font-black italic tracking-tighter uppercase text-white">Dictionary</h1>
+          <h1 className="text-3xl font-black italic tracking-tighter uppercase text-white">{t('vocab.title')}</h1>
         </div>
         <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
-          {items.length} words available
+          {t('vocab.wordsAvailable', { count: items.length })}
         </p>
       </div>
 
@@ -39,7 +41,7 @@ export default function Vocab() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
           <input
             type="text"
-            placeholder="Search words..."
+            placeholder={t('vocab.searchPlaceholder')}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="w-full bg-gray-900/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-cyan-500/50 outline-none transition-all font-bold"
@@ -50,27 +52,29 @@ export default function Vocab() {
       {/* WORD LIST */}
       <div className="px-6 mt-6 space-y-3 pb-10">
         {loading ? (
-          <LoadingState label="Loading dictionary..." fullScreen={false} className="py-10" />
+          <LoadingState label={t('loading.dictionary')} fullScreen={false} className="py-10" />
         ) : error ? (
           <ErrorState
-            title="Dictionary Error"
+            title={t('errors.dictionary')}
             message={error}
             onRetry={refresh}
             fullScreen={false}
           />
         ) : items.length === 0 ? (
-          <div className="text-center opacity-50 py-20 flex flex-col items-center">
-            <ScrollText size={48} className="mb-4 text-gray-600" />
-            <p className="text-gray-500 italic">No vocabulary yet</p>
-            <Button variant="outline" className="mt-4" onClick={() => navigate('/map')}>
-              Back to Map
-            </Button>
-          </div>
+          <EmptyState
+            title={t('empty.vocab')}
+            icon={<ScrollText size={48} />}
+            actions={(
+              <Button variant="outline" onClick={() => navigate('/map')}>
+                {t('actions.backToMap')}
+              </Button>
+            )}
+          />
         ) : filteredItems.length === 0 ? (
-          <div className="text-center opacity-50 py-20 flex flex-col items-center">
-            <ScrollText size={48} className="mb-4 text-gray-600" />
-            <p className="text-gray-500 italic">No results found</p>
-          </div>
+          <EmptyState
+            title={t('empty.results')}
+            icon={<ScrollText size={48} />}
+          />
         ) : (
           filteredItems.map((item, i) => (
             <div

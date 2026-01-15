@@ -6,6 +6,7 @@ import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
+import { t } from '../i18n';
 
 export default function LessonPlayer() {
   const {
@@ -31,17 +32,17 @@ export default function LessonPlayer() {
     refresh
   } = useLessonPlayer();
 
-  if (loading) return <LoadingState label="Syncing lesson..." />;
+  if (loading) return <LoadingState label={t('loading.lesson')} />;
 
   if (error) {
     return (
       <ErrorState
-        title="Lesson Error"
+        title={t('errors.lesson')}
         message={error}
         onRetry={refresh}
         secondaryAction={(
           <Button variant="outline" onClick={() => navigate('/map')}>
-            Back to Map
+            {t('actions.backToMap')}
           </Button>
         )}
       />
@@ -50,11 +51,15 @@ export default function LessonPlayer() {
 
   if (!items.length) {
     return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
-        <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Lesson Empty</p>
-        <p className="text-gray-500 text-xs">This lesson doesn't have content yet.</p>
-        <Button onClick={() => navigate('/map')}>Back to Map</Button>
-      </div>
+      <ErrorState
+        title={t('errors.lessonEmpty')}
+        message={t('empty.lessonContent')}
+        secondaryAction={(
+          <Button variant="outline" onClick={() => navigate('/map')}>
+            {t('actions.backToMap')}
+          </Button>
+        )}
+      />
     );
   }
 
@@ -65,15 +70,15 @@ export default function LessonPlayer() {
           {lessonPassed ? (
             <>
               <Trophy size={80} className="text-emerald-400 mb-8 animate-bounce" />
-              <h1 className="text-4xl font-black italic uppercase mb-2 text-white">Complete!</h1>
-              <p className="text-gray-400 mb-8 text-xl font-bold">Score: {score}/{quizCount}</p>
-              <Button onClick={() => navigate('/map')}>Back to Map</Button>
+              <h1 className="text-4xl font-black italic uppercase mb-2 text-white">{t('lesson.complete')}</h1>
+              <p className="text-gray-400 mb-8 text-xl font-bold">{t('lesson.score', { score, total: quizCount })}</p>
+              <Button onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>
             </>
           ) : (
             <>
               <Frown size={80} className="text-red-500 mb-8" />
-              <h1 className="text-3xl font-black italic uppercase mb-2 text-white">Review Needed</h1>
-              <Button variant="danger" onClick={refresh}>Try Again</Button>
+              <h1 className="text-3xl font-black italic uppercase mb-2 text-white">{t('lesson.reviewNeeded')}</h1>
+              <Button variant="danger" onClick={refresh}>{t('actions.retry')}</Button>
             </>
           )}
         </div>
@@ -94,7 +99,7 @@ export default function LessonPlayer() {
               <ChevronLeft size={24} />
             </button>
             <Button onClick={handleNext} disabled={!canAdvance} className="flex-1">
-              Continue <ArrowRight size={20} />
+              {t('actions.continue')} <ArrowRight size={20} />
             </Button>
           </div>
         </footer>
@@ -108,6 +113,9 @@ export default function LessonPlayer() {
             <div className="w-24 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden">
               <div className="h-full bg-cyan-500 transition-all" style={{ width: `${items.length ? ((step + 1) / items.length) * 100 : 0}%` }} />
             </div>
+            <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest mt-2">
+              {t('lesson.progress', { current: step + 1, total: items.length })}
+            </p>
           </div>
           <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs w-10"><CheckCircle2 size={16}/> {score}</div>
         </div>

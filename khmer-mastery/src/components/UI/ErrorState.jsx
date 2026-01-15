@@ -1,10 +1,11 @@
 import React from 'react';
+import { t } from '../../i18n';
 
 export default function ErrorState({
-  title = 'Error',
+  title = t('errors.map'),
   message = 'Something went wrong.',
   onRetry,
-  retryLabel = 'Retry',
+  retryLabel = t('actions.retry'),
   secondaryAction,
   fullScreen = true,
   className = ''

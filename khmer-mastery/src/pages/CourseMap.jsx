@@ -5,7 +5,9 @@ import {
 import MobileLayout from '../components/Layout/MobileLayout';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
+import EmptyState from '../components/UI/EmptyState';
 import useCourseMap from '../hooks/useCourseMap';
+import { t } from '../i18n';
 
 const COURSE_LEVELS = [
   {
@@ -52,21 +54,17 @@ export default function CourseMap() {
     refresh
   } = useCourseMap();
 
-  if (loading) return <LoadingState label="Loading world map..." className="gap-4" />;
+  if (loading) return <LoadingState label={t('loading.worldMap')} className="gap-4" />;
 
   if (error) {
     return (
       <ErrorState
-        title="Map Error"
+        title={t('errors.map')}
         message={error}
         onRetry={refresh}
       />
     );
   }
-
-  const hasLessonGroups = Object.keys(chapters).length > 0;
-
-  const hasChapters = Object.keys(chapters).length > 0;
 
   return (
     <MobileLayout withNav={true}>
@@ -82,12 +80,12 @@ export default function CourseMap() {
       </div>
 
       <div className="space-y-12 mt-6 pb-10">
-        {!hasLessonGroups ? (
-          <div className="text-center opacity-60 py-20 flex flex-col items-center">
-            <RefreshCw size={36} className="mb-4 text-gray-600" />
-            <p className="text-gray-400 text-xs uppercase font-black tracking-widest">No lessons available yet</p>
-            <p className="text-gray-600 text-[10px] mt-2">Check back soon for new content.</p>
-          </div>
+        {Object.keys(chapters).length === 0 ? (
+          <EmptyState
+            title={t('empty.lessons')}
+            description={t('empty.lessonsSubtext')}
+            icon={<RefreshCw size={36} />}
+          />
         ) : COURSE_LEVELS.map((level, levelIndex) => {
           const levelChapters = Object.values(chapters).filter(ch =>
             ch.id >= level.range[0] && ch.id <= level.range[1]

@@ -1,7 +1,8 @@
 import React from 'react';
+import { t } from '../../i18n';
 
 export default function LoadingState({
-  label = 'Loading...',
+  label = t('loading.worldMap'),
   fullScreen = true,
   className = ''
 }) {

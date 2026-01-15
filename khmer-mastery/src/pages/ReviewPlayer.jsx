@@ -6,7 +6,9 @@ import {
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import LoadingState from '../components/UI/LoadingState';
 import useReviewSession from '../hooks/useReviewSession';
+import { t } from '../i18n';
 
 export default function ReviewPlayer() {
   const navigate = useNavigate();
@@ -14,20 +16,20 @@ export default function ReviewPlayer() {
     if (mode === 'read') {
       return {
         questionMain: cardTarget.back || cardTarget.khmer,
-        questionSub: 'How do you read this?',
+        questionSub: t('review.promptRead'),
         showBigAudioBtn: true
       };
     }
     if (mode === 'recall') {
       return {
         questionMain: cardTarget.front || cardTarget.english,
-        questionSub: 'Select the Khmer translation',
+        questionSub: t('review.promptRecall'),
         showBigAudioBtn: false
       };
     }
     return {
-      questionMain: 'Listen...',
-      questionSub: 'What did you hear?',
+      questionMain: t('review.listenMain'),
+      questionSub: t('review.promptListen'),
       showBigAudioBtn: true
     };
   };
@@ -50,17 +52,17 @@ export default function ReviewPlayer() {
     refresh
   } = useReviewSession();
 
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic uppercase">Building Quiz...</div>;
+  if (loading) return <LoadingState label={t('loading.review')} />;
 
   if (error) {
     return (
       <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
         <AlertCircle size={56} className="text-red-500 mb-4 mx-auto" />
-        <h1 className="text-2xl font-black text-white italic uppercase mb-2">Review Error</h1>
+        <h1 className="text-2xl font-black text-white italic uppercase mb-2">{t('errors.review')}</h1>
         <p className="text-gray-400 text-xs">{error}</p>
         <div className="mt-6 flex gap-3 justify-center">
-          <Button onClick={refresh}>Retry</Button>
-          <Button variant="outline" onClick={() => navigate('/review')}>Back to Hub</Button>
+          <Button onClick={refresh}>{t('actions.retry')}</Button>
+          <Button variant="outline" onClick={() => navigate('/review')}>{t('actions.backToHub')}</Button>
         </div>
       </MobileLayout>
     );
@@ -68,18 +70,18 @@ export default function ReviewPlayer() {
 
   if (sessionData.length === 0) {
     const emptyTitle = emptyReason === 'insufficient_vocab'
-      ? 'Not enough vocab yet'
-      : 'All caught up!';
+      ? t('empty.reviewInsufficient')
+      : t('empty.reviewCaughtUp');
     const emptyBody = emptyReason === 'insufficient_vocab'
-      ? 'Add more vocabulary before starting a review session.'
-      : 'You have no cards due right now.';
+      ? t('empty.reviewInsufficientBody')
+      : t('empty.reviewCaughtUpBody');
 
     return (
       <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
         <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
         <h1 className="text-3xl font-black text-white italic uppercase mb-2">{emptyTitle}</h1>
         <p className="text-gray-400 text-xs">{emptyBody}</p>
-        <Button onClick={() => navigate('/review')} className="mt-8">Back to Hub</Button>
+        <Button onClick={() => navigate('/review')} className="mt-8">{t('actions.backToHub')}</Button>
       </MobileLayout>
     );
   }
@@ -88,8 +90,8 @@ export default function ReviewPlayer() {
     return (
       <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
         <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
-        <h1 className="text-3xl font-black text-white italic uppercase mb-2">Session Complete!</h1>
-        <Button onClick={() => navigate('/review')} className="mt-8">Back to Hub</Button>
+        <h1 className="text-3xl font-black text-white italic uppercase mb-2">{t('review.sessionComplete')}</h1>
+        <Button onClick={() => navigate('/review')} className="mt-8">{t('actions.backToHub')}</Button>
       </MobileLayout>
     );
   }
@@ -129,7 +131,9 @@ export default function ReviewPlayer() {
         variant={isAnswered && isCorrectAnswer(selectedOption) ? "primary" : "secondary"}
         className={!isAnswered ? "opacity-60" : ""}
       >
-        {isAnswered ? (isCorrectAnswer(selectedOption) ? 'Continue' : 'Got it') : 'Choose an answer'} <ArrowRight size={20} />
+        {isAnswered
+          ? (isCorrectAnswer(selectedOption) ? t('actions.continue') : t('actions.gotIt'))
+          : t('actions.chooseAnswer')} <ArrowRight size={20} />
       </Button>
     </div>
   );
@@ -142,6 +146,9 @@ export default function ReviewPlayer() {
            <div className="h-1 w-24 bg-gray-800 rounded-full overflow-hidden mx-4">
               <div className="h-full bg-cyan-500 transition-all" style={{width: `${(currentIndex / sessionData.length) * 100}%`}}></div>
            </div>
+           <span className="text-[9px] text-gray-600 font-black uppercase tracking-widest">
+             {t('review.progress', { current: currentIndex + 1, total: sessionData.length })}
+           </span>
            <button onClick={() => setShowSettings(true)} className="p-2 bg-gray-800 rounded-full text-cyan-400 hover:bg-gray-700 transition-colors">
              <Settings size={18} />
            </button>

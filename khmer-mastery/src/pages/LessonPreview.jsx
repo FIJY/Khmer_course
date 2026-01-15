@@ -5,7 +5,9 @@ import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
+import EmptyState from '../components/UI/EmptyState';
 import { fetchLessonById, fetchLessonItemsByLessonId } from '../data/lessons';
+import { t } from '../i18n';
 
 export default function LessonPreview() {
   const { id } = useParams();
@@ -32,12 +34,12 @@ export default function LessonPreview() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  if (loading) return <LoadingState label="Loading preview..." />;
+  if (loading) return <LoadingState label={t('loading.preview')} />;
 
   if (error) {
     return (
       <ErrorState
-        title="Preview Error"
+        title={t('errors.preview')}
         message={error}
         onRetry={fetchData}
       />
@@ -60,19 +62,22 @@ export default function LessonPreview() {
         </div>
 
         <div className="space-y-3 mb-10">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-4 px-1">Vocabulary List</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-4 px-1">{t('empty.vocabList')}</h3>
           {vocabItems.length === 0 ? (
-            <div className="text-center opacity-60 py-8 space-y-4">
-              <p className="text-gray-500 italic">No vocabulary items yet</p>
-              <div className="flex gap-3 justify-center">
-                <Button variant="outline" onClick={() => navigate('/map')}>
-                  Back to Map
-                </Button>
-                <Button onClick={() => navigate(`/lesson/${id}`)}>
-                  Start Lesson <Play size={18} fill="currentColor" />
-                </Button>
-              </div>
-            </div>
+            <EmptyState
+              title={t('empty.vocab')}
+              actions={(
+                <>
+                  <Button variant="outline" onClick={() => navigate('/map')}>
+                    {t('actions.backToMap')}
+                  </Button>
+                  <Button onClick={() => navigate(`/lesson/${id}`)}>
+                    {t('actions.startLesson')} <Play size={18} fill="currentColor" />
+                  </Button>
+                </>
+              )}
+              className="py-8"
+            />
           ) : vocabItems.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between bg-gray-900/50 border border-white/5 p-4 rounded-2xl">
               <div>
@@ -86,7 +91,7 @@ export default function LessonPreview() {
 
         {vocabItems.length > 0 && (
           <Button onClick={() => navigate(`/lesson/${id}`)}>
-            Start Lesson <Play size={18} fill="currentColor" />
+            {t('actions.startLesson')} <Play size={18} fill="currentColor" />
           </Button>
         )}
       </main>

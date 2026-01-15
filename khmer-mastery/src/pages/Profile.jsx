@@ -6,9 +6,11 @@ import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
+import EmptyState from '../components/UI/EmptyState';
 import { fetchCurrentUser } from '../data/auth';
 import { fetchCompletedLessonCount } from '../data/progress';
 import { fetchUserSrsCount } from '../data/profile';
+import { t } from '../i18n';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -53,17 +55,19 @@ export default function Profile() {
     } catch (err) { alert("Error resetting progress"); }
   };
 
-  if (loading) return <LoadingState label="Loading profile..." />;
+  if (loading) return <LoadingState label={t('loading.profile')} />;
 
   if (error) {
     return (
       <ErrorState
-        title="Profile Error"
+        title={t('errors.profile')}
         message={error}
         onRetry={fetchProfileData}
       />
     );
   }
+
+  const isEmptyStats = stats.lessons === 0 && stats.words === 0;
 
   return (
     <MobileLayout>
@@ -78,7 +82,7 @@ export default function Profile() {
                 {profile.email ? profile.email.split('@')[0] : 'Learner'}
               </h2>
               <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
-                Member since {profile.joined || '—'}
+                {t('profile.memberSince', { date: profile.joined || '—' })}
               </p>
            </div>
         </div>
@@ -86,6 +90,18 @@ export default function Profile() {
 
       <div className="p-6 space-y-6">
         {/* STATS GRID */}
+        {isEmptyStats && (
+          <EmptyState
+            title={t('empty.lessons')}
+            description={t('empty.lessonsSubtext')}
+            actions={(
+              <Button variant="outline" onClick={() => navigate('/map')}>
+                {t('actions.backToMap')}
+              </Button>
+            )}
+            className="py-6"
+          />
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-900/50 p-5 rounded-[2rem] border border-white/5">
              <Trophy className="text-emerald-500 mb-2" size={20} />
