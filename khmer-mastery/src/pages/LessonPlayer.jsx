@@ -89,6 +89,19 @@ export default function LessonPlayer() {
   const khmerPattern = /[\u1780-\u17FF]/;
   const current = items[step]?.data;
   const type = items[step]?.type;
+  if (!current) {
+    return (
+      <ErrorState
+        title={t('errors.lesson')}
+        message={t('empty.lessonContent')}
+        secondaryAction={(
+          <Button variant="outline" onClick={() => navigate('/map')}>
+            {t('actions.backToMap')}
+          </Button>
+        )}
+      />
+    );
+  }
   const frontText = current?.front ?? '';
   const backText = current?.back ?? '';
   const frontHasKhmer = khmerPattern.test(frontText);
