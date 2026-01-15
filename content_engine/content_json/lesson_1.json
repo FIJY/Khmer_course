@@ -1,0 +1,198 @@
+{
+  "lesson_id": 101,
+  "title": "Lesson 1.1: Greetings",
+  "desc": "Formal vs informal greetings",
+  "module_id": 1,
+  "order_index": 0,
+  "content": [
+    {
+      "type": "theory",
+      "data": {
+        "title": "Sub-lesson 101A: Greetings (formal vs casual)",
+        "sublesson_title": "101A — Greetings (formal vs casual)",
+        "text": "Khmer greetings have formal and casual options. Use formal greetings in respectful or service contexts, and casual greetings with friends or people you know."
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "ជំរាបសួរ",
+        "back": "Hello (formal)",
+        "pronunciation": "jom-reep-suor",
+        "audio": "audio/km/beginner/greetings/jom_reep_suor.mp3"
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "សួស្តី",
+        "back": "Hello (casual)",
+        "pronunciation": "suos-dei",
+        "audio": "audio/km/beginner/greetings/suos_dei.mp3"
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "ជំរាបលា",
+        "back": "Goodbye (formal)",
+        "pronunciation": "jom-reep-lia",
+        "audio": "audio/km/beginner/greetings/jom_reep_lia.mp3"
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "លា",
+        "back": "Bye (casual)",
+        "pronunciation": "lia",
+        "audio": "audio/km/beginner/greetings/lia.mp3"
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "សុខសប្បាយទេ?",
+        "back": "How are you?",
+        "pronunciation": "sok-sa-baay-tei",
+        "audio": "audio/km/beginner/greetings/sok_sa_baay_tei.mp3"
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "សុខសប្បាយ",
+        "back": "Fine / well",
+        "pronunciation": "sok-sa-baay",
+        "audio": "audio/km/beginner/greetings/sok_sa_baay.mp3"
+      }
+    },
+    {
+      "type": "quiz",
+      "data": {
+        "question": "Which phrase is the formal greeting?",
+        "options": [
+          "ជំរាបសួរ",
+          "សួស្តី",
+          "ជំរាបលា",
+          "លា"
+        ],
+        "correct_answer": "ជំរាបសួរ",
+        "explanation": "«ជំរាបសួរ» is a formal hello. «សួស្តី» is casual, and «ជំរាបលា/លា» are goodbyes."
+      }
+    },
+    {
+      "type": "theory",
+      "data": {
+        "title": "Sub-lesson 101B: Politeness essentials (replies + thanks)",
+        "sublesson_title": "101B — Politeness (replies + thanks)",
+        "text": "These phrases make your Khmer sound friendly and respectful. Khmer also uses gendered polite reply particles for “yes.”",
+        "culture_note": "In Cambodia, it is common to add polite particles in replies: «ចាស» (female) and «បាទ» (male). Using them with older people, staff, or in formal situations sounds respectful."
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "សូម",
+        "back": "Please (polite marker)",
+        "pronunciation": "sohm",
+        "audio": "audio/km/beginner/politeness/sohm.mp3"
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "អរគុណ",
+        "back": "Thank you",
+        "pronunciation": "aw-kun",
+        "audio": "audio/km/beginner/politeness/aw_kun.mp3"
+      }
+    },
+    {
+      "type": "visual_decoder",
+      "data": {
+        "word": "អរគុណ",
+        "target_char": "ន",
+        "hint": "Find «ន» at the end: អ-រ-គុ-ន. It is the final character in the word.",
+        "english_translation": "Thank you",
+        "letter_series": 1,
+        "word_audio": "audio/km/beginner/politeness/aw_kun.mp3",
+        "char_audio_map": {
+          "ន": "audio/km/chars/series1/no.mp3"
+        }
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "សូមអរគុណ",
+        "back": "Thank you (very polite)",
+        "pronunciation": "sohm-aw-kun",
+        "audio": "audio/km/beginner/politeness/sohm_aw_kun.mp3"
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "សុំទោស",
+        "back": "Sorry / Excuse me",
+        "pronunciation": "som-toh",
+        "audio": "audio/km/beginner/politeness/som_toh.mp3"
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "ចាស",
+        "back": "Yes (female polite)",
+        "pronunciation": "chaas",
+        "audio": "audio/km/beginner/politeness/chaas.mp3"
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "បាទ",
+        "back": "Yes (male polite)",
+        "pronunciation": "baat",
+        "audio": "audio/km/beginner/politeness/baat.mp3"
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "អត់ទេ",
+        "back": "No",
+        "pronunciation": "ot-tei",
+        "audio": "audio/km/beginner/politeness/ot_tei.mp3"
+      }
+    },
+    {
+      "type": "quiz",
+      "data": {
+        "question": "Choose the polite “yes” used by a woman:",
+        "options": [
+          "ចាស",
+          "បាទ",
+          "អត់ទេ",
+          "សូម"
+        ],
+        "correct_answer": "ចាស",
+        "explanation": "«ចាស» is commonly used by women as a polite “yes.” «បាទ» is the male variant."
+      }
+    },
+    {
+      "type": "quiz",
+      "data": {
+        "question": "Summary: Which option lists ALL key lesson words in a useful order (formal hello → casual hello → formal goodbye → casual bye → how are you → fine → please → thank you → very polite thank you → sorry → yes (female) → yes (male) → no)?",
+        "options": [
+          "ជំរាបសួរ / សួស្តី / ជំរាបលា / លា / សុខសប្បាយទេ? / សុខសប្បាយ / សូម / អរគុណ / សូមអរគុណ / សុំទោស / ចាស / បាទ / អត់ទេ",
+          "សួស្តី / ជំរាបសួរ / លា / ជំរាបលា / សុខសប្បាយ / សុខសប្បាយទេ? / អរគុណ / សូម / សុំទោស / សូមអរគុណ / បាទ / ចាស / អត់ទេ",
+          "ជំរាបសួរ / ជំរាបលា / សូម / អរគុណ / សូមអរគុណ / សុំទោស / ចាស / បាទ / អត់ទេ"
+        ],
+        "correct_answer": "ជំរាបសួរ / សួស្តី / ជំរាបលា / លា / សុខសប្បាយទេ? / សុខសប្បាយ / សូម / អរគុណ / សូមអរគុណ / សុំទោស / ចាស / បាទ / អត់ទេ",
+        "explanation": "This option includes every key word from both sub-lessons, covering greetings, farewells, a basic check-in, and politeness essentials including gendered polite “yes” forms."
+      }
+    }
+  ]
+}
