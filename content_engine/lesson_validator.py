@@ -31,6 +31,21 @@ def validate_lessons(lessons: Dict[int, dict], source: str) -> Tuple[List[str], 
         if not isinstance(content, list) or not content:
             errors.append(f"[{source}] Lesson {lesson_id}: content must be a non-empty list.")
             continue
+        if len(content) < 5:
+            errors.append(
+                f"[{source}] Lesson {lesson_id}: content must contain at least 5 items."
+            )
+        if content and content[-1].get("type") != "quiz":
+            errors.append(
+                f"[{source}] Lesson {lesson_id}: last item should be a summary quiz."
+            )
+
+        vocab_words = {
+            item.get("data", {}).get("back")
+            for item in content
+            if item.get("type") == "vocab_card"
+        }
+        vocab_words = {word for word in vocab_words if word}
 
         for idx, item in enumerate(content):
             item_type = item.get("type")
@@ -59,6 +74,17 @@ def validate_lessons(lessons: Dict[int, dict], source: str) -> Tuple[List[str], 
                     errors.append(
                         f"[{source}] Lesson {lesson_id} item {idx} (quiz): options must be a list with 2+ items."
                     )
+                if idx == len(content) - 1 and vocab_words:
+                    summary_hits = [
+                        option
+                        for option in (options or [])
+                        if any(word in option for word in vocab_words)
+                    ]
+                    if not summary_hits:
+                        warnings.append(
+                            f"[{source}] Lesson {lesson_id} item {idx} (quiz): "
+                            "summary quiz options do not reference learned words."
+                        )
                 elif correct not in options:
                     errors.append(
                         f"[{source}] Lesson {lesson_id} item {idx} (quiz): "
