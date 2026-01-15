@@ -37,6 +37,28 @@ def ask_for_content_file(base_dir: Path) -> Path:
         print("Invalid choice. Try again.")
 
 
+def resolve_content_path(content_path: Path) -> Path:
+    if content_path.is_absolute():
+        return content_path
+
+    candidate = content_path
+    if candidate.exists():
+        return candidate
+
+    script_dir = Path(__file__).resolve().parent
+    candidate = script_dir / content_path
+    if candidate.exists():
+        return candidate
+
+    parts = content_path.parts
+    if parts and parts[0].lower() == "content_engine":
+        candidate = script_dir / Path(*parts[1:])
+        if candidate.exists():
+            return candidate
+
+    return content_path
+
+
 async def async_main():
     parser = argparse.ArgumentParser(
         description="Seed a lesson using a JSON payload or a JSON content list."
@@ -65,9 +87,9 @@ async def async_main():
 
     # Pick content file path (explicit or interactive)
     if args.content:
-        content_path = Path(args.content)
+        content_path = resolve_content_path(Path(args.content))
     else:
-        content_path = ask_for_content_file(Path(args.content_dir))
+        content_path = resolve_content_path(ask_for_content_file(Path(args.content_dir)))
 
     payload = load_content(content_path)
 
