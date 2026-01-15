@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
 export default function useVocab() {
@@ -7,9 +7,7 @@ export default function useVocab() {
   const [filter, setFilter] = useState('');
   const [error, setError] = useState(null);
 
-  useEffect(() => { fetchVocab(); }, []);
-
-  const fetchVocab = async () => {
+  const fetchVocab = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -27,7 +25,9 @@ export default function useVocab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => { fetchVocab(); }, [fetchVocab]);
 
   const playAudio = (filename) => {
     if (filename) new Audio(`/sounds/${filename}`).play().catch(() => {});
@@ -47,6 +47,7 @@ export default function useVocab() {
     filter,
     setFilter,
     filteredItems,
-    playAudio
+    playAudio,
+    refresh: fetchVocab
   };
 }

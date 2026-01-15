@@ -46,7 +46,8 @@ export default function CourseMap() {
     completedLessons,
     chapters,
     error,
-    navigate
+    navigate,
+    refresh
   } = useCourseMap();
 
   if (loading) return (
@@ -61,10 +62,10 @@ export default function CourseMap() {
       <p className="text-sm font-bold uppercase tracking-widest text-red-400">Map Error</p>
       <p className="text-gray-400 text-xs">{error}</p>
       <button
-        onClick={() => window.location.reload()}
+        onClick={refresh}
         className="px-4 py-2 rounded-full border border-white/10 text-xs font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300"
       >
-        Reload Map
+        Retry
       </button>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { X, BookOpen, Volume2, Play } from 'lucide-react';
@@ -13,24 +13,32 @@ export default function LessonPreview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const { data: lessonData } = await supabase.from('lessons').select('*').eq('id', id).single();
-        setLesson(lessonData);
-        const { data: itemsData } = await supabase.from('lesson_items')
-          .select('*').eq('lesson_id', id).order('order_index', { ascending: true });
-        setItems(itemsData || []);
-      } catch (e) {
-        console.error(e);
-        setError('Unable to load the lesson preview.');
-      }
-      finally { setLoading(false); }
-    };
-    fetchData();
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { data: lessonData, error: lessonError } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (lessonError) throw lessonError;
+      setLesson(lessonData);
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('lesson_items')
+        .select('*')
+        .eq('lesson_id', id)
+        .order('order_index', { ascending: true });
+      if (itemsError) throw itemsError;
+      setItems(itemsData || []);
+    } catch (e) {
+      console.error(e);
+      setError('Unable to load the lesson preview.');
+    }
+    finally { setLoading(false); }
   }, [id]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic">LOADING PREVIEW...</div>;
 
@@ -40,7 +48,7 @@ export default function LessonPreview() {
         <p className="text-red-400 text-xs font-black uppercase tracking-widest">Preview Error</p>
         <p className="text-gray-400 text-xs">{error}</p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={fetchData}
           className="px-4 py-2 rounded-full border border-white/10 text-xs font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300"
         >
           Retry

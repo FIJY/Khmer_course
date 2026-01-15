@@ -16,6 +16,7 @@ export default function LessonPlayer() {
     canAdvance,
     isFlipped,
     loading,
+    error,
     selectedOption,
     isFinished,
     lessonPassed,
@@ -24,10 +25,34 @@ export default function LessonPlayer() {
     handleVocabCardFlip,
     handleQuizAnswer,
     goBack,
-    setCanAdvance
+    setCanAdvance,
+    refresh
   } = useLessonPlayer();
 
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic">SYNCING...</div>;
+
+  if (error) {
+    return (
+      <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
+        <p className="text-red-400 text-xs font-black uppercase tracking-widest">Lesson Error</p>
+        <p className="text-gray-400 text-xs">{error}</p>
+        <div className="flex gap-3">
+          <Button onClick={refresh}>Retry</Button>
+          <Button variant="outline" onClick={() => navigate('/map')}>Back to Map</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
+        <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Lesson Empty</p>
+        <p className="text-gray-500 text-xs">This lesson doesn't have content yet.</p>
+        <Button onClick={() => navigate('/map')}>Back to Map</Button>
+      </div>
+    );
+  }
 
   if (isFinished) {
     return (
@@ -44,7 +69,7 @@ export default function LessonPlayer() {
             <>
               <Frown size={80} className="text-red-500 mb-8" />
               <h1 className="text-3xl font-black italic uppercase mb-2 text-white">Review Needed</h1>
-              <Button variant="danger" onClick={() => window.location.reload()}>Try Again</Button>
+              <Button variant="danger" onClick={refresh}>Try Again</Button>
             </>
           )}
         </div>
@@ -63,7 +88,7 @@ export default function LessonPlayer() {
           <div className="text-center flex-1 px-4">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-cyan-500 mb-1 truncate">{lessonInfo?.title}</h2>
             <div className="w-24 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden">
-              <div className="h-full bg-cyan-500 transition-all" style={{ width: `${((step + 1) / items.length) * 100}%` }} />
+              <div className="h-full bg-cyan-500 transition-all" style={{ width: `${items.length ? ((step + 1) / items.length) * 100 : 0}%` }} />
             </div>
           </div>
           <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs w-10"><CheckCircle2 size={16}/> {score}</div>

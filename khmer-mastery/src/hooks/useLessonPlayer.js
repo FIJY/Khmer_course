@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
@@ -16,9 +16,43 @@ export default function useLessonPlayer() {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isFinished, setIsFinished] = useState(false);
   const [lessonPassed, setLessonPassed] = useState(false);
+  const [error, setError] = useState(null);
   const audioRef = useRef(null);
 
-  useEffect(() => { fetchLessonData(); }, [id]);
+  const fetchLessonData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { data: lesson, error: lessonError } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (lessonError) throw lessonError;
+      if (!lesson) {
+        setError('Lesson not found.');
+        setLessonInfo(null);
+        setItems([]);
+        return;
+      }
+      setLessonInfo(lesson);
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('lesson_items')
+        .select('*')
+        .eq('lesson_id', id)
+        .order('order_index', { ascending: true });
+      if (itemsError) throw itemsError;
+      setItems(itemsData || []);
+      setQuizCount(itemsData?.filter(i => i.type === 'quiz').length || 0);
+    } catch (err) {
+      console.error(err);
+      setError('Unable to load this lesson.');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => { fetchLessonData(); }, [fetchLessonData]);
 
   useEffect(() => {
     setCanAdvance(false);
@@ -26,25 +60,6 @@ export default function useLessonPlayer() {
     setIsFlipped(false);
     if (items[step]?.type === 'theory') setCanAdvance(true);
   }, [step, items]);
-
-  const fetchLessonData = async () => {
-    try {
-      setLoading(true);
-      const { data: lesson } = await supabase.from('lessons').select('*').eq('id', id).single();
-      setLessonInfo(lesson);
-      const { data: itemsData } = await supabase
-        .from('lesson_items')
-        .select('*')
-        .eq('lesson_id', id)
-        .order('order_index', { ascending: true });
-      setItems(itemsData || []);
-      setQuizCount(itemsData?.filter(i => i.type === 'quiz').length || 0);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleNext = () => {
     if (step < items.length - 1) {
@@ -95,6 +110,7 @@ export default function useLessonPlayer() {
     canAdvance,
     isFlipped,
     loading,
+    error,
     selectedOption,
     isFinished,
     lessonPassed,
@@ -103,6 +119,7 @@ export default function useLessonPlayer() {
     handleVocabCardFlip,
     handleQuizAnswer,
     goBack,
-    setCanAdvance
+    setCanAdvance,
+    refresh: fetchLessonData
   };
 }

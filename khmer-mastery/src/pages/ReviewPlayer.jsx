@@ -20,15 +20,50 @@ export default function ReviewPlayer() {
     settings,
     setSettings,
     setShowSettings,
+    error,
+    emptyReason,
     playAudio,
     handleAnswer,
     nextCard,
-    getCardMode
+    getCardMode,
+    refresh
   } = useReviewSession();
 
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic uppercase">Building Quiz...</div>;
 
-  if (isFinished || sessionData.length === 0) {
+  if (error) {
+    return (
+      <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
+        <AlertCircle size={56} className="text-red-500 mb-4 mx-auto" />
+        <h1 className="text-2xl font-black text-white italic uppercase mb-2">Review Error</h1>
+        <p className="text-gray-400 text-xs">{error}</p>
+        <div className="mt-6 flex gap-3 justify-center">
+          <Button onClick={refresh}>Retry</Button>
+          <Button variant="outline" onClick={() => navigate('/review')}>Back to Hub</Button>
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  if (sessionData.length === 0) {
+    const emptyTitle = emptyReason === 'insufficient_vocab'
+      ? 'Not enough vocab yet'
+      : 'All caught up!';
+    const emptyBody = emptyReason === 'insufficient_vocab'
+      ? 'Add more vocabulary before starting a review session.'
+      : 'You have no cards due right now.';
+
+    return (
+      <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
+        <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
+        <h1 className="text-3xl font-black text-white italic uppercase mb-2">{emptyTitle}</h1>
+        <p className="text-gray-400 text-xs">{emptyBody}</p>
+        <Button onClick={() => navigate('/review')} className="mt-8">Back to Hub</Button>
+      </MobileLayout>
+    );
+  }
+
+  if (isFinished) {
     return (
       <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
         <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
