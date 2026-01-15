@@ -21,7 +21,6 @@ def main():
     parser.add_argument("--desc", help="Lesson description")
     parser.add_argument(
         "--content",
-        required=True,
         help="Path to JSON file with content list",
     )
     parser.add_argument("--module-id", type=int, help="Module id (chapter)")
@@ -33,7 +32,14 @@ def main():
     )
 
     args = parser.parse_args()
-    payload = load_content(Path(args.content))
+
+    content_path = args.content
+    if not content_path:
+        content_path = input("Enter path to lesson JSON: ").strip()
+        if not content_path:
+            raise ValueError("Missing content file path.")
+
+    payload = load_content(Path(content_path))
 
     if isinstance(payload, dict):
         content = payload.get("content")
