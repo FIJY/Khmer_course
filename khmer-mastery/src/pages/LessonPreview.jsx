@@ -104,12 +104,10 @@ export default function LessonPreview() {
               <div>
                 <h4 className="text-lg font-black text-white">{item.data.back}</h4>
                 <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{item.data.front}</p>
-                {item.data.pronunciation && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    <span className="uppercase font-black tracking-widest mr-2">{t('preview.pronunciationLabel')}:</span>
-                    {item.data.pronunciation}
-                  </p>
-                )}
+                <p className="text-sm text-cyan-100 mt-1">
+                  <span className="uppercase font-black tracking-widest mr-2 text-[10px] text-cyan-400">{t('preview.pronunciationLabel')}:</span>
+                  {item.data.pronunciation || '—'}
+                </p>
               </div>
               <Volume2 size={18} className="text-cyan-500" />
             </div>
