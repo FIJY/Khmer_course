@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { fetchCurrentUser } from '../data/auth';
+import { fetchSrsStatusCounts } from '../data/review';
 import { getDueItems } from '../services/srsService';
 import {
   BrainCircuit, Trophy, TrendingUp, Play, Check
@@ -8,32 +9,49 @@ import {
 // Unified UI Components
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
 
 export default function ReviewHub() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ due: 0, total: 0, mastered: 0 });
+  const [error, setError] = useState(null);
 
   useEffect(() => { fetchReviewData(); }, []);
 
   const fetchReviewData = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      setError(null);
+      const user = await fetchCurrentUser();
+      if (!user) {
+        navigate('/login');
+        return;
+      }
 
       const dueItems = await getDueItems(user.id);
-      const { data: allSrs } = await supabase.from('user_srs').select('status').eq('user_id', user.id);
-
-      const total = allSrs?.length || 0;
-      const mastered = allSrs?.filter(i => i.status === 'graduated').length || 0;
+      const { total, mastered } = await fetchSrsStatusCounts(user.id);
 
       setStats({ due: dueItems.length, total, mastered });
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setError('Unable to load review stats right now.');
+    }
     finally { setLoading(false); }
   };
 
-  if (loading) return <div className="h-screen bg-black text-white flex items-center justify-center font-black tracking-widest uppercase italic">Loading Hub...</div>;
+  if (error) {
+    return (
+      <ErrorState
+        title="Review Error"
+        message={error}
+        onRetry={fetchReviewData}
+      />
+    );
+  }
+
+  if (loading) return <LoadingState label="Loading hub..." />;
 
   return (
     <MobileLayout>
