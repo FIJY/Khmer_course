@@ -119,10 +119,11 @@ export default function useLessonPlayer() {
     setCanAdvance(true);
     const correct = option === correctAnswer;
     if (correct) setScore(s => s + 1);
-    playLocalAudio(correct ? 'success.mp3' : 'error.mp3');
-    if (correctAudio) {
-      setTimeout(() => playLocalAudio(correctAudio), 900);
+    if (correct && correctAudio) {
+      playLocalAudio(correctAudio);
+      return;
     }
+    playLocalAudio(correct ? 'success.mp3' : 'error.mp3');
   };
 
   const goBack = () => setStep(s => s - 1);
