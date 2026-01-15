@@ -8,6 +8,8 @@ import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
 
+const KHMER_PATTERN = /[\u1780-\u17FF]/;
+
 export default function LessonPlayer() {
   const {
     navigate,
@@ -31,6 +33,17 @@ export default function LessonPlayer() {
     setCanAdvance,
     refresh
   } = useLessonPlayer();
+  const lessonPronunciations = items.reduce((map, item) => {
+    const data = item?.data;
+    if (!data?.pronunciation) return map;
+    const front = data.front ?? '';
+    const back = data.back ?? '';
+    const khmerWord = KHMER_PATTERN.test(front) ? front : (KHMER_PATTERN.test(back) ? back : '');
+    if (khmerWord) {
+      map[khmerWord] = data.pronunciation;
+    }
+    return map;
+  }, {});
 
   if (loading) return <LoadingState label={t('loading.lesson')} />;
 
@@ -86,7 +99,6 @@ export default function LessonPlayer() {
     );
   }
 
-  const khmerPattern = /[\u1780-\u17FF]/;
   const current = items[step]?.data;
   const type = items[step]?.type;
   if (!current) {
@@ -105,25 +117,11 @@ export default function LessonPlayer() {
   }
   const frontText = current?.front ?? '';
   const backText = current?.back ?? '';
-  const frontHasKhmer = khmerPattern.test(frontText);
-  const backHasKhmer = khmerPattern.test(backText);
+  const frontHasKhmer = KHMER_PATTERN.test(frontText);
+  const backHasKhmer = KHMER_PATTERN.test(backText);
   const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
   const quizOptions = Array.isArray(current?.options) ? current.options : [];
-  const lessonPronunciations = React.useMemo(() => {
-    const map = {};
-    items.forEach(item => {
-      const data = item?.data;
-      if (!data?.pronunciation) return;
-      const front = data.front ?? '';
-      const back = data.back ?? '';
-      const khmerWord = khmerPattern.test(front) ? front : (khmerPattern.test(back) ? back : '');
-      if (khmerWord) {
-        map[khmerWord] = data.pronunciation;
-      }
-    });
-    return map;
-  }, [items]);
   const getQuizOption = (opt) => {
     if (opt && typeof opt === 'object') {
       return {
