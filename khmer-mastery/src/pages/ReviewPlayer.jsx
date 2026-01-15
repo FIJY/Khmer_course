@@ -10,6 +10,27 @@ import useReviewSession from '../hooks/useReviewSession';
 
 export default function ReviewPlayer() {
   const navigate = useNavigate();
+  const getQuestionCopy = (mode, cardTarget) => {
+    if (mode === 'read') {
+      return {
+        questionMain: cardTarget.back || cardTarget.khmer,
+        questionSub: 'How do you read this?',
+        showBigAudioBtn: true
+      };
+    }
+    if (mode === 'recall') {
+      return {
+        questionMain: cardTarget.front || cardTarget.english,
+        questionSub: 'Select the Khmer translation',
+        showBigAudioBtn: false
+      };
+    }
+    return {
+      questionMain: 'Listen...',
+      questionSub: 'What did you hear?',
+      showBigAudioBtn: true
+    };
+  };
   const {
     loading,
     sessionData,
@@ -20,11 +41,38 @@ export default function ReviewPlayer() {
     settings,
     setSettings,
     setShowSettings,
+    error,
+    emptyReason,
     playAudio,
     handleAnswer,
     nextCard,
-    getCardMode
+    getCardMode,
+    refresh
   } = useReviewSession();
+
+  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic uppercase">Building Quiz...</div>;
+
+  if (error) {
+    return (
+      <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
+        <AlertCircle size={56} className="text-red-500 mb-4 mx-auto" />
+        <h1 className="text-2xl font-black text-white italic uppercase mb-2">Review Error</h1>
+        <p className="text-gray-400 text-xs">{error}</p>
+        <div className="mt-6 flex gap-3 justify-center">
+          <Button onClick={refresh}>Retry</Button>
+          <Button variant="outline" onClick={() => navigate('/review')}>Back to Hub</Button>
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  if (sessionData.length === 0) {
+    const emptyTitle = emptyReason === 'insufficient_vocab'
+      ? 'Not enough vocab yet'
+      : 'All caught up!';
+    const emptyBody = emptyReason === 'insufficient_vocab'
+      ? 'Add more vocabulary before starting a review session.'
+      : 'You have no cards due right now.';
 
     return (
       <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
@@ -50,11 +98,9 @@ export default function ReviewPlayer() {
   const target = currentItem.target;
   const activeMode = getCardMode();
 
-  let questionMain = "";
-  let questionSub = "";
-  let showBigAudioBtn = false;
+  const { questionMain, questionSub, showBigAudioBtn } = getQuestionCopy(activeMode, target);
 
-  let renderOptionContent = (opt) => {
+  const renderOptionContent = (opt) => {
     const eng = opt.english || opt.front || "???";
     const khm = opt.back || opt.khmer || "???";
     const pron = opt.pronunciation || "";
@@ -71,19 +117,6 @@ export default function ReviewPlayer() {
     }
     return <span className="text-sm font-bold">{eng}</span>;
   };
-
-  if (activeMode === 'read') {
-     questionMain = target.back || target.khmer;
-     questionSub = "How do you read this?";
-     showBigAudioBtn = true;
-  } else if (activeMode === 'recall') {
-     questionMain = target.front || target.english;
-     questionSub = "Select the Khmer translation";
-  } else if (activeMode === 'listen') {
-     questionMain = "Listen...";
-     questionSub = "What did you hear?";
-     showBigAudioBtn = true;
-  }
 
   const isAnswered = selectedOption !== null;
   const isCorrectAnswer = (opt) => (opt.front || opt.english) === (target.front || target.english);
