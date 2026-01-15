@@ -86,15 +86,29 @@ export default function LessonPlayer() {
     );
   }
 
+  const khmerPattern = /[\u1780-\u17FF]/;
   const current = items[step]?.data;
   const type = items[step]?.type;
-  const khmerPattern = /[\u1780-\u17FF]/;
   const frontText = current?.front ?? '';
   const backText = current?.back ?? '';
   const frontHasKhmer = khmerPattern.test(frontText);
   const backHasKhmer = khmerPattern.test(backText);
   const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
+  const lessonPronunciations = React.useMemo(() => {
+    const map = {};
+    items.forEach(item => {
+      const data = item?.data;
+      if (!data?.pronunciation) return;
+      const front = data.front ?? '';
+      const back = data.back ?? '';
+      const khmerWord = khmerPattern.test(front) ? front : (khmerPattern.test(back) ? back : '');
+      if (khmerWord) {
+        map[khmerWord] = data.pronunciation;
+      }
+    });
+    return map;
+  }, [items]);
   const getQuizOption = (opt) => {
     if (opt && typeof opt === 'object') {
       return {
@@ -103,7 +117,7 @@ export default function LessonPlayer() {
       };
     }
     const pronunciationMap = current?.option_pronunciations || current?.pronunciations || {};
-    return { text: opt, pronunciation: pronunciationMap?.[opt] ?? '' };
+    return { text: opt, pronunciation: pronunciationMap?.[opt] ?? lessonPronunciations?.[opt] ?? '' };
   };
 
   return (
