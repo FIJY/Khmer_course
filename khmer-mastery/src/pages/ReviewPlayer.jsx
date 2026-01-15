@@ -135,6 +135,11 @@ export default function ReviewPlayer() {
           ? (isCorrectAnswer(selectedOption) ? t('actions.continue') : t('actions.gotIt'))
           : t('actions.chooseAnswer')} <ArrowRight size={20} />
       </Button>
+      {!isAnswered && (
+        <p className="mt-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center">
+          {t('review.hintSelect')}
+        </p>
+      )}
     </div>
   );
 

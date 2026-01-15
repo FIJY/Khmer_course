@@ -50,6 +50,7 @@ const en = {
     totalLearned: 'Total Learned',
     sessionComplete: 'Session Complete!',
     progress: 'Card {current} of {total}',
+    hintSelect: 'Select an answer to continue.',
     promptRead: 'How do you read this?',
     promptRecall: 'Select the Khmer translation',
     promptListen: 'What did you hear?',
@@ -59,7 +60,8 @@ const en = {
     complete: 'Complete!',
     reviewNeeded: 'Review Needed',
     score: 'Score: {score}/{total}',
-    progress: 'Step {current} of {total}'
+    progress: 'Step {current} of {total}',
+    hintContinue: 'Complete this step to continue.'
   },
   vocab: {
     title: 'Dictionary',

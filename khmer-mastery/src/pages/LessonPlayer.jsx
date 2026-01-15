@@ -102,6 +102,11 @@ export default function LessonPlayer() {
               {t('actions.continue')} <ArrowRight size={20} />
             </Button>
           </div>
+          {!canAdvance && (
+            <p className="mt-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center">
+              {t('lesson.hintContinue')}
+            </p>
+          )}
         </footer>
       )}
     >
