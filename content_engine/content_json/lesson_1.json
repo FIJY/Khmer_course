@@ -112,13 +112,13 @@
       "type": "visual_decoder",
       "data": {
         "word": "អរគុណ",
-        "target_char": "ន",
-        "hint": "Find «ន» at the end: អ-រ-គុ-ន. It is the final character in the word.",
+        "target_char": "ណ",
+        "hint": "Find «ណ» at the end: អ-រ-គុ-ណ. It is the final character in the word.",
         "english_translation": "Thank you",
         "letter_series": 1,
         "word_audio": "audio/km/beginner/politeness/aw_kun.mp3",
         "char_audio_map": {
-          "ន": "audio/km/chars/series1/no.mp3"
+          "ណ": "audio/km/chars/series1/no.mp3"
         }
       }
     },
