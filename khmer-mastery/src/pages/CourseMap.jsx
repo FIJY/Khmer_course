@@ -66,6 +66,8 @@ export default function CourseMap() {
 
   const hasLessonGroups = Object.keys(chapters).length > 0;
 
+  const hasChapters = Object.keys(chapters).length > 0;
+
   return (
     <MobileLayout withNav={true}>
       {/* Sticky header to stay visible while scrolling */}
