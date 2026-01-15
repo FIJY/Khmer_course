@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { getDueItems, updateSRSItem } from '../services/srsService';
 
@@ -17,9 +17,9 @@ export default function useReviewSession() {
   const [isFinished, setIsFinished] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [error, setError] = useState(null);
-  const [emptyReason, setEmptyReason] = useState(null);
   const audioRef = useRef(null);
+
+  useEffect(() => { initSession(); }, []);
 
   useEffect(() => {
     if (!loading && !isFinished && sessionData.length > 0 && settings.autoPlay) {
@@ -33,34 +33,25 @@ export default function useReviewSession() {
     }
   }, [currentIndex, loading, isFinished, sessionData, settings.autoPlay, settings.mode]);
 
-  const initSession = useCallback(async () => {
+  const initSession = async () => {
     try {
       setLoading(true);
-      setError(null);
-      setEmptyReason(null);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError('Please sign in to start a review session.');
-        return;
-      }
       const dueItems = await getDueItems(user.id);
 
       if (dueItems.length === 0) {
-        setEmptyReason('no_due');
         setLoading(false);
         return;
       }
 
-      const { data: allVocab, error: vocabError } = await supabase
+      const { data: allVocab } = await supabase
         .from('dictionary')
         .select('*')
         .neq('english', 'Quiz Answer')
         .neq('english', '')
         .limit(100);
 
-      if (vocabError) throw vocabError;
       if (!allVocab || allVocab.length < 4) {
-        setEmptyReason('insufficient_vocab');
         setLoading(false);
         return;
       }
@@ -84,13 +75,10 @@ export default function useReviewSession() {
       setSessionData(session);
     } catch (e) {
       console.error(e);
-      setError('Unable to start a review session right now.');
     } finally {
       setLoading(false);
     }
-  }, [settings.sessionLimit]);
-
-  useEffect(() => { initSession(); }, [initSession]);
+  };
 
   const shuffle = (array) => [...array].sort(() => 0.5 - Math.random());
 
@@ -141,12 +129,9 @@ export default function useReviewSession() {
     settings,
     setSettings,
     setShowSettings,
-    error,
-    emptyReason,
     playAudio,
     handleAnswer,
     nextCard,
-    getCardMode,
-    refresh: initSession
+    getCardMode
   };
 }
