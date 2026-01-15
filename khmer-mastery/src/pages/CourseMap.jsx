@@ -3,6 +3,8 @@ import {
   Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
 import useCourseMap from '../hooks/useCourseMap';
 
 const COURSE_LEVELS = [
@@ -50,12 +52,19 @@ export default function CourseMap() {
     refresh
   } = useCourseMap();
 
-  if (loading) return (
-    <div className="h-screen bg-black flex flex-col items-center justify-center text-cyan-400 font-black italic tracking-widest gap-4">
-      <RefreshCw size={32} className="animate-spin" />
-      <span>LOADING WORLD MAP...</span>
-    </div>
-  );
+  if (loading) return <LoadingState label="Loading world map..." className="gap-4" />;
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Map Error"
+        message={error}
+        onRetry={refresh}
+      />
+    );
+  }
+
+  const hasChapters = Object.keys(chapters).length > 0;
 
   if (error) return (
     <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
@@ -74,7 +83,7 @@ export default function CourseMap() {
 
   return (
     <MobileLayout withNav={true}>
-      {/* HEADER: Делаем его липким, чтобы не уезжал при скролле */}
+      {/* Sticky header to stay visible while scrolling */}
       <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-40">
         <h1 className="text-2xl font-black tracking-tighter uppercase italic text-white">
           Khmer <span className="text-cyan-400">Mastery</span>

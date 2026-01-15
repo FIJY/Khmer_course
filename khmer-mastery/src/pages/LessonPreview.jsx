@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
 import { X, BookOpen, Volume2, Play } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
+import { fetchLessonById, fetchLessonItemsByLessonId } from '../data/lessons';
 
 export default function LessonPreview() {
   const { id } = useParams();
@@ -17,20 +19,10 @@ export default function LessonPreview() {
     try {
       setLoading(true);
       setError(null);
-      const { data: lessonData, error: lessonError } = await supabase
-        .from('lessons')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (lessonError) throw lessonError;
+      const lessonData = await fetchLessonById(id);
       setLesson(lessonData);
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('lesson_items')
-        .select('*')
-        .eq('lesson_id', id)
-        .order('order_index', { ascending: true });
-      if (itemsError) throw itemsError;
-      setItems(itemsData || []);
+      const itemsData = await fetchLessonItemsByLessonId(id);
+      setItems(itemsData);
     } catch (e) {
       console.error(e);
       setError('Unable to load the lesson preview.');
@@ -40,7 +32,19 @@ export default function LessonPreview() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic">LOADING PREVIEW...</div>;
+  if (loading) return <LoadingState label="Loading preview..." />;
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Preview Error"
+        message={error}
+        onRetry={fetchData}
+      />
+    );
+  }
+
+  const vocabItems = items.filter(i => i.type === 'vocab_card');
 
   if (error) {
     return (
@@ -75,8 +79,16 @@ export default function LessonPreview() {
         <div className="space-y-3 mb-10">
           <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-4 px-1">Vocabulary List</h3>
           {vocabItems.length === 0 ? (
-            <div className="text-center opacity-60 py-8">
+            <div className="text-center opacity-60 py-8 space-y-4">
               <p className="text-gray-500 italic">No vocabulary items yet</p>
+              <div className="flex gap-3 justify-center">
+                <Button variant="outline" onClick={() => navigate('/map')}>
+                  Back to Map
+                </Button>
+                <Button onClick={() => navigate(`/lesson/${id}`)}>
+                  Start Lesson <Play size={18} fill="currentColor" />
+                </Button>
+              </div>
             </div>
           ) : vocabItems.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between bg-gray-900/50 border border-white/5 p-4 rounded-2xl">
@@ -89,9 +101,11 @@ export default function LessonPreview() {
           ))}
         </div>
 
-        <Button onClick={() => navigate(`/lesson/${id}`)}>
-          Start Lesson <Play size={18} fill="currentColor" />
-        </Button>
+        {vocabItems.length > 0 && (
+          <Button onClick={() => navigate(`/lesson/${id}`)}>
+            Start Lesson <Play size={18} fill="currentColor" />
+          </Button>
+        )}
       </main>
     </MobileLayout>
   );

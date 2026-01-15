@@ -3,6 +3,8 @@ import { Volume2, ArrowRight, X, CheckCircle2, Trophy, BookOpen, ChevronLeft, Fr
 import VisualDecoder from '../components/VisualDecoder';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
 
 export default function LessonPlayer() {
@@ -29,18 +31,20 @@ export default function LessonPlayer() {
     refresh
   } = useLessonPlayer();
 
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-cyan-400 font-black italic">SYNCING...</div>;
+  if (loading) return <LoadingState label="Syncing lesson..." />;
 
   if (error) {
     return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center text-center text-white px-6 gap-4">
-        <p className="text-red-400 text-xs font-black uppercase tracking-widest">Lesson Error</p>
-        <p className="text-gray-400 text-xs">{error}</p>
-        <div className="flex gap-3">
-          <Button onClick={refresh}>Retry</Button>
-          <Button variant="outline" onClick={() => navigate('/map')}>Back to Map</Button>
-        </div>
-      </div>
+      <ErrorState
+        title="Lesson Error"
+        message={error}
+        onRetry={refresh}
+        secondaryAction={(
+          <Button variant="outline" onClick={() => navigate('/map')}>
+            Back to Map
+          </Button>
+        )}
+      />
     );
   }
 
@@ -115,19 +119,19 @@ export default function LessonPlayer() {
         {type === 'vocab_card' && (
           <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
             <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
-              {/* ПЕРЕДНЯЯ СТОРОНА */}
+              {/* Front side */}
               <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
                 <h2 className="text-3xl font-black italic text-white">{current.front}</h2>
               </div>
 
-              {/* ЗАДНЯЯ СТОРОНА */}
+              {/* Back side */}
               <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
                 <h2 className="text-4xl font-black mb-3">{current.back}</h2>
 
-                {/* КНОПКА ПОВТОРНОГО ПРОСЛУШИВАНИЯ */}
+                {/* Replay audio button */}
                 <div
                   onClick={(e) => {
-                    e.stopPropagation(); // Остановка всплытия, чтобы карточка не перевернулась
+                    e.stopPropagation(); // Prevent flip on audio replay
                     playLocalAudio(current.audio);
                   }}
                   className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg"

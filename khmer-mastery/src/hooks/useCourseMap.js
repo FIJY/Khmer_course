@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { fetchCurrentUser } from '../data/auth';
+import { fetchAllLessons } from '../data/lessons';
+import { fetchCompletedLessonIds } from '../data/progress';
 
 const buildChaptersMap = (allLessons) => {
   if (!allLessons) return {};
@@ -38,29 +40,17 @@ export default function useCourseMap() {
     try {
       setLoading(true);
       setError(null);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await fetchCurrentUser();
       if (!user) {
         navigate('/login');
         return;
       }
 
-      const { data: progressData, error: progressError } = await supabase
-        .from('user_progress')
-        .select('lesson_id')
-        .eq('user_id', user.id)
-        .eq('is_completed', true);
-
-      if (progressError) throw progressError;
-      const doneIds = progressData ? progressData.map(item => Number(item.lesson_id)) : [];
+      const doneIds = await fetchCompletedLessonIds(user.id);
       setCompletedLessons(doneIds);
 
-      const { data: allLessons, error: lessonsError } = await supabase
-        .from('lessons')
-        .select('*')
-        .order('id', { ascending: true });
-
-      if (lessonsError) throw lessonsError;
-      if (!allLessons || allLessons.length === 0) {
+      const allLessons = await fetchAllLessons();
+      if (!allLessons.length) {
         setChapters({});
         return;
       }

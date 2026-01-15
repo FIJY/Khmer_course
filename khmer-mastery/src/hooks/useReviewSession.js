@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { fetchCurrentUser } from '../data/auth';
+import { fetchDictionaryEntries } from '../data/review';
 import { getDueItems, updateSRSItem } from '../services/srsService';
 
 const DEFAULT_SETTINGS = {
@@ -38,7 +40,7 @@ export default function useReviewSession() {
       setLoading(true);
       setError(null);
       setEmptyReason(null);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await fetchCurrentUser();
       if (!user) {
         setError('Please sign in to start a review session.');
         return;
@@ -51,15 +53,8 @@ export default function useReviewSession() {
         return;
       }
 
-      const { data: allVocab, error: vocabError } = await supabase
-        .from('dictionary')
-        .select('*')
-        .neq('english', 'Quiz Answer')
-        .neq('english', '')
-        .limit(100);
-
-      if (vocabError) throw vocabError;
-      if (!allVocab || allVocab.length < 4) {
+      const allVocab = await fetchDictionaryEntries();
+      if (allVocab.length < 4) {
         setEmptyReason('insufficient_vocab');
         setLoading(false);
         return;

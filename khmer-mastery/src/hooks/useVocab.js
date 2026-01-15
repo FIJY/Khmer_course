@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { fetchVocabCards } from '../data/vocab';
 
 export default function useVocab() {
   const [items, setItems] = useState([]);
@@ -11,14 +11,8 @@ export default function useVocab() {
     try {
       setLoading(true);
       setError(null);
-      const { data, error } = await supabase
-        .from('lesson_items')
-        .select('*')
-        .eq('type', 'vocab_card')
-        .order('lesson_id', { ascending: true });
-
-      if (error) throw error;
-      setItems(data || []);
+      const data = await fetchVocabCards();
+      setItems(data);
     } catch (e) {
       console.error(e);
       setError('Unable to load vocabulary right now.');

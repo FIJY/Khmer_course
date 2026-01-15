@@ -4,6 +4,11 @@ import { supabase } from '../supabaseClient';
 import { User, Trophy, Zap, Target, Flame, Trash2, LogOut } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
+import { fetchCurrentUser } from '../data/auth';
+import { fetchCompletedLessonCount } from '../data/progress';
+import { fetchUserSrsCount } from '../data/profile';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -18,14 +23,14 @@ export default function Profile() {
     try {
       setLoading(true);
       setError(null);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await fetchCurrentUser();
       if (!user) { navigate('/login'); return; }
 
-      const { data: progress } = await supabase.from('user_progress').select('id').eq('user_id', user.id).eq('is_completed', true);
-      const { data: words } = await supabase.from('user_srs').select('id').eq('user_id', user.id);
+      const lessonsCompleted = await fetchCompletedLessonCount(user.id);
+      const wordsLearned = await fetchUserSrsCount(user.id);
 
       setProfile({ email: user.email, joined: new Date(user.created_at).toLocaleDateString() });
-      setStats({ lessons: progress?.length || 0, words: words?.length || 0, gems: (progress?.length || 0) * 50 });
+      setStats({ lessons: lessonsCompleted, words: wordsLearned, gems: lessonsCompleted * 50 });
     } catch (err) {
       console.error(err);
       setError('Unable to load your profile.');
@@ -48,7 +53,17 @@ export default function Profile() {
     } catch (err) { alert("Error resetting progress"); }
   };
 
-  if (loading) return <div className="h-screen bg-black text-cyan-400 flex items-center justify-center font-black italic">LOADING PROFILE...</div>;
+  if (loading) return <LoadingState label="Loading profile..." />;
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Profile Error"
+        message={error}
+        onRetry={fetchProfileData}
+      />
+    );
+  }
 
   if (error) {
     return (

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { fetchLessonById, fetchLessonItemsByLessonId } from '../data/lessons';
 
 export default function useLessonPlayer() {
   const { id } = useParams();
@@ -23,12 +23,7 @@ export default function useLessonPlayer() {
     try {
       setLoading(true);
       setError(null);
-      const { data: lesson, error: lessonError } = await supabase
-        .from('lessons')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (lessonError) throw lessonError;
+      const lesson = await fetchLessonById(id);
       if (!lesson) {
         setError('Lesson not found.');
         setLessonInfo(null);
@@ -36,14 +31,9 @@ export default function useLessonPlayer() {
         return;
       }
       setLessonInfo(lesson);
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('lesson_items')
-        .select('*')
-        .eq('lesson_id', id)
-        .order('order_index', { ascending: true });
-      if (itemsError) throw itemsError;
-      setItems(itemsData || []);
-      setQuizCount(itemsData?.filter(i => i.type === 'quiz').length || 0);
+      const itemsData = await fetchLessonItemsByLessonId(id);
+      setItems(itemsData);
+      setQuizCount(itemsData.filter(i => i.type === 'quiz').length || 0);
     } catch (err) {
       console.error(err);
       setError('Unable to load this lesson.');

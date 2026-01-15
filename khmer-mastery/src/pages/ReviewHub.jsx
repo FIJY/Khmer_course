@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { fetchCurrentUser } from '../data/auth';
+import { fetchSrsStatusCounts } from '../data/review';
 import { getDueItems } from '../services/srsService';
 import {
   BrainCircuit, Trophy, TrendingUp, Play, Check
@@ -8,6 +9,8 @@ import {
 // Unified UI Components
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
 
 export default function ReviewHub() {
   const navigate = useNavigate();
@@ -21,17 +24,14 @@ export default function ReviewHub() {
     try {
       setLoading(true);
       setError(null);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await fetchCurrentUser();
       if (!user) {
         navigate('/login');
         return;
       }
 
       const dueItems = await getDueItems(user.id);
-      const { data: allSrs } = await supabase.from('user_srs').select('status').eq('user_id', user.id);
-
-      const total = allSrs?.length || 0;
-      const mastered = allSrs?.filter(i => i.status === 'graduated').length || 0;
+      const { total, mastered } = await fetchSrsStatusCounts(user.id);
 
       setStats({ due: dueItems.length, total, mastered });
     } catch (e) {
@@ -43,17 +43,15 @@ export default function ReviewHub() {
 
   if (error) {
     return (
-      <div className="h-screen bg-black text-white flex flex-col items-center justify-center text-center px-6 gap-4">
-        <p className="text-red-400 text-xs font-black uppercase tracking-widest">Review Error</p>
-        <p className="text-gray-400 text-xs">{error}</p>
-        <Button onClick={fetchReviewData} className="bg-orange-500 border-none">
-          Retry
-        </Button>
-      </div>
+      <ErrorState
+        title="Review Error"
+        message={error}
+        onRetry={fetchReviewData}
+      />
     );
   }
 
-  if (loading) return <div className="h-screen bg-black text-white flex items-center justify-center font-black tracking-widest uppercase italic">Loading Hub...</div>;
+  if (loading) return <LoadingState label="Loading hub..." />;
 
   return (
     <MobileLayout>

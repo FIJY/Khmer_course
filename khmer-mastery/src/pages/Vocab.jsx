@@ -1,9 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Globe, Search, Volume2, ScrollText } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
+import Button from '../components/UI/Button';
+import ErrorState from '../components/UI/ErrorState';
+import LoadingState from '../components/UI/LoadingState';
 import useVocab from '../hooks/useVocab';
 
 export default function Vocab() {
+  const navigate = useNavigate();
   const {
     items,
     loading,
@@ -45,23 +50,21 @@ export default function Vocab() {
       {/* WORD LIST */}
       <div className="px-6 mt-6 space-y-3 pb-10">
         {loading ? (
-          <div className="text-center text-gray-600 py-10 animate-pulse uppercase font-black text-xs">Loading...</div>
+          <LoadingState label="Loading dictionary..." fullScreen={false} className="py-10" />
         ) : error ? (
-          <div className="text-center opacity-70 py-20 flex flex-col items-center">
-            <ScrollText size={48} className="mb-4 text-red-400" />
-            <p className="text-red-400 text-xs font-black uppercase tracking-widest">Dictionary Error</p>
-            <p className="text-gray-500 text-xs mt-2">{error}</p>
-            <button
-              onClick={refresh}
-              className="mt-4 px-4 py-2 rounded-full border border-white/10 text-[10px] font-black uppercase tracking-widest text-cyan-400 hover:text-cyan-300"
-            >
-              Retry
-            </button>
-          </div>
+          <ErrorState
+            title="Dictionary Error"
+            message={error}
+            onRetry={refresh}
+            fullScreen={false}
+          />
         ) : items.length === 0 ? (
           <div className="text-center opacity-50 py-20 flex flex-col items-center">
             <ScrollText size={48} className="mb-4 text-gray-600" />
             <p className="text-gray-500 italic">No vocabulary yet</p>
+            <Button variant="outline" className="mt-4" onClick={() => navigate('/map')}>
+              Back to Map
+            </Button>
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center opacity-50 py-20 flex flex-col items-center">
