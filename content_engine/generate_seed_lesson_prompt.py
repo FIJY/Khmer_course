@@ -36,6 +36,7 @@ def build_prompt(
         5) Keep blocks logically grouped by sub-lesson themes.
         6) Add a cultural or usage note inside one theory block (field: culture_note).
         7) If the lesson includes "yes/no" or polite replies, include both male and female variants.
+        8) If the target is a vowel/diacritic/unknown, keep letter_series as "unknown".
 
         Sub-lesson structure guidance:
         - Start each sub-lesson with a theory block that includes a sublesson_title field.
@@ -69,7 +70,12 @@ def main():
     )
     parser.add_argument("--theme", required=True, help="Lesson theme")
     parser.add_argument("--target-char", required=True, help="Khmer character to focus on")
-    parser.add_argument("--series", required=True, choices=["1", "2"], help="Letter series")
+    parser.add_argument(
+        "--series",
+        default="unknown",
+        choices=["1", "2", "vowel", "diacritic", "unknown"],
+        help="Letter series (or vowel/diacritic/unknown)",
+    )
     parser.add_argument(
         "--sublessons",
         type=int,

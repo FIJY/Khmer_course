@@ -11,7 +11,7 @@ Lesson number: <LESSON_NUMBER> (example: 1)
 Sub-lesson ids: <SUBLESSON_IDS> (example: 101, 102, 103)
 Lesson theme: <THEME>
 Level: Beginner (A0)
-Alphabet focus: <TARGET_CHAR> (series <1|2>)
+Alphabet focus: <TARGET_CHAR> (series <1|2|vowel|diacritic|unknown>)
 The lesson must include at least two words containing <TARGET_CHAR>.
 
 Rules:
@@ -36,6 +36,53 @@ Return only this content list:
   {type: "...", data: {...}},
   ...
 ]
+```
+
+## Usage Examples
+
+### CLI (recommended)
+```
+python content_engine/generate_seed_lesson_prompt.py \
+  --lesson-number 1 \
+  --sublesson-ids 101,102 \
+  --theme "Greetings & Politeness" \
+  --target-char "ន" \
+  --series unknown \
+  --sublessons 2 \
+  --vocab-min 10 \
+  --vocab-max 20 \
+  --notes "Можно писать на русском — норм."
+```
+
+### JSON + seed script (no manual pasting)
+1) Save GPT output to a JSON file (example: `content/lesson_101.json`).
+2) Seed it directly:
+```
+python content_engine/seed_lesson_json.py \
+  --lesson-id 101 \
+  --title "Lesson 1.1: Greetings" \
+  --desc "Formal vs informal greetings" \
+  --content content/lesson_101.json \
+  --module-id 1 \
+  --order-index 0
+```
+
+### Python (if calling build_prompt directly)
+```python
+from generate_seed_lesson_prompt import build_prompt
+
+prompt = build_prompt(
+    lesson_number="1",
+    sublesson_ids="101,102",
+    theme="Greetings & Politeness",
+    target_char="ន",
+    series="unknown",
+    sublesson_count=2,
+    vocab_min=10,
+    vocab_max=20,
+    notes="Можно писать заметки по-русски.",
+)
+print(prompt)
 ```
 
 ## Example Content Skeleton
