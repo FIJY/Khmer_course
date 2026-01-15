@@ -94,11 +94,10 @@ def build_chapter_data(global_audio_map):
                     "type": "visual_decoder",
                     "data": {
                         "word": "អរគុណ",
-                        # ИСПРАВЛЕНО: Теперь ищем គ (Ko), так как она реально есть в слове
-                        "target_char": "គ",
-                        "hint": "Find character: Ko (Series 2)",  # Подсказка тоже обновлена
+                        "target_char": "ណ",
+                        "hint": "Find character: No (Series 1)",
                         "english_translation": "Thank You (Arkun)",
-                        "letter_series": 2,
+                        "letter_series": 1,
                         "word_audio": "thank_you.mp3",
                         "char_audio_map": build_word_map("អរគុណ", global_audio_map)
                     }
