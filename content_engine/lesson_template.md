@@ -20,9 +20,11 @@ Rules:
 5) Keep blocks logically grouped by theme.
 6) Add a cultural or usage note inside one theory block (field: culture_note).
 7) If the lesson includes "yes/no" or polite replies, include both male and female variants.
+8) Split the lesson into sub-lessons (2+), each with 5–20 vocab_card items.
+9) For sub-lessons, add a sublesson_title field in the opening theory block.
 
 Item formats:
-- theory: {title, text, culture_note?}
+- theory: {title, text, culture_note?, sublesson_title?}
 - vocab_card: {front, back, pronunciation, audio}
 - visual_decoder: {word, target_char, hint, english_translation, letter_series, word_audio, char_audio_map}
 - quiz: {question, options, correct_answer, explanation?}
