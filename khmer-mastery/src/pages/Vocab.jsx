@@ -1,42 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import React from 'react';
 import { Globe, Search, Volume2, ScrollText } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
+import useVocab from '../hooks/useVocab';
 
 export default function Vocab() {
-  const navigate = useNavigate();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('');
-
-  useEffect(() => { fetchVocab(); }, []);
-
-  const fetchVocab = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('lesson_items')
-        .select('*')
-        .eq('type', 'vocab_card')
-        .order('lesson_id', { ascending: true });
-
-      if (error) throw error;
-      setItems(data || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
-
-  const playAudio = (filename) => {
-    if (filename) new Audio(`/sounds/${filename}`).play().catch(() => {});
-  };
-
-  const filteredItems = items.filter(item => {
-    const term = filter.toLowerCase();
-    const front = item.data?.front?.toLowerCase() || '';
-    const back = item.data?.back?.toLowerCase() || '';
-    return front.includes(term) || back.includes(term);
-  });
+  const {
+    items,
+    loading,
+    filter,
+    setFilter,
+    filteredItems,
+    playAudio
+  } = useVocab();
 
   return (
     <MobileLayout>
