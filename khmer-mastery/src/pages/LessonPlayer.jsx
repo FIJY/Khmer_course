@@ -8,6 +8,8 @@ import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
 
+const KHMER_PATTERN = /[\u1780-\u17FF]/;
+
 export default function LessonPlayer() {
   const {
     navigate,
@@ -31,6 +33,20 @@ export default function LessonPlayer() {
     setCanAdvance,
     refresh
   } = useLessonPlayer();
+  const lessonPronunciations = React.useMemo(() => {
+    const map = {};
+    items.forEach(item => {
+      const data = item?.data;
+      if (!data?.pronunciation) return;
+      const front = data.front ?? '';
+      const back = data.back ?? '';
+      const khmerWord = KHMER_PATTERN.test(front) ? front : (KHMER_PATTERN.test(back) ? back : '');
+      if (khmerWord) {
+        map[khmerWord] = data.pronunciation;
+      }
+    });
+    return map;
+  }, [items]);
 
   if (loading) return <LoadingState label={t('loading.lesson')} />;
 
@@ -86,29 +102,29 @@ export default function LessonPlayer() {
     );
   }
 
-  const khmerPattern = /[\u1780-\u17FF]/;
   const current = items[step]?.data;
   const type = items[step]?.type;
+  if (!current) {
+    return (
+      <ErrorState
+        title={t('errors.lessonEmpty')}
+        message={t('empty.lessonContent')}
+        onRetry={refresh}
+        secondaryAction={(
+          <Button variant="outline" onClick={() => navigate('/map')}>
+            {t('actions.backToMap')}
+          </Button>
+        )}
+      />
+    );
+  }
   const frontText = current?.front ?? '';
   const backText = current?.back ?? '';
-  const frontHasKhmer = khmerPattern.test(frontText);
-  const backHasKhmer = khmerPattern.test(backText);
+  const frontHasKhmer = KHMER_PATTERN.test(frontText);
+  const backHasKhmer = KHMER_PATTERN.test(backText);
   const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
-  const lessonPronunciations = React.useMemo(() => {
-    const map = {};
-    items.forEach(item => {
-      const data = item?.data;
-      if (!data?.pronunciation) return;
-      const front = data.front ?? '';
-      const back = data.back ?? '';
-      const khmerWord = khmerPattern.test(front) ? front : (khmerPattern.test(back) ? back : '');
-      if (khmerWord) {
-        map[khmerWord] = data.pronunciation;
-      }
-    });
-    return map;
-  }, [items]);
+  const quizOptions = Array.isArray(current?.options) ? current.options : [];
   const getQuizOption = (opt) => {
     if (opt && typeof opt === 'object') {
       return {
@@ -203,8 +219,8 @@ export default function LessonPlayer() {
 
         {type === 'quiz' && (
           <div className="w-full space-y-3">
-             <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current.question}</h2>
-             {current.options.map((opt, i) => {
+             <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
+             {quizOptions.map((opt, i) => {
                const { text, pronunciation } = getQuizOption(opt);
                const pronunciationText = pronunciation || '—';
                return (
