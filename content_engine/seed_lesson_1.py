@@ -1,26 +1,12 @@
 import asyncio
 import os
-from dotenv import load_dotenv
-from supabase import create_client, Client
-
-# --- НАСТРОЙКА SUPABASE ---
-load_dotenv()
-url = os.environ.get("VITE_SUPABASE_URL") or os.environ.get("SUPABASE_URL")
-key = os.environ.get("VITE_SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_KEY")
-
-if not url or not key:
-    raise ValueError("❌ Не найдены ключи Supabase в .env файле!")
-
-supabase: Client = create_client(url, key)
 
 # --- ИМПОРТ ФУНКЦИЙ (Убедись, что database_engine.py лежит рядом) ---
-from database_engine import seed_lesson, update_study_materials
-
-
 # --- 1. ПОЛУЧЕНИЕ КАРТЫ ЗВУКОВ ---
 async def fetch_global_audio_map():
     print("📡 Скачиваю карту звуков...")
     try:
+        supabase = get_supabase_client()
         response = supabase.table('alphabet').select('id, audio_url').execute()
         audio_map = {row['id']: row['audio_url'] for row in response.data if row['audio_url']}
         return audio_map
@@ -31,6 +17,20 @@ async def fetch_global_audio_map():
 
 def build_word_map(word, global_map):
     return {char: global_map[char] for char in word if char in global_map}
+
+
+def get_supabase_client():
+    from dotenv import load_dotenv
+    from supabase import create_client
+
+    load_dotenv()
+    url = os.environ.get("VITE_SUPABASE_URL") or os.environ.get("SUPABASE_URL")
+    key = os.environ.get("VITE_SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_KEY")
+
+    if not url or not key:
+        raise ValueError("❌ Не найдены ключи Supabase в .env файле!")
+
+    return create_client(url, key)
 
 
 # --- 2. ВАЛИДАТОР ДАННЫХ (ЗАЩИТА ОТ ОШИБОК) ---
@@ -45,7 +45,7 @@ def validate_visual_decoder(data):
 
 
 # --- 3. ДАННЫЕ УРОКОВ ---
-def get_chapter_data(global_audio_map):
+def build_chapter_data(global_audio_map):
     return {
         # ... Урок 1.1 без изменений ...
         101: {
@@ -140,9 +140,15 @@ def get_chapter_data(global_audio_map):
     }
 
 
+async def get_lessons(include_audio_map=True):
+    global_map = await fetch_global_audio_map() if include_audio_map else {}
+    return build_chapter_data(global_map)
+
+
 async def main():
-    global_map = await fetch_global_audio_map()
-    chapter_data = get_chapter_data(global_map)
+    from database_engine import seed_lesson, update_study_materials
+
+    chapter_data = await get_lessons(include_audio_map=True)
 
     print("🛡️ Проверка данных перед записью...")
     for lesson_id, info in chapter_data.items():
