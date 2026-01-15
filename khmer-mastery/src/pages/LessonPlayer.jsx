@@ -95,6 +95,7 @@ export default function LessonPlayer() {
   const backHasKhmer = khmerPattern.test(backText);
   const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
+  const quizOptions = Array.isArray(current?.options) ? current.options : [];
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
     items.forEach(item => {
@@ -203,8 +204,8 @@ export default function LessonPlayer() {
 
         {type === 'quiz' && (
           <div className="w-full space-y-3">
-             <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current.question}</h2>
-             {current.options.map((opt, i) => {
+             <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
+             {quizOptions.map((opt, i) => {
                const { text, pronunciation } = getQuizOption(opt);
                const pronunciationText = pronunciation || '—';
                return (
