@@ -35,10 +35,7 @@ supabase: Client = create_client(url, key)
 # --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 
 def db_execute_retry(query, retries=5, delay=2):
-    """
-    Выполняет запрос к Supabase с повторными попытками.
-    Спасает от 'Network connection lost'.
-    """
+    """Выполняет запрос с повторными попытками (спасает от 502 error)"""
     last_error = None
     for attempt in range(retries):
         try:
@@ -46,12 +43,10 @@ def db_execute_retry(query, retries=5, delay=2):
         except Exception as e:
             last_error = e
             err_str = str(e)
-            # Ловим ошибки сети (502, connection lost и т.д.)
             if "Network" in err_str or "502" in err_str or "500" in err_str or "connection" in err_str.lower():
                 print(f"   ⚠️ DB Network error (попытка {attempt + 1}/{retries}), ждем {delay} сек...")
                 time.sleep(delay)
             else:
-                # Если ошибка не сетевая (например, синтаксис), падаем сразу
                 raise e
     print(f"❌ Не удалось выполнить запрос после {retries} попыток.")
     raise last_error
@@ -100,7 +95,7 @@ async def generate_audio(text, filename):
 async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, order_index=0):
     print(f"🚀 Processing Lesson {lesson_id}: {title}...")
 
-    # 1. UPSERT УРОКА (С ЗАЩИТОЙ)
+    # 1. UPSERT УРОКА
     db_execute_retry(supabase.table("lessons").upsert({
         "id": lesson_id, "title": title, "description": desc,
         "module_id": module_id, "order_index": order_index
@@ -128,27 +123,35 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
             for opt in options:
                 clean_opt = opt.split(' (')[0].replace('?', '').strip()
 
-                # Ищем данные в словаре (С ЗАЩИТОЙ)
+                # 1. Берем данные из базы (нам нужен English для имени файла)
                 dict_res = db_execute_retry(
                     supabase.table("dictionary").select("pronunciation", "english").eq("khmer", clean_opt))
                 entry = dict_res.data[0] if dict_res.data else {}
 
-                pron = entry.get("pronunciation", "")
+                db_pron = entry.get("pronunciation", "")
                 eng = entry.get("english", "option")
 
-                if not pron:
-                    pron = pron_map.get(clean_opt, "")
-                    if pron:
+                # 2. Берем данные из JSON (САМЫЕ ВАЖНЫЕ)
+                json_pron = pron_map.get(clean_opt, "")
+
+                # 3. ЛОГИКА: Если в JSON есть транскрипция -> используем её и ОБНОВЛЯЕМ базу
+                # Это "пробивает" старые пустые записи
+                if json_pron:
+                    pron = json_pron
+                    # Обновляем словарь, если там было пусто или по-другому
+                    if pron != db_pron:
                         try:
-                            # Запись в словарь (С ЗАЩИТОЙ)
                             db_execute_retry(supabase.table("dictionary").upsert({
                                 "khmer": clean_opt,
                                 "pronunciation": pron,
-                                "english": "Quiz Option",
+                                "english": eng if eng != "option" else "Quiz Option",
                                 "item_type": "word"
                             }, on_conflict="khmer"))
                         except:
                             pass
+                else:
+                    # Если в JSON нет, надеемся на базу
+                    pron = db_pron
 
                 audio_name = get_safe_audio_name(clean_opt, eng)
                 await generate_audio(clean_opt, audio_name)
@@ -169,7 +172,12 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                 entry = dict_res.data[0] if dict_res.data else {}
 
                 json_pron = item['data'].get("pronunciation", "")
-                final_pron = entry.get("pronunciation") or json_pron
+
+                # Та же логика: JSON > Database
+                if json_pron:
+                    final_pron = json_pron
+                else:
+                    final_pron = entry.get("pronunciation", "")
 
                 item['data']['pronunciation'] = final_pron
                 english = entry.get("english", english)
@@ -178,6 +186,7 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                 await generate_audio(clean_k, audio_name)
                 item['data']['audio'] = audio_name
 
+                # Всегда обновляем словарь свежими данными
                 db_execute_retry(supabase.table("dictionary").upsert({
                     "khmer": clean_k,
                     "english": english,
@@ -185,7 +194,7 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                     "item_type": get_item_type(clean_k, english)
                 }, on_conflict="khmer"))
 
-        # Запись карточки (С ЗАЩИТОЙ)
+        # Запись карточки
         db_execute_retry(supabase.table("lesson_items").insert({
             "lesson_id": lesson_id, "type": item['type'],
             "order_index": idx, "data": item['data']
