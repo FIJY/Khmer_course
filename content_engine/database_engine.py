@@ -36,11 +36,8 @@ supabase: Client = create_client(url, key)
 def get_safe_audio_name(khmer_text, english_label=None):
     """Генерирует красивое имя файла: english_hash.mp3"""
     clean_k = khmer_text.split(' (')[0].replace('?', '').strip()
-    # Если перевода нет, используем 'audio', если есть - чистим его для имени файла
     label = english_label or "audio"
     safe_label = re.sub(r'[\\/*?:"<>|]', "", label).lower().strip().replace(' ', '_')[:15]
-
-    # Хэш от кхмерского гарантирует, что одно слово = один файл
     w_hash = hashlib.md5(clean_k.encode()).hexdigest()[:4]
     return f"{safe_label}_{w_hash}.mp3"
 
@@ -102,21 +99,39 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
         # А) ОБРАБОТКА КВИЗОВ
         if item['type'] == 'quiz':
             options = item['data'].get('options', [])
+            # !!! ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ: Читаем карту из JSON !!!
+            pron_map = item['data'].get('pronunciation_map', {})
+
             item['data']['options_metadata'] = {}
             for opt in options:
                 clean_opt = opt.split(' (')[0].replace('?', '').strip()
-                # Ищем данные в словаре для красоты
+
+                # 1. Сначала ищем в базе (там может быть английский перевод для имени файла)
                 dict_res = supabase.table("dictionary").select("pronunciation", "english").eq("khmer",
                                                                                               clean_opt).execute()
                 entry = dict_res.data[0] if dict_res.data else {}
 
                 pron = entry.get("pronunciation", "")
-                eng = entry.get("english", "option")
+                eng = entry.get("english", "option")  # Если нет в базе, будет "option"
+
+                # 2. Если в базе пусто, БЕРЕМ ИЗ JSON MAP!
+                if not pron:
+                    pron = pron_map.get(clean_opt, "")
+                    # Если нашли новую транскрипцию, сохраним её в словарь на будущее
+                    if pron:
+                        try:
+                            supabase.table("dictionary").upsert({
+                                "khmer": clean_opt,
+                                "pronunciation": pron,
+                                "english": "Quiz Option",
+                                "item_type": "word"
+                            }, on_conflict="khmer").execute()
+                        except:
+                            pass
 
                 audio_name = get_safe_audio_name(clean_opt, eng)
                 await generate_audio(clean_opt, audio_name)
 
-                # Записываем метаданные варианта
                 item['data']['options_metadata'][opt] = {
                     "audio": audio_name,
                     "pronunciation": pron
@@ -127,23 +142,29 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
             khmer, english = resolve_khmer_english(item['type'], item['data'])
             if khmer:
                 clean_k = khmer.split(' (')[0].replace('?', '').strip()
-                # Ищем транскрипцию в словаре
+
+                # Сначала ищем в базе
                 dict_res = supabase.table("dictionary").select("pronunciation", "english").eq("khmer",
                                                                                               clean_k).execute()
                 entry = dict_res.data[0] if dict_res.data else {}
 
-                # Принудительно обновляем транскрипцию в данных урока
-                item['data']['pronunciation'] = entry.get("pronunciation", item['data'].get("pronunciation", ""))
+                # Если в базе пусто, берем из JSON карточки
+                json_pron = item['data'].get("pronunciation", "")
+                final_pron = entry.get("pronunciation") or json_pron
+
+                # Принудительно обновляем данные в JSON перед отправкой
+                item['data']['pronunciation'] = final_pron
                 english = entry.get("english", english)
 
                 audio_name = get_safe_audio_name(clean_k, english)
                 await generate_audio(clean_k, audio_name)
                 item['data']['audio'] = audio_name
 
-                # Обновляем сам словарь
+                # Обновляем словарь (теперь точно с транскрипцией)
                 supabase.table("dictionary").upsert({
-                    "khmer": clean_k, "english": english,
-                    "pronunciation": item['data']['pronunciation'],
+                    "khmer": clean_k,
+                    "english": english,
+                    "pronunciation": final_pron,
                     "item_type": get_item_type(clean_k, english)
                 }, on_conflict="khmer").execute()
 
@@ -153,21 +174,17 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
             "order_index": idx, "data": item['data']
         }).execute()
 
-    print(f"🎉 Lesson {lesson_id} synced with clean filenames and transcriptions!")
+    print(f"🎉 Lesson {lesson_id} synced!")
 
 
 async def update_study_materials(module_id, lessons_data):
-    """
-    Собирает контент всех уроков и обновляет 'Книжечку' (study_materials) для главы.
-    """
-    print(f"\n📘 Updating Study Materials (Guidebook) for Module {module_id}...")
-
+    """Обновляет Summary (Книжечку)"""
+    print(f"\n📘 Updating Study Materials for Module {module_id}...")
     summary_text = f"# Chapter Summary\n\n"
 
     for lesson_id, info in lessons_data.items():
         summary_text += f"## {info['title']}\n"
 
-        # 1. Сначала правила (Theory)
         theory_found = False
         for item in info['content']:
             if item['type'] == 'theory':
@@ -175,17 +192,14 @@ async def update_study_materials(module_id, lessons_data):
                 theory_found = True
         if theory_found: summary_text += "\n"
 
-        # 2. Потом слова (Vocab)
         for item in info['content']:
             if item['type'] == 'vocab_card':
                 khmer = item['data'].get('back', '')
                 eng = item['data'].get('front', '')
                 pron = item['data'].get('pronunciation', '')
                 summary_text += f"* **{khmer}** ({pron}) — {eng}\n"
-
         summary_text += "\n"
 
-    # Записываем в таблицу study_materials
     try:
         supabase.table("study_materials").upsert({
             "chapter_id": module_id,
@@ -193,6 +207,6 @@ async def update_study_materials(module_id, lessons_data):
             "content": summary_text,
             "type": "summary"
         }, on_conflict="chapter_id").execute()
-        print(f"✅ Study materials for Module {module_id} updated successfully!")
+        print(f"✅ Study materials updated!")
     except Exception as e:
         print(f"⚠️ Failed to update study_materials: {e}")
