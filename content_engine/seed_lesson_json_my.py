@@ -71,10 +71,19 @@ async def async_main():
 
     payload = load_content(content_path)
 
-    # Support either:
-    # 1) Full payload dict:
-    #    {"lesson_id":..., "title":..., "desc":..., "module_id":..., "order_index":..., "content":[...]}
-    # 2) Plain list: [...]
+    # 1. Если это полная структура главы (Chapter -> Lessons)
+    if isinstance(payload, dict) and "lessons" in payload:
+        print(f"Detected Chapter JSON: {payload.get('title')}")
+        lessons_list = payload.get("lessons", [])
+
+        if not lessons_list:
+            raise ValueError("No lessons found in the 'lessons' list of the JSON.")
+
+        # Берем первый урок из списка (или можно добавить выбор через input)
+        payload = lessons_list[0]
+        print(f"Processing first lesson: {payload.get('title')}")
+
+    # 2. Обработка конкретного урока (теперь payload — это либо исходный словарь урока, либо вытянутый из списка)
     if isinstance(payload, dict):
         content = payload.get("content")
         lesson_id = args.lesson_id or payload.get("lesson_id")
@@ -87,24 +96,13 @@ async def async_main():
             else payload.get("order_index", 0)
         )
     else:
+        # Если в файле был просто чистый список [ {...}, {...} ]
         content = payload
         lesson_id = args.lesson_id
         title = args.title
         desc = args.desc
         module_id = args.module_id
         order_index = args.order_index if args.order_index is not None else 0
-
-    if not isinstance(content, list):
-        raise ValueError(
-            "Content JSON must be a list of lesson items (or a payload dict with a 'content' list)."
-        )
-
-    if lesson_id is None or title is None or desc is None:
-        raise ValueError(
-            "Missing lesson metadata. Provide --lesson-id/--title/--desc or include them in the JSON payload."
-        )
-
-    lesson_id = int(lesson_id)
 
     # ✅ seed_lesson is async in your project, so we must await it
     await seed_lesson(
