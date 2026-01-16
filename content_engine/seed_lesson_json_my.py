@@ -70,63 +70,51 @@ async def async_main():
         content_path = ask_for_content_file(Path(args.content_dir))
 
     payload = load_content(content_path)
+    lessons_to_process = []
 
-    # 1. Если это полная структура главы (Chapter -> Lessons)
+    # 1. Проверяем: это вся глава или один урок?
     if isinstance(payload, dict) and "lessons" in payload:
         print(f"Detected Chapter JSON: {payload.get('title')}")
-        lessons_list = payload.get("lessons", [])
-
-        if not lessons_list:
-            raise ValueError("No lessons found in the 'lessons' list of the JSON.")
-
-        # Берем первый урок из списка (или можно добавить выбор через input)
-        payload = lessons_list[0]
-        print(f"Processing first lesson: {payload.get('title')}")
-
-    # 2. Обработка конкретного урока (теперь payload — это либо исходный словарь урока, либо вытянутый из списка)
-    if isinstance(payload, dict):
-        content = payload.get("content")
-        lesson_id = args.lesson_id or payload.get("lesson_id")
-        title = args.title or payload.get("title")
-        desc = args.desc or payload.get("desc")
-        module_id = args.module_id if args.module_id is not None else payload.get("module_id")
-        order_index = (
-            args.order_index
-            if args.order_index is not None
-            else payload.get("order_index", 0)
-        )
+        # Создаем список из всех уроков главы
+        lessons_to_process = payload.get("lessons", [])
+    elif isinstance(payload, dict):
+        # Если в файле один урок
+        lessons_to_process = [payload]
     else:
-        # Если в файле был просто чистый список [ {...}, {...} ]
-        content = payload
-        lesson_id = args.lesson_id
-        title = args.title
-        desc = args.desc
-        module_id = args.module_id
-        order_index = args.order_index if args.order_index is not None else 0
+        # Если просто список [{}, {}]
+        lessons_to_process = [{"content": payload}]
 
-    # ✅ seed_lesson is async in your project, so we must await it
-    await seed_lesson(
-        lesson_id,
-        title,
-        desc,
-        content,
-        module_id=module_id,
-        order_index=order_index,
-    )
+    # 2. ЗАПУСКАЕМ ЦИКЛ ПО ВСЕМ НАЙДЕННЫМ УРОКАМ
+    for lesson_data in lessons_to_process:
+        content = lesson_data.get("content")
+        lesson_id = args.lesson_id or lesson_data.get("lesson_id")
+        title = args.title or lesson_data.get("title")
+        desc = args.desc or lesson_data.get("desc")
 
-    # ✅ update_study_materials is async too (based on your warning), so await it as well
-    if args.update_summary and module_id is not None:
-        await update_study_materials(
-            module_id,
-            {
-                lesson_id: {
-                    "title": title,
-                    "desc": desc,
-                    "content": content,
-                }
-            },
+        # Определяем ID главы (module_id)
+        module_id = args.module_id or lesson_data.get("module_id") or payload.get("chapter_id")
+        order_index = args.order_index if args.order_index is not None else lesson_data.get("order_index", 0)
+
+        if not content or not lesson_id:
+            continue
+
+        # Загружаем текущий урок
+        await seed_lesson(
+            int(lesson_id),
+            title,
+            desc,
+            content,
+            module_id=module_id,
+            order_index=order_index,
         )
 
+    # 3. Обновляем итоговую книжечку для всей главы
+    if args.update_summary and module_id is not None:
+        # Собираем данные всех уроков для суммаризации
+        summary_payload = {int(l["lesson_id"]): l for l in lessons_to_process if "lesson_id" in l}
+        await update_study_materials(module_id, summary_payload)
+
+    print("✅ All lessons from JSON synced successfully!")
 
 def main():
     asyncio.run(async_main())
