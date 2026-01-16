@@ -99,25 +99,25 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
         # А) ОБРАБОТКА КВИЗОВ
         if item['type'] == 'quiz':
             options = item['data'].get('options', [])
-            # !!! ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ: Читаем карту из JSON !!!
+            # !!! Читаем карту из JSON, если она есть !!!
             pron_map = item['data'].get('pronunciation_map', {})
 
             item['data']['options_metadata'] = {}
             for opt in options:
                 clean_opt = opt.split(' (')[0].replace('?', '').strip()
 
-                # 1. Сначала ищем в базе (там может быть английский перевод для имени файла)
+                # 1. Сначала ищем в базе
                 dict_res = supabase.table("dictionary").select("pronunciation", "english").eq("khmer",
                                                                                               clean_opt).execute()
                 entry = dict_res.data[0] if dict_res.data else {}
 
                 pron = entry.get("pronunciation", "")
-                eng = entry.get("english", "option")  # Если нет в базе, будет "option"
+                eng = entry.get("english", "option")
 
                 # 2. Если в базе пусто, БЕРЕМ ИЗ JSON MAP!
                 if not pron:
                     pron = pron_map.get(clean_opt, "")
-                    # Если нашли новую транскрипцию, сохраним её в словарь на будущее
+                    # Сохраним в базу на будущее
                     if pron:
                         try:
                             supabase.table("dictionary").upsert({
@@ -143,16 +143,13 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
             if khmer:
                 clean_k = khmer.split(' (')[0].replace('?', '').strip()
 
-                # Сначала ищем в базе
                 dict_res = supabase.table("dictionary").select("pronunciation", "english").eq("khmer",
                                                                                               clean_k).execute()
                 entry = dict_res.data[0] if dict_res.data else {}
 
-                # Если в базе пусто, берем из JSON карточки
                 json_pron = item['data'].get("pronunciation", "")
                 final_pron = entry.get("pronunciation") or json_pron
 
-                # Принудительно обновляем данные в JSON перед отправкой
                 item['data']['pronunciation'] = final_pron
                 english = entry.get("english", english)
 
@@ -160,7 +157,6 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                 await generate_audio(clean_k, audio_name)
                 item['data']['audio'] = audio_name
 
-                # Обновляем словарь (теперь точно с транскрипцией)
                 supabase.table("dictionary").upsert({
                     "khmer": clean_k,
                     "english": english,

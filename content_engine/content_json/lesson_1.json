@@ -12,7 +12,7 @@
         {
           "type": "theory",
           "data": {
-            "title": "Context",
+            "title": "Intro",
             "text": "In Cambodia, it is customary to start an interaction with a greeting even in the shortest situations — in a shop, on the street, or when asking a question. This immediately makes the conversation calm and friendly, even if you speak very simply afterwards.",
             "sublesson_title": "Приветствие и базовый контакт"
           }
@@ -97,7 +97,7 @@
         {
           "type": "vocab_card",
           "data": {
-            "front": "No problem / It's okay",
+            "front": "No problem",
             "back": "អត់បញ្ហា",
             "pronunciation": "ot-banh-ha",
             "item_type": "phrase",
@@ -116,7 +116,7 @@
               "ជំរាបលា"
             ],
             "correct_answer": "ជំរាបសួរ",
-            "explanation": "This is the polite way to say hello.",
+            "explanation": "This is the polite greeting.",
             "pronunciation_map": {
               "ជំរាបសួរ": "chum-riap-suor",
               "សួស្តី": "suos-dei",
@@ -129,41 +129,20 @@
         {
           "type": "quiz",
           "data": {
-            "question": "Translate: No problem",
-            "options": [
-              "អត់បញ្ហា",
-              "បញ្ហា",
-              "អ្នក",
-              "ខ្ញុំ"
-            ],
-            "correct_answer": "អត់បញ្ហា",
-            "explanation": "Use this phrase to say everything is fine.",
-            "pronunciation_map": {
-              "អត់បញ្ហា": "ot-banh-ha",
-              "បញ្ហា": "banh-ha",
-              "អ្នក": "neak",
-              "ខ្ញុំ": "knhom"
-            },
-            "audio_map": {}
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
             "question": "Translate: You",
             "options": [
               "អ្នក",
               "ខ្ញុំ",
-              "សួស្តី",
-              "លាហើយ"
+              "បញ្ហា",
+              "អត់បញ្ហា"
             ],
             "correct_answer": "អ្នក",
-            "explanation": "This is the word for 'you'.",
+            "explanation": "Neak means You.",
             "pronunciation_map": {
               "អ្នក": "neak",
               "ខ្ញុំ": "knhom",
-              "សួស្តី": "suos-dei",
-              "លាហើយ": "lea-hai"
+              "បញ្ហា": "banh-ha",
+              "អត់បញ្ហា": "ot-banh-ha"
             },
             "audio_map": {}
           }
@@ -171,20 +150,20 @@
         {
           "type": "quiz",
           "data": {
-            "question": "Translate: Bye (informal)",
+            "question": "Translate: No problem",
             "options": [
-              "លាហើយ",
-              "ជំរាបលា",
-              "ជំរាបសួរ",
-              "បញ្ហា"
+              "អត់បញ្ហា",
+              "បញ្ហា",
+              "សួស្តី",
+              "លាហើយ"
             ],
-            "correct_answer": "លាហើយ",
-            "explanation": "This is the casual way to say goodbye.",
+            "correct_answer": "អត់បញ្ហា",
+            "explanation": "Ot banh-ha means No problem.",
             "pronunciation_map": {
-              "លាហើយ": "lea-hai",
-              "ជំរាបលា": "chum-riap-lear",
-              "ជំរាបសួរ": "chum-riap-suor",
-              "បញ្ហា": "banh-ha"
+              "អត់បញ្ហា": "ot-banh-ha",
+              "បញ្ហា": "banh-ha",
+              "សួស្តី": "suos-dei",
+              "លាហើយ": "lea-hai"
             },
             "audio_map": {}
           }
@@ -196,16 +175,37 @@
             "options": [
               "ខ្ញុំ",
               "អ្នក",
-              "សួស្តី",
-              "អត់បញ្ហា"
+              "ជំរាបសួរ",
+              "ជំរាបលា"
             ],
             "correct_answer": "ខ្ញុំ",
-            "explanation": "This is the word for 'I' or 'me'.",
+            "explanation": "Knhom means I.",
             "pronunciation_map": {
               "ខ្ញុំ": "knhom",
               "អ្នក": "neak",
+              "ជំរាបសួរ": "chum-riap-suor",
+              "ជំរាបលា": "chum-riap-lear"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: Bye (informal)",
+            "options": [
+              "លាហើយ",
+              "សួស្តី",
+              "ជំរាបលា",
+              "ជំរាបសួរ"
+            ],
+            "correct_answer": "លាហើយ",
+            "explanation": "Lea-hai is informal bye.",
+            "pronunciation_map": {
+              "លាហើយ": "lea-hai",
               "សួស្តី": "suos-dei",
-              "អត់បញ្ហា": "ot-banh-ha"
+              "ជំរាបលា": "chum-riap-lear",
+              "ជំរាបសួរ": "chum-riap-suor"
             },
             "audio_map": {}
           }
@@ -222,7 +222,7 @@
         {
           "type": "theory",
           "data": {
-            "title": "Context",
+            "title": "Intro",
             "text": "In everyday speech, Khmer people often use words of gratitude and agreement — even in places where one might do without them in other languages. This is not a formality, but a way to make communication soft and safe.",
             "sublesson_title": "Вежливость и ответы"
           }
@@ -252,7 +252,7 @@
         {
           "type": "vocab_card",
           "data": {
-            "front": "Yes (male speaker)",
+            "front": "Yes (male)",
             "back": "បាទ",
             "pronunciation": "baat",
             "item_type": "word",
@@ -263,7 +263,7 @@
         {
           "type": "vocab_card",
           "data": {
-            "front": "Yes (female speaker)",
+            "front": "Yes (female)",
             "back": "ចាស",
             "pronunciation": "chaas",
             "item_type": "word",
@@ -285,7 +285,7 @@
         {
           "type": "vocab_card",
           "data": {
-            "front": "Sorry / Excuse me",
+            "front": "Sorry",
             "back": "សូមទោស",
             "pronunciation": "som-toh",
             "item_type": "phrase",
@@ -339,20 +339,20 @@
         {
           "type": "quiz",
           "data": {
-            "question": "Translate: Thank you very much",
+            "question": "Translate: Thank you",
             "options": [
-              "អរគុណច្រើន",
               "អរគុណ",
               "សូមទោស",
-              "ទេ"
+              "ទេ",
+              "បាន"
             ],
-            "correct_answer": "អរគុណច្រើន",
-            "explanation": "This phrase expresses deep gratitude.",
+            "correct_answer": "អរគុណ",
+            "explanation": "Or-kun means Thank you.",
             "pronunciation_map": {
-              "អរគុណច្រើន": "or-kun-chraen",
               "អរគុណ": "or-kun",
               "សូមទោស": "som-toh",
-              "ទេ": "te"
+              "ទេ": "te",
+              "បាន": "baan"
             },
             "audio_map": {}
           }
@@ -360,19 +360,19 @@
         {
           "type": "quiz",
           "data": {
-            "question": "A male speaker wants to say 'Yes'. Which word should he use?",
+            "question": "How do you say Yes if you are a woman?",
             "options": [
-              "បាទ",
               "ចាស",
-              "បាន",
+              "បាទ",
+              "ទេ",
               "សូម"
             ],
-            "correct_answer": "បាទ",
-            "explanation": "'Baat' is used by men.",
+            "correct_answer": "ចាស",
+            "explanation": "Chaas is the female Yes.",
             "pronunciation_map": {
-              "បាទ": "baat",
               "ចាស": "chaas",
-              "បាន": "baan",
+              "បាទ": "baat",
+              "ទេ": "te",
               "សូម": "som"
             },
             "audio_map": {}
@@ -381,20 +381,20 @@
         {
           "type": "quiz",
           "data": {
-            "question": "A female speaker wants to say 'Yes'. Which word should she use?",
+            "question": "Translate: Sorry",
             "options": [
-              "ចាស",
-              "បាទ",
-              "ទេ",
-              "អរគុណ"
+              "សូមទោស",
+              "អរគុណ",
+              "បាន",
+              "បាទ"
             ],
-            "correct_answer": "ចាស",
-            "explanation": "'Chaas' is used by women.",
+            "correct_answer": "សូមទោស",
+            "explanation": "Som-toh means Sorry.",
             "pronunciation_map": {
-              "ចាស": "chaas",
-              "បាទ": "baat",
-              "ទេ": "te",
-              "អរគុណ": "or-kun"
+              "សូមទោស": "som-toh",
+              "អរគុណ": "or-kun",
+              "បាន": "baan",
+              "បាទ": "baat"
             },
             "audio_map": {}
           }
@@ -402,20 +402,20 @@
         {
           "type": "quiz",
           "data": {
-            "question": "Translate: Sorry / Excuse me",
+            "question": "How do you say Yes if you are a man?",
             "options": [
-              "សូមទោស",
-              "សូម",
-              "អរគុណ",
-              "បាន"
+              "បាទ",
+              "ចាស",
+              "បាន",
+              "ទេ"
             ],
-            "correct_answer": "សូមទោស",
-            "explanation": "Use this to apologize or get attention politely.",
+            "correct_answer": "បាទ",
+            "explanation": "Baat is the male Yes.",
             "pronunciation_map": {
-              "សូមទោស": "som-toh",
-              "សូម": "som",
-              "អរគុណ": "or-kun",
-              "បាន": "baan"
+              "បាទ": "baat",
+              "ចាស": "chaas",
+              "បាន": "baan",
+              "ទេ": "te"
             },
             "audio_map": {}
           }
@@ -428,15 +428,15 @@
               "ទេ",
               "បាទ",
               "ចាស",
-              "បាន"
+              "អរគុណ"
             ],
             "correct_answer": "ទេ",
-            "explanation": "This is the standard word for 'No'.",
+            "explanation": "Te means No.",
             "pronunciation_map": {
               "ទេ": "te",
               "បាទ": "baat",
               "ចាស": "chaas",
-              "បាន": "baan"
+              "អរគុណ": "or-kun"
             },
             "audio_map": {}
           }
@@ -445,28 +445,70 @@
     },
     {
       "lesson_id": 103,
-      "title": "Final Quiz: Chapter Review",
-      "desc": "Review of all words from Chapter 1",
+      "title": "Final Quiz",
+      "desc": "Chapter Review",
       "module_id": 1,
       "order_index": 2,
       "content": [
         {
           "type": "quiz",
           "data": {
-            "question": "Translate: Hello (formal)",
+            "question": "Translate: Hello (informal)",
             "options": [
-              "ជំរាបសួរ",
               "សួស្តី",
-              "ជំរាបលា",
-              "លាហើយ"
+              "ជំរាបសួរ",
+              "លាហើយ",
+              "ជំរាបលា"
             ],
-            "correct_answer": "ជំរាបសួរ",
-            "explanation": "Formal greeting used in polite situations.",
+            "correct_answer": "សួស្តី",
+            "explanation": "Suos-dei is informal hello.",
             "pronunciation_map": {
-              "ជំរាបសួរ": "chum-riap-suor",
               "សួស្តី": "suos-dei",
-              "ជំរាបលា": "chum-riap-lear",
-              "លាហើយ": "lea-hai"
+              "ជំរាបសួរ": "chum-riap-suor",
+              "លាហើយ": "lea-hai",
+              "ជំរាបលា": "chum-riap-lear"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: I / me",
+            "options": [
+              "ខ្ញុំ",
+              "អ្នក",
+              "បញ្ហា",
+              "ទេ"
+            ],
+            "correct_answer": "ខ្ញុំ",
+            "explanation": "Knhom means I.",
+            "pronunciation_map": {
+              "ខ្ញុំ": "knhom",
+              "អ្នក": "neak",
+              "បញ្ហា": "banh-ha",
+              "ទេ": "te"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: No",
+            "options": [
+              "ទេ",
+              "បាន",
+              "បាទ",
+              "ចាស"
+            ],
+            "correct_answer": "ទេ",
+            "explanation": "Te means No.",
+            "pronunciation_map": {
+              "ទេ": "te",
+              "បាន": "baan",
+              "បាទ": "baat",
+              "ចាស": "chaas"
             },
             "audio_map": {}
           }
@@ -479,15 +521,15 @@
               "អរគុណច្រើន",
               "អរគុណ",
               "សូមទោស",
-              "បញ្ហា"
+              "សូម"
             ],
             "correct_answer": "អរគុណច្រើន",
-            "explanation": "Stronger form of thanks.",
+            "explanation": "Or-kun chraen means Thank you very much.",
             "pronunciation_map": {
               "អរគុណច្រើន": "or-kun-chraen",
               "អរគុណ": "or-kun",
               "សូមទោស": "som-toh",
-              "បញ្ហា": "banh-ha"
+              "សូម": "som"
             },
             "audio_map": {}
           }
@@ -495,39 +537,18 @@
         {
           "type": "quiz",
           "data": {
-            "question": "Translate: I / me",
+            "question": "How do you say Yes if you are a man?",
             "options": [
-              "ខ្ញុំ",
-              "អ្នក",
               "បាទ",
-              "ចាស"
-            ],
-            "correct_answer": "ខ្ញុំ",
-            "explanation": "Standard word for self-reference.",
-            "pronunciation_map": {
-              "ខ្ញុំ": "knhom",
-              "អ្នក": "neak",
-              "បាទ": "baat",
-              "ចាស": "chaas"
-            },
-            "audio_map": {}
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Translate: No problem",
-            "options": [
-              "អត់បញ្ហា",
-              "បញ្ហា",
+              "ចាស",
               "ទេ",
               "បាន"
             ],
-            "correct_answer": "អត់បញ្ហា",
-            "explanation": "Means 'no problem' or 'all good'.",
+            "correct_answer": "បាទ",
+            "explanation": "Baat is the male Yes.",
             "pronunciation_map": {
-              "អត់បញ្ហា": "ot-banh-ha",
-              "បញ្ហា": "banh-ha",
+              "បាទ": "baat",
+              "ចាស": "chaas",
               "ទេ": "te",
               "បាន": "baan"
             },
@@ -545,7 +566,7 @@
               "សួស្តី"
             ],
             "correct_answer": "ជំរាបលា",
-            "explanation": "Formal way to say goodbye.",
+            "explanation": "Chum-riap-lear is formal goodbye.",
             "pronunciation_map": {
               "ជំរាបលា": "chum-riap-lear",
               "លាហើយ": "lea-hai",
@@ -558,62 +579,20 @@
         {
           "type": "quiz",
           "data": {
-            "question": "Which word is 'Yes' for a woman?",
-            "options": [
-              "ចាស",
-              "បាទ",
-              "អ្នក",
-              "ខ្ញុំ"
-            ],
-            "correct_answer": "ចាស",
-            "explanation": "Women use 'Chaas'.",
-            "pronunciation_map": {
-              "ចាស": "chaas",
-              "បាទ": "baat",
-              "អ្នក": "neak",
-              "ខ្ញុំ": "knhom"
-            },
-            "audio_map": {}
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which word is 'Yes' for a man?",
-            "options": [
-              "បាទ",
-              "ចាស",
-              "ទេ",
-              "បាន"
-            ],
-            "correct_answer": "បាទ",
-            "explanation": "Men use 'Baat'.",
-            "pronunciation_map": {
-              "បាទ": "baat",
-              "ចាស": "chaas",
-              "ទេ": "te",
-              "បាន": "baan"
-            },
-            "audio_map": {}
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
             "question": "Translate: Please",
             "options": [
               "សូម",
               "សូមទោស",
               "អរគុណ",
-              "សួស្តី"
+              "បាន"
             ],
             "correct_answer": "សូម",
-            "explanation": "Used when making a request.",
+            "explanation": "Som means Please.",
             "pronunciation_map": {
               "សូម": "som",
               "សូមទោស": "som-toh",
               "អរគុណ": "or-kun",
-              "សួស្តី": "suos-dei"
+              "បាន": "baan"
             },
             "audio_map": {}
           }
@@ -626,15 +605,15 @@
               "បាន",
               "ទេ",
               "បញ្ហា",
-              "អ្នក"
+              "អត់បញ្ហា"
             ],
             "correct_answer": "បាន",
-            "explanation": "Means okay or agreed.",
+            "explanation": "Baan means OK/Agree.",
             "pronunciation_map": {
               "បាន": "baan",
               "ទេ": "te",
               "បញ្ហា": "banh-ha",
-              "អ្នក": "neak"
+              "អត់បញ្ហា": "ot-banh-ha"
             },
             "audio_map": {}
           }
@@ -646,16 +625,37 @@
             "options": [
               "សូមទោស",
               "អរគុណ",
-              "ជំរាបសួរ",
+              "សួស្តី",
               "លាហើយ"
             ],
             "correct_answer": "សូមទោស",
-            "explanation": "Apology or excuse me.",
+            "explanation": "Som-toh means Sorry.",
             "pronunciation_map": {
               "សូមទោស": "som-toh",
               "អរគុណ": "or-kun",
-              "ជំរាបសួរ": "chum-riap-suor",
+              "សួស្តី": "suos-dei",
               "លាហើយ": "lea-hai"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: You",
+            "options": [
+              "អ្នក",
+              "ខ្ញុំ",
+              "បាទ",
+              "ចាស"
+            ],
+            "correct_answer": "អ្នក",
+            "explanation": "Neak means You.",
+            "pronunciation_map": {
+              "អ្នក": "neak",
+              "ខ្ញុំ": "knhom",
+              "បាទ": "baat",
+              "ចាស": "chaas"
             },
             "audio_map": {}
           }
