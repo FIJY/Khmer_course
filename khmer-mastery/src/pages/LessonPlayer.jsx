@@ -33,18 +33,20 @@ export default function LessonPlayer() {
     setCanAdvance,
     refresh
   } = useLessonPlayer();
-  const safeItems = Array.isArray(items) ? items : [];
-  const lessonPronunciations = safeItems.reduce((map, item) => {
-    const data = item?.data;
-    if (!data?.pronunciation) return map;
-    const front = data.front ?? '';
-    const back = data.back ?? '';
-    const khmerWord = KHMER_PATTERN.test(front) ? front : (KHMER_PATTERN.test(back) ? back : '');
-    if (khmerWord) {
-      map[khmerWord] = data.pronunciation;
-    }
+  const lessonPronunciations = React.useMemo(() => {
+    const map = {};
+    items.forEach(item => {
+      const data = item?.data;
+      if (!data?.pronunciation) return;
+      const front = data.front ?? '';
+      const back = data.back ?? '';
+      const khmerWord = KHMER_PATTERN.test(front) ? front : (KHMER_PATTERN.test(back) ? back : '');
+      if (khmerWord) {
+        map[khmerWord] = data.pronunciation;
+      }
+    });
     return map;
-  }, {});
+  }, [items]);
 
   if (loading) return <LoadingState label={t('loading.lesson')} />;
 
@@ -100,8 +102,8 @@ export default function LessonPlayer() {
     );
   }
 
-  const current = safeItems[step]?.data;
-  const type = safeItems[step]?.type;
+  const current = items[step]?.data;
+  const type = items[step]?.type;
   if (!current) {
     return (
       <ErrorState
