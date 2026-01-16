@@ -3,6 +3,7 @@ import sys
 import re
 import asyncio
 import hashlib
+import time
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import edge_tts
@@ -33,8 +34,30 @@ supabase: Client = create_client(url, key)
 
 # --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 
+def db_execute_retry(query, retries=5, delay=2):
+    """
+    Выполняет запрос к Supabase с повторными попытками.
+    Спасает от 'Network connection lost'.
+    """
+    last_error = None
+    for attempt in range(retries):
+        try:
+            return query.execute()
+        except Exception as e:
+            last_error = e
+            err_str = str(e)
+            # Ловим ошибки сети (502, connection lost и т.д.)
+            if "Network" in err_str or "502" in err_str or "500" in err_str or "connection" in err_str.lower():
+                print(f"   ⚠️ DB Network error (попытка {attempt + 1}/{retries}), ждем {delay} сек...")
+                time.sleep(delay)
+            else:
+                # Если ошибка не сетевая (например, синтаксис), падаем сразу
+                raise e
+    print(f"❌ Не удалось выполнить запрос после {retries} попыток.")
+    raise last_error
+
+
 def get_safe_audio_name(khmer_text, english_label=None):
-    """Генерирует красивое имя файла: english_hash.mp3"""
     clean_k = khmer_text.split(' (')[0].replace('?', '').strip()
     label = english_label or "audio"
     safe_label = re.sub(r'[\\/*?:"<>|]', "", label).lower().strip().replace(' ', '_')[:15]
@@ -77,55 +100,53 @@ async def generate_audio(text, filename):
 async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, order_index=0):
     print(f"🚀 Processing Lesson {lesson_id}: {title}...")
 
-    # 1. UPSERT УРОКА
-    supabase.table("lessons").upsert({
+    # 1. UPSERT УРОКА (С ЗАЩИТОЙ)
+    db_execute_retry(supabase.table("lessons").upsert({
         "id": lesson_id, "title": title, "description": desc,
         "module_id": module_id, "order_index": order_index
-    }, on_conflict="id").execute()
+    }, on_conflict="id"))
 
     # 2. ЧИСТКА СТАРЫХ ДАННЫХ
-    existing = supabase.table("lesson_items").select("id").eq("lesson_id", lesson_id).execute()
+    existing = db_execute_retry(supabase.table("lesson_items").select("id").eq("lesson_id", lesson_id))
     ids = [i['id'] for i in existing.data]
     if ids:
         for table in ["user_srs", "user_srs_items"]:
             try:
-                supabase.table(table).delete().in_("item_id", ids).execute()
+                db_execute_retry(supabase.table(table).delete().in_("item_id", ids))
             except:
                 pass
-        supabase.table("lesson_items").delete().eq("lesson_id", lesson_id).execute()
+        db_execute_retry(supabase.table("lesson_items").delete().eq("lesson_id", lesson_id))
 
     # 3. ВСТАВКА КОНТЕНТА
     for idx, item in enumerate(content_list):
         # А) ОБРАБОТКА КВИЗОВ
         if item['type'] == 'quiz':
             options = item['data'].get('options', [])
-            # !!! Читаем карту из JSON, если она есть !!!
             pron_map = item['data'].get('pronunciation_map', {})
 
             item['data']['options_metadata'] = {}
             for opt in options:
                 clean_opt = opt.split(' (')[0].replace('?', '').strip()
 
-                # 1. Сначала ищем в базе
-                dict_res = supabase.table("dictionary").select("pronunciation", "english").eq("khmer",
-                                                                                              clean_opt).execute()
+                # Ищем данные в словаре (С ЗАЩИТОЙ)
+                dict_res = db_execute_retry(
+                    supabase.table("dictionary").select("pronunciation", "english").eq("khmer", clean_opt))
                 entry = dict_res.data[0] if dict_res.data else {}
 
                 pron = entry.get("pronunciation", "")
                 eng = entry.get("english", "option")
 
-                # 2. Если в базе пусто, БЕРЕМ ИЗ JSON MAP!
                 if not pron:
                     pron = pron_map.get(clean_opt, "")
-                    # Сохраним в базу на будущее
                     if pron:
                         try:
-                            supabase.table("dictionary").upsert({
+                            # Запись в словарь (С ЗАЩИТОЙ)
+                            db_execute_retry(supabase.table("dictionary").upsert({
                                 "khmer": clean_opt,
                                 "pronunciation": pron,
                                 "english": "Quiz Option",
                                 "item_type": "word"
-                            }, on_conflict="khmer").execute()
+                            }, on_conflict="khmer"))
                         except:
                             pass
 
@@ -143,8 +164,8 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
             if khmer:
                 clean_k = khmer.split(' (')[0].replace('?', '').strip()
 
-                dict_res = supabase.table("dictionary").select("pronunciation", "english").eq("khmer",
-                                                                                              clean_k).execute()
+                dict_res = db_execute_retry(
+                    supabase.table("dictionary").select("pronunciation", "english").eq("khmer", clean_k))
                 entry = dict_res.data[0] if dict_res.data else {}
 
                 json_pron = item['data'].get("pronunciation", "")
@@ -157,18 +178,18 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                 await generate_audio(clean_k, audio_name)
                 item['data']['audio'] = audio_name
 
-                supabase.table("dictionary").upsert({
+                db_execute_retry(supabase.table("dictionary").upsert({
                     "khmer": clean_k,
                     "english": english,
                     "pronunciation": final_pron,
                     "item_type": get_item_type(clean_k, english)
-                }, on_conflict="khmer").execute()
+                }, on_conflict="khmer"))
 
-        # Запись карточки
-        supabase.table("lesson_items").insert({
+        # Запись карточки (С ЗАЩИТОЙ)
+        db_execute_retry(supabase.table("lesson_items").insert({
             "lesson_id": lesson_id, "type": item['type'],
             "order_index": idx, "data": item['data']
-        }).execute()
+        }))
 
     print(f"🎉 Lesson {lesson_id} synced!")
 
@@ -197,12 +218,12 @@ async def update_study_materials(module_id, lessons_data):
         summary_text += "\n"
 
     try:
-        supabase.table("study_materials").upsert({
+        db_execute_retry(supabase.table("study_materials").upsert({
             "chapter_id": module_id,
             "title": f"Summary: Module {module_id}",
             "content": summary_text,
             "type": "summary"
-        }, on_conflict="chapter_id").execute()
+        }, on_conflict="chapter_id"))
         print(f"✅ Study materials updated!")
     except Exception as e:
         print(f"⚠️ Failed to update study_materials: {e}")
