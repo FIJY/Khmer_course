@@ -1,21 +1,21 @@
 {
   "chapter_id": 1,
-  "title": "Chapter 1: Survival Mode — Basic Greetings and Polite Replies",
+  "title": "Greetings & Politeness",
   "lessons": [
     {
       "lesson_id": 101,
-      "title": "Lesson 1.1: Greetings and Polite Basics",
-      "desc": "Informal vs formal greetings, how to ask and answer how you are, and gendered yes replies.",
+      "title": "Greetings and Basic Contact",
+      "desc": "Learn simple greetings and core pronouns for quick everyday interactions",
       "module_id": 1,
       "order_index": 0,
       "content": [
         {
           "type": "theory",
           "data": {
-            "title": "Greeting first",
-            "text": "This sub-lesson covers essential greetings and a basic well-being exchange used in everyday conversations.",
-            "sublesson_title": "Подурок [1.1]: Приветствия и формулы вежливости",
-            "culture_note": "In Cambodia, it is polite to greet even for short interactions in shops or cafes. Choose formal vs informal greetings by situation, but greeting itself is usually not omitted."
+            "title": "Start with a greeting",
+            "text": "Use a greeting first, even in very short exchanges. It makes the interaction calmer and friendlier, even if you speak very simply afterward.",
+            "sublesson_title": "Подурок [1.1]: Приветствие и базовый контакт",
+            "culture_note": "In Cambodia, people usually begin with a greeting even in quick situations like a shop or on the street. It signals friendliness and helps the conversation feel safe and smooth."
           }
         },
         {
@@ -23,9 +23,8 @@
           "data": {
             "front": "Hello (informal)",
             "back": "សួស្តី",
-            "pronunciation": "suos-dei",
-            "item_type": "phrase",
-            "audio": ""
+            "pronunciation": "suos-tey",
+            "item_type": "phrase"
           }
         },
         {
@@ -33,352 +32,39 @@
           "data": {
             "front": "Hello (formal)",
             "back": "ជំរាបសួរ",
-            "pronunciation": "chum-riap-suor",
-            "item_type": "phrase",
-            "audio": ""
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "I / me",
-            "back": "ខ្ញុំ",
-            "pronunciation": "knhom",
-            "item_type": "word",
-            "audio": ""
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Fine / well (healthy, happy)",
-            "back": "សុខсប្បាយ",
-            "pronunciation": "sok-sa-baay",
-            "item_type": "phrase",
-            "audio": ""
+            "pronunciation": "chum-riap-suo",
+            "item_type": "phrase"
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "Which Khmer phrase is a formal greeting?",
+            "question": "Which Khmer phrase means Hello (formal)?",
             "options": [
               "ជំរាបសួរ",
               "សួស្តី",
-              "ខ្ញុំ",
-              "សុខсប្បាយ"
+              "លាហើយ",
+              "ជំរាបលា"
             ],
             "correct_answer": "ជំរាបសួរ",
-            "explanation": "Use ជំរាបសួរ in respectful or formal situations."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer item means \"I / me\"?",
-            "options": [
-              "ខ្ញុំ",
-              "សួស្តី",
-              "ជំរាបសួរ",
-              "សុខсប្បាយ"
-            ],
-            "correct_answer": "ខ្ញុំ",
-            "explanation": "ខ្ញុំ is the basic word for \"I / me\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer item means \"Fine / well\"?",
-            "options": [
-              "សុខсប្បាយ",
-              "ខ្ញុំ",
-              "សួស្តី",
-              "ជំរាបសួរ"
-            ],
-            "correct_answer": "សុខсប្បាយ",
-            "explanation": "សុខсប្បាយ is used to say someone is fine / well."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Choose the informal greeting.",
-            "options": [
-              "សួស្តី",
-              "ជំរាបសួរ",
-              "ខ្ញុំ",
-              "សុខсប្បាយ"
-            ],
-            "correct_answer": "សួស្តី",
-            "explanation": "សួស្តី is the common informal hello."
+            "explanation": "Use ជំរាបសួរ as a formal hello. សួស្តី is more informal, and the other options are goodbyes."
           }
         },
         {
           "type": "theory",
           "data": {
-            "title": "Ask and answer \"How are you?\"",
-            "text": "Use the question form to ask how someone is doing and a simple sentence to reply that you are fine.",
-            "sublesson_title": "Подурок [1.1]: Приветствия и формулы вежливости"
+            "title": "Goodbyes and basic roles",
+            "text": "Use informal and formal goodbyes depending on the situation. Also learn the basic pronouns to say I and you.",
+            "sublesson_title": "Подурок [1.1]: Приветствие и базовый контакт"
           }
         },
         {
           "type": "vocab_card",
           "data": {
-            "front": "How are you?",
-            "back": "តើអ្នកសុខсប្បាយទេ?",
-            "pronunciation": "tae-neak-sok-sa-baay-te",
-            "item_type": "sentence",
-            "audio": ""
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "I am fine",
-            "back": "ខ្ញុំសុខсប្បាយ",
-            "pronunciation": "knhom-sok-sa-baay",
-            "item_type": "sentence",
-            "audio": ""
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "តើអ្នកសុខсប្បាយទេ?",
-            "target_char": "ន",
-            "char_split": [
-              "ត",
-              "ើ",
-              "អ",
-              "ន",
-              "ក",
-              "ស",
-              "ុ",
-              "ខ",
-              "ស",
-              "ប",
-              "្",
-              "ប",
-              "ា",
-              "យ",
-              "ទ",
-              "េ",
-              "?"
-            ],
-            "char_position": "middle",
-            "english_translation": "How are you?",
-            "letter_series": 1,
-            "word_audio": "",
-            "char_audio_map": {}
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Yes (male speaker)",
-            "back": "បាទ",
-            "pronunciation": "baat",
-            "item_type": "word",
-            "audio": ""
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Yes (female speaker)",
-            "back": "ចាស",
-            "pronunciation": "chaas",
-            "item_type": "word",
-            "audio": ""
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer sentence means \"How are you?\"",
-            "options": [
-              "តើអ្នកសុខсប្បាយទេ?",
-              "ខ្ញុំសុខсប្បាយ",
-              "ជំរាបសួរ",
-              "សួស្តី"
-            ],
-            "correct_answer": "តើអ្នកសុខсប្បាយទេ?",
-            "explanation": "This sentence is the standard question: \"How are you?\""
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer sentence means \"I am fine\"?",
-            "options": [
-              "ខ្ញុំសុខсប្បាយ",
-              "តើអ្នកសុខсប្បាយទេ?",
-              "សុខсប្បាយ",
-              "ខ្ញុំ"
-            ],
-            "correct_answer": "ខ្ញុំសុខсប្បាយ",
-            "explanation": "This sentence is used to reply that you are fine."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "A male speaker wants to say \"Yes\". Which Khmer word should he use?",
-            "options": [
-              "បាទ",
-              "ចាស",
-              "សួស្តី",
-              "ខ្ញុំ"
-            ],
-            "correct_answer": "បាទ",
-            "explanation": "បាទ is the gendered \"Yes\" used by male speakers."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "A female speaker wants to say \"Yes\". Which Khmer word should she use?",
-            "options": [
-              "ចាស",
-              "បាទ",
-              "ជំរាបសួរ",
-              "សុខсប្បាយ"
-            ],
-            "correct_answer": "ចាស",
-            "explanation": "ចាស is the gendered \"Yes\" used by female speakers."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which item would you use as a polite reply meaning \"I am fine\"?",
-            "options": [
-              "ខ្ញុំសុខсប្បាយ",
-              "សួស្តី",
-              "ជំរាបсួរ",
-              "ខ្ញុំ"
-            ],
-            "correct_answer": "ខ្ញុំសុខсប្បាយ",
-            "explanation": "This is the full sentence reply meaning \"I am fine\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.1): choose the Khmer for \"Hello (formal)\".",
-            "options": [
-              "ជំរាបсួរ",
-              "សួស្តី",
-              "តើអ្នកសុខсប្បាយទេ?",
-              "ខ្ញុំសុខсប្បាយ"
-            ],
-            "correct_answer": "ជំរាបсួរ",
-            "explanation": "Formal hello is ជំរាបсួរ."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.1): choose the Khmer for \"Hello (informal)\".",
-            "options": [
-              "សួស្តី",
-              "ជំរាបсួរ",
-              "ខ្ញុំ",
-              "សុខсប្បាយ"
-            ],
-            "correct_answer": "សួស្តី",
-            "explanation": "Informal hello is สួស្តី."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.1): choose the Khmer for \"Fine / well\".",
-            "options": [
-              "សុខсប្បាយ",
-              "ខ្ញុំ",
-              "បាទ",
-              "ចាស"
-            ],
-            "correct_answer": "សុខсប្បាយ",
-            "explanation": "Fine / well is สุខсប្បាយ."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.1): choose the Khmer for \"Yes (male speaker)\".",
-            "options": [
-              "បាទ",
-              "ចាស",
-              "សួស្តី",
-              "ជំរាបсួរ"
-            ],
-            "correct_answer": "បាទ",
-            "explanation": "Male \"Yes\" is บាទ."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.1): choose the Khmer for \"Yes (female speaker)\".",
-            "options": [
-              "ចាស",
-              "បាទ",
-              "ខ្ញុំ",
-              "សុខсប្បាយ"
-            ],
-            "correct_answer": "ចាស",
-            "explanation": "Female \"Yes\" is ចាស."
-          }
-        }
-      ]
-    },
-    {
-      "lesson_id": 102,
-      "title": "Lesson 1.2: Goodbyes, Thanks, and Pointing",
-      "desc": "Common goodbyes, thanks and big thanks, apologies, and basic this/that pointing words.",
-      "module_id": 1,
-      "order_index": 1,
-      "content": [
-        {
-          "type": "theory",
-          "data": {
-            "title": "Short polite endings matter",
-            "text": "This sub-lesson introduces goodbyes, thanks, apologies, and basic pointing words used in everyday interactions.",
-            "sublesson_title": "Подурок [1.2]: Прощания, благодарность и указание",
-            "culture_note": "In Cambodia, thanks and goodbyes are used even in very short exchanges and are part of polite speech. Pointing words are often supported by a hand gesture, especially at markets or while traveling."
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "This",
-            "back": "នេះ",
-            "pronunciation": "nih",
-            "item_type": "word",
-            "audio": ""
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "That",
-            "back": "នោះ",
-            "pronunciation": "noh",
-            "item_type": "word",
-            "audio": ""
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "You (singular) / you (polite)",
-            "back": "អ្នក",
-            "pronunciation": "neak",
-            "item_type": "word",
-            "audio": ""
+            "front": "Bye",
+            "back": "លាហើយ",
+            "pronunciation": "lie-hey",
+            "item_type": "phrase"
           }
         },
         {
@@ -386,51 +72,72 @@
           "data": {
             "front": "Goodbye (formal)",
             "back": "ជំរាបលា",
-            "pronunciation": "chum-riap-lia",
-            "item_type": "phrase",
-            "audio": ""
+            "pronunciation": "chum-riap-lie",
+            "item_type": "phrase"
           }
         },
         {
-          "type": "quiz",
+          "type": "visual_decoder",
           "data": {
-            "question": "Which Khmer word means \"This\"?",
-            "options": [
-              "នេះ",
-              "នោះ",
-              "អ្នក",
-              "ជំរាបលា"
+            "word": "អ្នក",
+            "word_pronunciation": "neak",
+            "target_char": "ន",
+            "char_split": [
+              "អ",
+              "ន",
+              "្",
+              "ន",
+              "ក"
             ],
-            "correct_answer": "នេះ",
-            "explanation": "This is the basic pointing word for \"this\"."
+            "char_position": "middle",
+            "english_translation": "You",
+            "letter_series": 1
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "I",
+            "back": "ខ្ញុំ",
+            "pronunciation": "knhom",
+            "item_type": "word"
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "You / you (singular or plural)",
+            "back": "អ្នក",
+            "pronunciation": "neak",
+            "item_type": "word"
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "Which Khmer word means \"That\"?",
+            "question": "You accidentally bump someone. What do you say next using these words?",
             "options": [
-              "នោះ",
-              "នេះ",
-              "ជំរាបលា",
-              "អ្នក"
+              "សួស្តី",
+              "ជំរាបសួរ",
+              "អត់បញ្ហា",
+              "លាហើយ"
             ],
-            "correct_answer": "នោះ",
-            "explanation": "This is the basic pointing word for \"that\"."
+            "correct_answer": "អត់បញ្ហា",
+            "explanation": "អត់បញ្ហា means No problem or it is ok, and it fits as a calming reply in a quick situation."
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "Which Khmer item means \"You\"?",
+            "question": "Which Khmer word means You?",
             "options": [
               "អ្នក",
-              "នេះ",
-              "នោះ",
+              "ខ្ញុំ",
+              "បញ្ហា",
               "ជំរាបលា"
             ],
             "correct_answer": "អ្នក",
-            "explanation": "អ្នក is used for \"you\" (you/you polite depending on context)."
+            "explanation": "អ្នក is You. ខ្ញុំ is I. បញ្ហា is Problem. ជំរាបលា is a formal goodbye."
           }
         },
         {
@@ -439,30 +146,30 @@
             "question": "Which Khmer phrase is a formal goodbye?",
             "options": [
               "ជំរាបលា",
-              "អ្នក",
-              "នេះ",
-              "នោះ"
+              "លាហើយ",
+              "សួស្តី",
+              "ជំរាបសួរ"
             ],
             "correct_answer": "ជំរាបលា",
-            "explanation": "Use ជំរាបលា as a formal \"Goodbye\"."
+            "explanation": "ជំរាបលា is a formal goodbye. លាហើយ is an informal bye, and the other two are greetings."
           }
-        },
+        }
+      ]
+    },
+    {
+      "lesson_id": 102,
+      "title": "Politeness and Replies",
+      "desc": "Learn common polite words for thanks, agreement, refusal, and apology",
+      "module_id": 1,
+      "order_index": 1,
+      "content": [
         {
           "type": "theory",
           "data": {
-            "title": "Thanks, big thanks, and apologies",
-            "text": "Use thanks to be polite; use big thanks to sound warmer or more appreciative. Apologies are useful in daily life.",
-            "sublesson_title": "Подурок [1.2]: Прощания, благодарность и указание"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Bye (informal)",
-            "back": "លាហើយ",
-            "pronunciation": "lia-haey",
-            "item_type": "phrase",
-            "audio": ""
+            "title": "Politeness makes speech softer",
+            "text": "In daily Khmer, people often use thanks and polite responses even when Russian could skip them. It helps communication feel gentle and safe.",
+            "sublesson_title": "Подурок [1.2]: Вежливость и ответы",
+            "culture_note": "Khmer everyday speech uses gratitude and polite agreement very often."
           }
         },
         {
@@ -471,8 +178,7 @@
             "front": "Thank you",
             "back": "អរគុណ",
             "pronunciation": "or-kun",
-            "item_type": "phrase",
-            "audio": ""
+            "item_type": "phrase"
           }
         },
         {
@@ -481,190 +187,102 @@
             "front": "Thank you very much",
             "back": "អរគុណច្រើន",
             "pronunciation": "or-kun-chraen",
-            "item_type": "phrase",
-            "audio": ""
+            "item_type": "phrase"
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Which Khmer phrase means Thank you very much?",
+            "options": [
+              "អរគុណច្រើន",
+              "អរគុណ",
+              "សូម",
+              "សូមទោស"
+            ],
+            "correct_answer": "អរគុណច្រើន",
+            "explanation": "អរគុណ is Thank you, and adding ច្រើន makes it Thank you very much."
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "Yes has gender forms",
+            "text": "Khmer has common yes forms that depend on the speaker. Use the male form if you are a man, and the female form if you are a woman.",
+            "sublesson_title": "Подурок [1.2]: Вежливость и ответы"
           }
         },
         {
           "type": "vocab_card",
           "data": {
-            "front": "Excuse me / Sorry",
+            "front": "Yes (said by a man)",
+            "back": "បាទ",
+            "pronunciation": "baat",
+            "item_type": "word"
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Yes (said by a woman)",
+            "back": "ចាស",
+            "pronunciation": "chaas",
+            "item_type": "word"
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "No",
+            "back": "ទេ",
+            "pronunciation": "te",
+            "item_type": "word"
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Sorry / Excuse me",
             "back": "សូមទោស",
-            "pronunciation": "som-tos",
-            "item_type": "phrase",
-            "audio": ""
+            "pronunciation": "soam-toh",
+            "item_type": "phrase"
           }
         },
         {
-          "type": "visual_decoder",
+          "type": "vocab_card",
           "data": {
-            "word": "នេះ",
-            "target_char": "ន",
-            "char_split": [
-              "ន",
-              "េះ"
-            ],
-            "char_position": "beginning",
-            "english_translation": "This",
-            "letter_series": 1,
-            "word_audio": "",
-            "char_audio_map": {}
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "នោះ",
-            "target_char": "ន",
-            "char_split": [
-              "ន",
-              "ោះ"
-            ],
-            "char_position": "beginning",
-            "english_translation": "That",
-            "letter_series": 1,
-            "word_audio": "",
-            "char_audio_map": {}
+            "front": "Please (when making a request)",
+            "back": "សូម",
+            "pronunciation": "soam",
+            "item_type": "phrase"
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "Which Khmer phrase means \"Thank you very much\"?",
+            "question": "You want to politely get attention before asking a question. Which word fits best?",
             "options": [
-              "អរគុណច្រើន",
-              "អរគុណ",
-              "សូមទោс",
-              "លាហើយ"
+              "សូម",
+              "ទេ",
+              "បាទ",
+              "ចាស"
             ],
-            "correct_answer": "អរគុណច្រើន",
-            "explanation": "Use អរគុណច្រើន for \"Thank you very much\"."
+            "correct_answer": "សូម",
+            "explanation": "Use សូម as Please when making a request."
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "Which Khmer phrase means \"Excuse me / Sorry\"?",
+            "question": "Which option is the female form of Yes?",
             "options": [
-              "សូមទោс",
-              "អរគុណ",
-              "លាហើយ",
-              "ជំរាបលា"
-            ],
-            "correct_answer": "សូមទោс",
-            "explanation": "Use សូមទោс to apologize or get someone's attention politely."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Choose the informal goodbye.",
-            "options": [
-              "លាហើយ",
-              "ជំរាបលា",
-              "អរគុណ",
-              "អ្នក"
-            ],
-            "correct_answer": "លាហើយ",
-            "explanation": "លាហើយ is a casual \"Bye\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer phrase is the standard \"Thank you\"?",
-            "options": [
-              "អរគុណ",
-              "អរគុណច្រើន",
-              "សូមទោс",
-              "លាហើយ"
-            ],
-            "correct_answer": "អរគុណ",
-            "explanation": "អរគុណ is the standard \"Thank you\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.2): choose the Khmer for \"Goodbye (formal)\".",
-            "options": [
-              "ជំរាបលា",
-              "លаហើយ",
-              "អរគុណ",
-              "សូមទោс"
-            ],
-            "correct_answer": "ជំរាបលា",
-            "explanation": "Formal goodbye is ជំរាបលា."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.2): choose the Khmer for \"Bye (informal)\".",
-            "options": [
-              "លាហើយ",
-              "ជំរាបលា",
-              "អ្នក",
+              "ចាស",
+              "បាទ",
+              "ទេ",
               "អរគុណ"
             ],
-            "correct_answer": "លាហើយ",
-            "explanation": "Informal bye is លាហើយ."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.2): choose the Khmer for \"This\".",
-            "options": [
-              "នេះ",
-              "នោះ",
-              "អ្នក",
-              "សូមទោс"
-            ],
-            "correct_answer": "នេះ",
-            "explanation": "This is នេះ."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.2): choose the Khmer for \"That\".",
-            "options": [
-              "នោះ",
-              "នេះ",
-              "អរគុណ",
-              "ជំរាបលា"
-            ],
-            "correct_answer": "នោះ",
-            "explanation": "That is នោះ."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.2): choose the Khmer for \"Excuse me / Sorry\".",
-            "options": [
-              "សូមទោс",
-              "អរគុណ",
-              "អរគុណច្រើន",
-              "ជំរាបលា"
-            ],
-            "correct_answer": "សូមទោс",
-            "explanation": "Excuse me / Sorry is សូមទោс."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Final check (Lesson 1.2): choose the Khmer for \"Thank you very much\".",
-            "options": [
-              "អរគុណច្រើន",
-              "អរគុណ",
-              "លាហើយ",
-              "នេះ"
-            ],
-            "correct_answer": "អរគុណច្រើន",
-            "explanation": "Thank you very much is អរគុណច្រើន."
+            "correct_answer": "ចាស",
+            "explanation": "ចាស is Yes said by a woman. បាទ is Yes said by a man."
           }
         }
       ]
@@ -672,344 +290,64 @@
     {
       "lesson_id": 103,
       "title": "Final Quiz: Chapter 1",
-      "desc": "Review all vocabulary from this chapter.",
+      "desc": "Review all vocabulary from this chapter",
       "module_id": 1,
       "order_index": 2,
       "content": [
         {
           "type": "quiz",
           "data": {
-            "question": "Choose the Khmer for \"Hello (informal)\".",
+            "question": "English to Khmer: Hello (informal)",
             "options": [
               "សួស្តី",
-              "ជំរាបсួរ",
-              "ជំរាបលា",
-              "លាហើយ"
+              "ជំរាបសួរ",
+              "លាហើយ",
+              "ជំរាបลា"
             ],
             "correct_answer": "សួស្តី",
-            "explanation": "Informal hello is សួស្តី."
+            "explanation": "សួស្តី is an informal hello."
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "Choose the Khmer for \"Hello (formal)\".",
-            "options": [
-              "ជំរាបсួរ",
-              "សួស្តី",
-              "ជំរាបលា",
-              "សូមទោс"
-            ],
-            "correct_answer": "ជំរាបсួរ",
-            "explanation": "Formal hello is ជំរាបсួរ."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Choose the Khmer for \"Goodbye (formal)\".",
+            "question": "English to Khmer: Goodbye (formal)",
             "options": [
               "ជំរាបលា",
               "លាហើយ",
-              "អរគុណ",
+              "ជំរាបសួរ",
               "សួស្តី"
             ],
             "correct_answer": "ជំរាបលា",
-            "explanation": "Formal goodbye is ជំរាបលា."
+            "explanation": "ជំរាបលា is a formal goodbye."
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "Choose the Khmer for \"Bye (informal)\".",
+            "question": "Khmer to English: What does ខ្ញុំ mean?",
             "options": [
-              "លาហើយ",
-              "ជំរាបលា",
-              "សួស្តី",
-              "ជំរាបсួរ"
+              "I",
+              "You",
+              "Hello",
+              "Problem"
             ],
-            "correct_answer": "លาហើយ",
-            "explanation": "Informal bye is លาហើយ."
+            "correct_answer": "I",
+            "explanation": "ខ្ញុំ means I."
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "Which Khmer word means \"I / me\"?",
-            "options": [
-              "ខ្ញុំ",
-              "អ្នក",
-              "នេះ",
-              "នោះ"
-            ],
-            "correct_answer": "ខ្ញុំ",
-            "explanation": "ខ្ញុំ means \"I / me\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer word means \"You\"?",
-            "options": [
-              "អ្នក",
-              "ខ្ញុំ",
-              "នេះ",
-              "នោះ"
-            ],
-            "correct_answer": "អ្នក",
-            "explanation": "អ្នក is used for \"you\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer word means \"This\"?",
-            "options": [
-              "នេះ",
-              "នោះ",
-              "អ្នក",
-              "ខ្ញុំ"
-            ],
-            "correct_answer": "នេះ",
-            "explanation": "នេះ means \"This\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer word means \"That\"?",
-            "options": [
-              "នោះ",
-              "នេះ",
-              "ខ្ញុំ",
-              "អ្នក"
-            ],
-            "correct_answer": "នោះ",
-            "explanation": "នោះ means \"That\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer phrase means \"Thank you\"?",
-            "options": [
-              "អរគុណ",
-              "អរគុណច្រើន",
-              "សូមទោс",
-              "សួស្តី"
-            ],
-            "correct_answer": "អរគុណ",
-            "explanation": "អរគុណ is \"Thank you\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer phrase means \"Thank you very much\"?",
-            "options": [
-              "អរគុណច្រើន",
-              "អរគុណ",
-              "សូមទោс",
-              "ជំរាបсួរ"
-            ],
-            "correct_answer": "អរគុណច្រើន",
-            "explanation": "Use អរគុណច្រើន for \"Thank you very much\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer phrase means \"Excuse me / Sorry\"?",
-            "options": [
-              "សូមទោс",
-              "អរគុណ",
-              "លាហើយ",
-              "ជំរាបលា"
-            ],
-            "correct_answer": "សូមទោс",
-            "explanation": "សូមទោс is used to apologize politely."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer phrase means \"Fine / well\"?",
-            "options": [
-              "សុខсប្បាយ",
-              "សួស្តី",
-              "ជំរាបсួរ",
-              "អរគុណ"
-            ],
-            "correct_answer": "សុខсប្បាយ",
-            "explanation": "សុខсប្បាយ means \"fine / well\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer sentence means \"How are you?\"",
-            "options": [
-              "តើអ្នកសុខсប្បាយទេ?",
-              "ខ្ញុំសុខсប្បាយ",
-              "សួស្តី",
-              "ជំរាបсួរ"
-            ],
-            "correct_answer": "តើអ្នកសុខсប្បាយទេ?",
-            "explanation": "This is the standard question: \"How are you?\""
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which Khmer sentence means \"I am fine\"?",
-            "options": [
-              "ខ្ញុំសុខсប្បាយ",
-              "តើអ្នកសុខсប្បាយទេ?",
-              "សុខсប្បាយ",
-              "ខ្ញុំ"
-            ],
-            "correct_answer": "ខ្ញុំសុខсប្បាយ",
-            "explanation": "This is the standard reply: \"I am fine\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "A male speaker wants to say \"Yes\". Choose the correct Khmer word.",
+            "question": "Gender-specific response: Which yes form is typically used by a man?",
             "options": [
               "បាទ",
               "ចាស",
-              "អរគុណ",
-              "សូមទោс"
+              "ទេ",
+              "សូម"
             ],
             "correct_answer": "បាទ",
-            "explanation": "Male \"Yes\" is บាទ."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "A female speaker wants to say \"Yes\". Choose the correct Khmer word.",
-            "options": [
-              "ចាស",
-              "បាទ",
-              "លាហើយ",
-              "ជំរាបលា"
-            ],
-            "correct_answer": "ចាស",
-            "explanation": "Female \"Yes\" is ចាស."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Context: You are leaving a formal meeting. Which goodbye fits best?",
-            "options": [
-              "ជំរាបលា",
-              "លាហើយ",
-              "សួស្តី",
-              "អរគុណ"
-            ],
-            "correct_answer": "ជំរាបលា",
-            "explanation": "Use the formal goodbye in respectful contexts."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Context: You meet a friend casually. Which greeting fits best?",
-            "options": [
-              "សួស្តី",
-              "ជំរាបсួរ",
-              "ជំរាបលា",
-              "សូមទោс"
-            ],
-            "correct_answer": "សួស្តី",
-            "explanation": "Use the informal greeting with friends."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Find the target letter in a word: which option contains the letter \"ន\"?",
-            "options": [
-              "នេះ",
-              "អរគុណ",
-              "លាហើយ",
-              "សួស្តី"
-            ],
-            "correct_answer": "នេះ",
-            "explanation": "This word starts with the target letter \"ន\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Find the target letter in a word: which option contains the letter \"ន\"?",
-            "options": [
-              "នោះ",
-              "ជំរាបលា",
-              "សូមទោс",
-              "ចាស"
-            ],
-            "correct_answer": "នោះ",
-            "explanation": "This word starts with the target letter \"ន\"."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "English to Khmer: Choose the best match for \"That\".",
-            "options": [
-              "នោះ",
-              "នេះ",
-              "អ្នក",
-              "ខ្ញុំ"
-            ],
-            "correct_answer": "នោះ",
-            "explanation": "\"That\" is នោះ."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "English to Khmer: Choose the best match for \"This\".",
-            "options": [
-              "នេះ",
-              "នោះ",
-              "អ្នក",
-              "ខ្ញុំ"
-            ],
-            "correct_answer": "នេះ",
-            "explanation": "\"This\" is នេះ."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Khmer to English: Which item is \"Thank you very much\"?",
-            "options": [
-              "អរគុណច្រើន",
-              "អរគុណ",
-              "សួស្តី",
-              "ជំរាបсួរ"
-            ],
-            "correct_answer": "អរគុណច្រើន",
-            "explanation": "This is the stronger form of thanks."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Khmer to English: Which item is the informal goodbye?",
-            "options": [
-              "លាហើយ",
-              "ជំរាបលា",
-              "ជំរាបсួរ",
-              "សូមទោс"
-            ],
-            "correct_answer": "លាហើយ",
-            "explanation": "This is the casual \"Bye\"."
+            "explanation": "បាទ is the common yes form used by a man."
           }
         }
       ]
