@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 import edge_tts
 from pathlib import Path
 
+
+
 # --- КОНФИГУРАЦИЯ ---
 env_path = Path('.') / '.env'
 load_dotenv(dotenv_path=env_path)

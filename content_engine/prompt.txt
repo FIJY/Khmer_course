@@ -1,17 +1,15 @@
-You are generating a JSON lesson payload (one lesson). Return ONLY valid JSON (no explanations, no Markdown, no code
-fences). Use this exact JSON structure:
+You are generating a JSON lesson payload (one lesson). Return ONLY valid JSON (no explanations, no Markdown, no code fences). Use this exact JSON structure:
 
 {
-"lesson_id": 101,
-"title": "Lesson 1.1: Greetings",
-"desc": "Formal vs informal greetings",
-"module_id": 1,
-"order_index": 0,
-"content": [...]
+  "lesson_id": 101,
+  "title": "Lesson 1.1: Greetings",
+  "desc": "Formal vs informal greetings",
+  "module_id": 1,
+  "order_index": 0,
+  "content": [...]
 }
 
 Requirements for the content list:
-
 - Split the lesson into sub-lessons (2+). You may choose how many based on the theme.
 - Each sub-lesson must end with a quiz.
 - The final item must be a summary quiz that reviews ALL blocks in the lesson (words + theory + any extra notes).
@@ -24,46 +22,42 @@ Requirements for the content list:
 - All text must be in English (except Khmer words themselves).
 
 Item formats:
-
 - theory: {title, text, culture_note?, sublesson_title?}
 - vocab_card: {front, back, pronunciation, audio}
 - visual_decoder: {word, target_char, hint, english_translation, letter_series, word_audio, char_audio_map}
 - quiz: {question, options, correct_answer, explanation?}
 
 CRITICAL AUDIO RULES:
-
 1. For vocab_card: "audio" field must be EMPTY STRING "" (audio will be auto-generated)
 2. For visual_decoder:
-
-- "word_audio" must be EMPTY STRING ""
-- "char_audio_map" must be EMPTY OBJECT {} (no char mappings)
-
+   - "word_audio" must be EMPTY STRING ""
+   - "char_audio_map" must be EMPTY OBJECT {} (no char mappings)
 3. Do NOT include any file paths or extensions in audio fields
 4. The system will automatically generate audio files based on the Khmer text
 
 Example vocab_card:
 {
-"type": "vocab_card",
-"data": {
-"front": "Hello (formal)",
-"back": "ជំរាបសួរ",
-"pronunciation": "jom-reep-suor",
-"audio": ""
-}
+  "type": "vocab_card",
+  "data": {
+    "front": "Hello (formal)",
+    "back": "ជំរាបសួរ",
+    "pronunciation": "jom-reep-suor",
+    "audio": ""
+  }
 }
 
 Example visual_decoder:
 {
-"type": "visual_decoder",
-"data": {
-"word": "អរគុណ",
-"target_char": "ណ",
-"hint": "Find «ណ» at the end: អ-រ-គុ-ណ. It is the final character in the word.",
-"english_translation": "Thank you",
-"letter_series": 1,
-"word_audio": "",
-"char_audio_map": {}
-}
+  "type": "visual_decoder",
+  "data": {
+    "word": "អរគុណ",
+    "target_char": "ណ",
+    "hint": "Find «ណ» at the end: អ-រ-គុ-ណ. It is the final character in the word.",
+    "english_translation": "Thank you",
+    "letter_series": 1,
+    "word_audio": "",
+    "char_audio_map": {}
+  }
 }
 
 Return ONLY the JSON object above.
