@@ -33,9 +33,10 @@ export default function LessonPlayer() {
     setCanAdvance,
     refresh
   } = useLessonPlayer();
+  const safeItems = Array.isArray(items) ? items : [];
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
-    items.forEach(item => {
+    safeItems.forEach(item => {
       const data = item?.data;
       if (!data?.pronunciation) return;
       const front = data.front ?? '';
@@ -46,7 +47,7 @@ export default function LessonPlayer() {
       }
     });
     return map;
-  }, [items]);
+  }, [safeItems]);
 
   if (loading) return <LoadingState label={t('loading.lesson')} />;
 
@@ -102,8 +103,8 @@ export default function LessonPlayer() {
     );
   }
 
-  const current = items[step]?.data;
-  const type = items[step]?.type;
+  const current = safeItems[step]?.data;
+  const type = safeItems[step]?.type;
   if (!current) {
     return (
       <ErrorState
