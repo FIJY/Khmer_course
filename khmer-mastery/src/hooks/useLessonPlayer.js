@@ -21,9 +21,10 @@ export default function useLessonPlayer() {
   const [error, setError] = useState(null);
   const [lessonId, setLessonId] = useState(id);
   const audioRef = useRef(null);
+  // Реф для хранения таймера, чтобы очищать его при уходе со страницы
+  const audioTimeoutRef = useRef(null);
 
-  // Вспомогательная функция для перемешивания (Fisher-Yates shuffle)
-  // Это надежнее, чем Math.random() - 0.5
+  // Вспомогательная функция для перемешивания
   const shuffleArray = (array) => {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -68,27 +69,22 @@ export default function useLessonPlayer() {
 
         if (item.type !== 'quiz') return { ...item, data: safeData };
 
-        // Логика для квизов
         const options = Array.isArray(safeData.options) ? safeData.options.filter(Boolean) : [];
         const correctAnswer = safeData.correct_answer;
         const mergedOptions = [...options];
 
-        // Убедимся, что правильный ответ есть в списке
         if (correctAnswer && !mergedOptions.includes(correctAnswer)) {
           mergedOptions.push(correctAnswer);
         }
 
-        // Убираем дубликаты
         const uniqueOptions = [...new Set(mergedOptions)];
-
-        // 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ: Перемешиваем опции здесь 🔥
         const shuffledOptions = shuffleArray(uniqueOptions);
 
         return {
           ...item,
           data: {
             ...safeData,
-            options: shuffledOptions // Сохраняем уже перемешанные
+            options: shuffledOptions
           }
         };
       });
@@ -105,11 +101,19 @@ export default function useLessonPlayer() {
 
   useEffect(() => { fetchLessonData(); }, [fetchLessonData]);
 
+  // Очистка при переключении шагов или размонтировании
   useEffect(() => {
     setCanAdvance(false);
     setSelectedOption(null);
     setIsFlipped(false);
+    if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
     if (items[step]?.type === 'theory') setCanAdvance(true);
+
+    // Останавливаем звук при смене шага
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+    }
   }, [step, items]);
 
   useEffect(() => {
@@ -139,13 +143,16 @@ export default function useLessonPlayer() {
 
   const playLocalAudio = (file) => {
     if (!file) return;
+
+    // Если что-то играло — останавливаем
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
+
     const audio = new Audio(`/sounds/${file}`);
     audioRef.current = audio;
-    audio.play().catch(() => {});
+    audio.play().catch((e) => console.warn("Audio play failed", e));
   };
 
   const handleVocabCardFlip = (audioFile) => {
@@ -156,16 +163,28 @@ export default function useLessonPlayer() {
     setCanAdvance(true);
   };
 
-  const handleQuizAnswer = (option, correctAnswer, correctAudio) => {
+  const handleQuizAnswer = (option, correctAnswer, selectedAudio) => {
+    // Блокируем повторные клики
+    if (selectedOption) return;
+
     setSelectedOption(option);
     setCanAdvance(true);
+
     const correct = option === correctAnswer;
     if (correct) setScore(s => s + 1);
-    if (correct && correctAudio) {
-      playLocalAudio(correctAudio);
-      return;
-    }
+
+    // 1. Сначала играем звук реакции (Успех / Ошибка)
     playLocalAudio(correct ? 'success.mp3' : 'error.mp3');
+
+    // 2. Если есть аудио самого слова (оно приходит из LessonPlayer.jsx),
+    // запускаем его через задержку 800мс
+    if (selectedAudio) {
+        if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
+
+        audioTimeoutRef.current = setTimeout(() => {
+            playLocalAudio(selectedAudio);
+        }, 800); // <-- ЗАДЕРЖКА ЗДЕСЬ (можно менять)
+    }
   };
 
   const goBack = () => setStep(s => s - 1);
