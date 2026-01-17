@@ -122,23 +122,16 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
             item['data']['options_metadata'] = {}
             for opt in options:
                 clean_opt = opt.split(' (')[0].replace('?', '').strip()
-
-                # 1. Берем данные из базы (нам нужен English для имени файла)
                 dict_res = db_execute_retry(
                     supabase.table("dictionary").select("pronunciation", "english").eq("khmer", clean_opt))
                 entry = dict_res.data[0] if dict_res.data else {}
 
                 db_pron = entry.get("pronunciation", "")
                 eng = entry.get("english", "option")
-
-                # 2. Берем данные из JSON (САМЫЕ ВАЖНЫЕ)
                 json_pron = pron_map.get(clean_opt, "")
 
-                # 3. ЛОГИКА: Если в JSON есть транскрипция -> используем её и ОБНОВЛЯЕМ базу
-                # Это "пробивает" старые пустые записи
                 if json_pron:
                     pron = json_pron
-                    # Обновляем словарь, если там было пусто или по-другому
                     if pron != db_pron:
                         try:
                             db_execute_retry(supabase.table("dictionary").upsert({
@@ -150,7 +143,6 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                         except:
                             pass
                 else:
-                    # Если в JSON нет, надеемся на базу
                     pron = db_pron
 
                 audio_name = get_safe_audio_name(clean_opt, eng)
@@ -166,14 +158,11 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
             khmer, english = resolve_khmer_english(item['type'], item['data'])
             if khmer:
                 clean_k = khmer.split(' (')[0].replace('?', '').strip()
-
                 dict_res = db_execute_retry(
                     supabase.table("dictionary").select("pronunciation", "english").eq("khmer", clean_k))
                 entry = dict_res.data[0] if dict_res.data else {}
 
                 json_pron = item['data'].get("pronunciation", "")
-
-                # Та же логика: JSON > Database
                 if json_pron:
                     final_pron = json_pron
                 else:
@@ -186,7 +175,6 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                 await generate_audio(clean_k, audio_name)
                 item['data']['audio'] = audio_name
 
-                # Всегда обновляем словарь свежими данными
                 db_execute_retry(supabase.table("dictionary").upsert({
                     "khmer": clean_k,
                     "english": english,
@@ -205,34 +193,40 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
 
 async def update_study_materials(module_id, lessons_data):
     """
-    Собирает контент всех уроков и обновляет 'Книжечку' (study_materials) для главы.
+    1. Обновляет текстовое саммари.
+    2. 🔥 ГЕНЕРИРУЕТ СВОДНЫЙ УРОК ДЛЯ ГЛАВЫ (ID = module_id)
+       чтобы кнопка 'Книжечка' показывала ВСЕ слова главы.
     """
-    print(f"\n📘 Updating Study Materials (Guidebook) for Module {module_id}...")
+    print(f"\n📘 Updating Summary & Guidebook for Module {module_id}...")
 
     summary_text = f"# Chapter Summary\n\n"
-    total_words_count = 0
 
-    # Сортируем уроки, чтобы они шли по порядку (101, 102...)
+    # Собираем все уникальные карточки для сводного урока
+    aggregated_items = []
+    seen_words = set()
+
     sorted_lessons = sorted(lessons_data.items(), key=lambda x: x[0])
 
     for lesson_id, info in sorted_lessons:
+        # Пропускаем финальный квиз в сводке слов
+        if "Final Quiz" in info.get('title', ''):
+            continue
+
         lesson_title = info.get('title', f'Lesson {lesson_id}')
         summary_text += f"## {lesson_title}\n"
 
-        # 1. Сначала правила (Theory)
-        theory_count = 0
+        # Добавляем теорию в текст
         for item in info.get('content', []):
             if item['type'] == 'theory':
                 t_title = item['data'].get('title', 'Note')
                 t_text = item['data'].get('text', '')
                 summary_text += f"* 💡 **{t_title}**: {t_text}\n"
-                theory_count += 1
+                # Теорию тоже добавляем в карточки для превью
+                aggregated_items.append(item)
 
-        if theory_count > 0:
-            summary_text += "\n"
+        summary_text += "\n"
 
-        # 2. Потом слова (Vocab)
-        vocab_count = 0
+        # Добавляем слова
         for item in info.get('content', []):
             if item['type'] == 'vocab_card':
                 data = item.get('data', {})
@@ -240,17 +234,19 @@ async def update_study_materials(module_id, lessons_data):
                 eng = data.get('front', '')
                 pron = data.get('pronunciation', '')
 
+                # Добавляем в текст
                 if khmer and eng:
                     summary_text += f"* **{khmer}** ({pron}) — {eng}\n"
-                    vocab_count += 1
-                    total_words_count += 1
+
+                # Добавляем в список карточек (без дублей)
+                if khmer not in seen_words:
+                    seen_words.add(khmer)
+                    # Копируем элемент, чтобы сохранить аудио и метаданные
+                    aggregated_items.append(item)
 
         summary_text += "\n"
-        print(f"   📝 Lesson {lesson_id}: added {vocab_count} words to summary.")
 
-    print(f"   ∑ Total words in Summary: {total_words_count}")
-
-    # Записываем в таблицу study_materials с защитой от сбоев
+    # 1. Записываем текстовое саммари
     try:
         db_execute_retry(supabase.table("study_materials").upsert({
             "chapter_id": module_id,
@@ -258,6 +254,27 @@ async def update_study_materials(module_id, lessons_data):
             "content": summary_text,
             "type": "summary"
         }, on_conflict="chapter_id"))
-        print(f"✅ Study materials for Module {module_id} updated successfully!")
+        print(f"✅ Text summary updated!")
     except Exception as e:
         print(f"⚠️ Failed to update study_materials: {e}")
+
+    # 2. 🔥 ПЕРЕЗАПИСЫВАЕМ УРОК-ГЛАВУ (ID = module_id, например 1)
+    # Это то, что открывает кнопка Книжечки
+    print(f"🔄 Regenerating Chapter Guidebook (Lesson ID {module_id})...")
+
+    # Чистим старые "6 слов"
+    existing = db_execute_retry(supabase.table("lesson_items").select("id").eq("lesson_id", module_id))
+    ids = [i['id'] for i in existing.data]
+    if ids:
+        db_execute_retry(supabase.table("lesson_items").delete().eq("lesson_id", module_id))
+
+    # Вставляем все собранные слова
+    for idx, item in enumerate(aggregated_items):
+        db_execute_retry(supabase.table("lesson_items").insert({
+            "lesson_id": module_id,
+            "type": item['type'],
+            "order_index": idx,
+            "data": item['data']
+        }))
+
+    print(f"✅ Guidebook (Lesson {module_id}) filled with {len(aggregated_items)} items!")
