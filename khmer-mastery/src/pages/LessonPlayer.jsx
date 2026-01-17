@@ -36,7 +36,7 @@ export default function LessonPlayer() {
 
   const safeItems = Array.isArray(items) ? items : [];
 
-  // Словарь произношений на случай, если в квизе нет метаданных
+  // Словарь произношений на случай, если в квизе нет метаданных (фолбек)
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
     safeItems.forEach(item => {
@@ -132,9 +132,9 @@ export default function LessonPlayer() {
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
   const quizOptions = Array.isArray(current?.options) ? current.options : [];
 
-  // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОЛУЧЕНИЯ ДАННЫХ ОПЦИИ ---
+  // --- 🔥 ГЛАВНОЕ ОБНОВЛЕНИЕ: Чтение метаданных с транскрипцией и аудио 🔥 ---
   const getQuizOption = (opt) => {
-    // 1. Если опция сама по себе объект (редкий случай)
+    // 1. Если опция сложный объект
     if (opt && typeof opt === 'object') {
       return {
         text: opt.text ?? opt.value ?? opt.label ?? opt.answer ?? '',
@@ -143,7 +143,7 @@ export default function LessonPlayer() {
       };
     }
 
-    // 2. ГЛАВНОЕ ИСПРАВЛЕНИЕ: Ищем в options_metadata (созданном Python скриптом)
+    // 2. Ищем в options_metadata (это то, что мы добавили в базу!)
     const metadata = current?.options_metadata?.[opt];
     if (metadata) {
       return {
@@ -153,7 +153,7 @@ export default function LessonPlayer() {
       };
     }
 
-    // 3. Фолбек на старые поля (для совместимости)
+    // 3. Старый способ (на всякий случай)
     const pronunciationMap = current?.option_pronunciations || current?.pronunciations || {};
     return {
       text: opt,
@@ -161,6 +161,7 @@ export default function LessonPlayer() {
       audio: null
     };
   };
+  // --------------------------------------------------------------------------
 
   return (
     <MobileLayout
@@ -255,13 +256,13 @@ export default function LessonPlayer() {
                <button
                  key={i}
                  disabled={!!selectedOption}
-                 // Передаем optionAudio вторым приоритетом после optionAudio (чтобы играло именно слово)
+                 // Передаем optionAudio для правильного воспроизведения
                  onClick={() => handleQuizAnswer(opt, current.correct_answer, optionAudio || current.audio)}
                  className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${selectedOption === opt ? (opt === current.correct_answer ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-red-600 border-red-400 text-white') : 'bg-gray-900 border-white/5 text-white'}`}
                >
                  <div className="flex flex-col gap-1">
                    <span className="text-2xl font-black">{text}</span>
-                   {/* Теперь этот текст точно будет, т.к. мы починили getQuizOption */}
+                   {/* Транскрипция будет отображаться здесь */}
                    <span className="text-xl font-semibold text-cyan-100 tracking-wide">{pronunciationText}</span>
                  </div>
                </button>
