@@ -22,6 +22,17 @@ export default function useLessonPlayer() {
   const [lessonId, setLessonId] = useState(id);
   const audioRef = useRef(null);
 
+  // Вспомогательная функция для перемешивания (Fisher-Yates shuffle)
+  // Это надежнее, чем Math.random() - 0.5
+  const shuffleArray = (array) => {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
   const normalizeItemData = useCallback((data) => {
     if (!data) return {};
     if (typeof data === 'string') {
@@ -51,24 +62,37 @@ export default function useLessonPlayer() {
       const resolvedLessonId = lesson?.lesson_id ?? lesson?.id ?? id;
       setLessonId(resolvedLessonId);
       const itemsData = await fetchLessonItemsByLessonId(resolvedLessonId);
+
       const normalizedItems = (Array.isArray(itemsData) ? itemsData : []).map(item => {
         const safeData = normalizeItemData(item.data);
+
         if (item.type !== 'quiz') return { ...item, data: safeData };
+
+        // Логика для квизов
         const options = Array.isArray(safeData.options) ? safeData.options.filter(Boolean) : [];
         const correctAnswer = safeData.correct_answer;
         const mergedOptions = [...options];
+
+        // Убедимся, что правильный ответ есть в списке
         if (correctAnswer && !mergedOptions.includes(correctAnswer)) {
           mergedOptions.push(correctAnswer);
         }
+
+        // Убираем дубликаты
         const uniqueOptions = [...new Set(mergedOptions)];
+
+        // 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ: Перемешиваем опции здесь 🔥
+        const shuffledOptions = shuffleArray(uniqueOptions);
+
         return {
           ...item,
           data: {
             ...safeData,
-            options: uniqueOptions
+            options: shuffledOptions // Сохраняем уже перемешанные
           }
         };
       });
+
       setItems(normalizedItems);
       setQuizCount(normalizedItems.filter(i => i.type === 'quiz').length || 0);
     } catch (err) {
