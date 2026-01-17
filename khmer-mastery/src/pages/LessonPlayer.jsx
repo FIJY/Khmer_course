@@ -33,7 +33,10 @@ export default function LessonPlayer() {
     setCanAdvance,
     refresh
   } = useLessonPlayer();
+
   const safeItems = Array.isArray(items) ? items : [];
+
+  // Словарь произношений на случай, если в квизе нет метаданных
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
     safeItems.forEach(item => {
@@ -105,6 +108,7 @@ export default function LessonPlayer() {
 
   const current = safeItems[step]?.data;
   const type = safeItems[step]?.type;
+
   if (!current) {
     return (
       <ErrorState
@@ -119,6 +123,7 @@ export default function LessonPlayer() {
       />
     );
   }
+
   const frontText = current?.front ?? '';
   const backText = current?.back ?? '';
   const frontHasKhmer = KHMER_PATTERN.test(frontText);
@@ -126,15 +131,35 @@ export default function LessonPlayer() {
   const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
   const quizOptions = Array.isArray(current?.options) ? current.options : [];
+
+  // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОЛУЧЕНИЯ ДАННЫХ ОПЦИИ ---
   const getQuizOption = (opt) => {
+    // 1. Если опция сама по себе объект (редкий случай)
     if (opt && typeof opt === 'object') {
       return {
         text: opt.text ?? opt.value ?? opt.label ?? opt.answer ?? '',
-        pronunciation: opt.pronunciation ?? ''
+        pronunciation: opt.pronunciation ?? '',
+        audio: opt.audio ?? null
       };
     }
+
+    // 2. ГЛАВНОЕ ИСПРАВЛЕНИЕ: Ищем в options_metadata (созданном Python скриптом)
+    const metadata = current?.options_metadata?.[opt];
+    if (metadata) {
+      return {
+        text: opt,
+        pronunciation: metadata.pronunciation,
+        audio: metadata.audio
+      };
+    }
+
+    // 3. Фолбек на старые поля (для совместимости)
     const pronunciationMap = current?.option_pronunciations || current?.pronunciations || {};
-    return { text: opt, pronunciation: pronunciationMap?.[opt] ?? lessonPronunciations?.[opt] ?? '' };
+    return {
+      text: opt,
+      pronunciation: pronunciationMap?.[opt] ?? lessonPronunciations?.[opt] ?? '',
+      audio: null
+    };
   };
 
   return (
@@ -222,14 +247,21 @@ export default function LessonPlayer() {
           <div className="w-full space-y-3">
              <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
              {quizOptions.map((opt, i) => {
-               const { text, pronunciation } = getQuizOption(opt);
+               // Теперь здесь мы получаем и текст, и транскрипцию, и АУДИО!
+               const { text, pronunciation, audio: optionAudio } = getQuizOption(opt);
                const pronunciationText = pronunciation || '—';
+
                return (
-               <button key={i} disabled={!!selectedOption} onClick={() => handleQuizAnswer(opt, current.correct_answer, current.audio)}
+               <button
+                 key={i}
+                 disabled={!!selectedOption}
+                 // Передаем optionAudio вторым приоритетом после optionAudio (чтобы играло именно слово)
+                 onClick={() => handleQuizAnswer(opt, current.correct_answer, optionAudio || current.audio)}
                  className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${selectedOption === opt ? (opt === current.correct_answer ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-red-600 border-red-400 text-white') : 'bg-gray-900 border-white/5 text-white'}`}
                >
                  <div className="flex flex-col gap-1">
                    <span className="text-2xl font-black">{text}</span>
+                   {/* Теперь этот текст точно будет, т.к. мы починили getQuizOption */}
                    <span className="text-xl font-semibold text-cyan-100 tracking-wide">{pronunciationText}</span>
                  </div>
                </button>

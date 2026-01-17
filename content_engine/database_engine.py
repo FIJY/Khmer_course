@@ -204,28 +204,53 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
 
 
 async def update_study_materials(module_id, lessons_data):
-    """Обновляет Summary (Книжечку)"""
-    print(f"\n📘 Updating Study Materials for Module {module_id}...")
+    """
+    Собирает контент всех уроков и обновляет 'Книжечку' (study_materials) для главы.
+    """
+    print(f"\n📘 Updating Study Materials (Guidebook) for Module {module_id}...")
+
     summary_text = f"# Chapter Summary\n\n"
+    total_words_count = 0
 
-    for lesson_id, info in lessons_data.items():
-        summary_text += f"## {info['title']}\n"
+    # Сортируем уроки, чтобы они шли по порядку (101, 102...)
+    sorted_lessons = sorted(lessons_data.items(), key=lambda x: x[0])
 
-        theory_found = False
-        for item in info['content']:
+    for lesson_id, info in sorted_lessons:
+        lesson_title = info.get('title', f'Lesson {lesson_id}')
+        summary_text += f"## {lesson_title}\n"
+
+        # 1. Сначала правила (Theory)
+        theory_count = 0
+        for item in info.get('content', []):
             if item['type'] == 'theory':
-                summary_text += f"* 💡 **{item['data']['title']}**: {item['data']['text']}\n"
-                theory_found = True
-        if theory_found: summary_text += "\n"
+                t_title = item['data'].get('title', 'Note')
+                t_text = item['data'].get('text', '')
+                summary_text += f"* 💡 **{t_title}**: {t_text}\n"
+                theory_count += 1
 
-        for item in info['content']:
+        if theory_count > 0:
+            summary_text += "\n"
+
+        # 2. Потом слова (Vocab)
+        vocab_count = 0
+        for item in info.get('content', []):
             if item['type'] == 'vocab_card':
-                khmer = item['data'].get('back', '')
-                eng = item['data'].get('front', '')
-                pron = item['data'].get('pronunciation', '')
-                summary_text += f"* **{khmer}** ({pron}) — {eng}\n"
-        summary_text += "\n"
+                data = item.get('data', {})
+                khmer = data.get('back', '')
+                eng = data.get('front', '')
+                pron = data.get('pronunciation', '')
 
+                if khmer and eng:
+                    summary_text += f"* **{khmer}** ({pron}) — {eng}\n"
+                    vocab_count += 1
+                    total_words_count += 1
+
+        summary_text += "\n"
+        print(f"   📝 Lesson {lesson_id}: added {vocab_count} words to summary.")
+
+    print(f"   ∑ Total words in Summary: {total_words_count}")
+
+    # Записываем в таблицу study_materials с защитой от сбоев
     try:
         db_execute_retry(supabase.table("study_materials").upsert({
             "chapter_id": module_id,
@@ -233,6 +258,6 @@ async def update_study_materials(module_id, lessons_data):
             "content": summary_text,
             "type": "summary"
         }, on_conflict="chapter_id"))
-        print(f"✅ Study materials updated!")
+        print(f"✅ Study materials for Module {module_id} updated successfully!")
     except Exception as e:
         print(f"⚠️ Failed to update study_materials: {e}")
