@@ -3,18 +3,45 @@ import KhmerColoredText from '../components/KhmerColoredText';
 import { khmerGlyphDefaults } from '../lib/khmerGlyphRenderer';
 
 const DEFAULT_TEXT = 'ខ្មែរ';
+const DEFAULT_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
+  ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 export default function KhmerGlyphLab() {
   const [text, setText] = React.useState(DEFAULT_TEXT);
-  const [fontUrl, setFontUrl] = React.useState('');
+  const [fontUrl, setFontUrl] = React.useState(DEFAULT_FONT_URL);
+  const [fontFileName, setFontFileName] = React.useState('');
   const [fontSize, setFontSize] = React.useState(96);
   const [harfbuzzUrl, setHarfbuzzUrl] = React.useState(khmerGlyphDefaults.DEFAULT_MODULE_URLS.harfbuzz);
   const [opentypeUrl, setOpentypeUrl] = React.useState(khmerGlyphDefaults.DEFAULT_MODULE_URLS.opentype);
+  const [renderStatus, setRenderStatus] = React.useState({ state: 'idle' });
+  const fontObjectUrlRef = React.useRef('');
 
   const moduleUrls = React.useMemo(
     () => ({ harfbuzz: harfbuzzUrl.trim(), opentype: opentypeUrl.trim() }),
     [harfbuzzUrl, opentypeUrl],
   );
+
+  React.useEffect(() => {
+    return () => {
+      if (fontObjectUrlRef.current) {
+        URL.revokeObjectURL(fontObjectUrlRef.current);
+      }
+    };
+  }, []);
+
+  const handleFontFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (fontObjectUrlRef.current) {
+      URL.revokeObjectURL(fontObjectUrlRef.current);
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    fontObjectUrlRef.current = objectUrl;
+    setFontUrl(objectUrl);
+    setFontFileName(file.name);
+  };
 
   return (
     <div className="min-h-screen bg-black text-white px-6 py-10">
@@ -49,6 +76,21 @@ export default function KhmerGlyphLab() {
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-gray-900 p-3 text-sm"
                 placeholder="/fonts/NotoSansKhmer-Regular.ttf"
               />
+            </label>
+
+            <label className="block text-sm font-bold uppercase tracking-widest text-cyan-400">
+              Upload font file
+              <input
+                type="file"
+                accept=".ttf,.otf,.woff,.woff2"
+                onChange={handleFontFileChange}
+                className="mt-2 block w-full text-xs text-gray-300 file:mr-3 file:rounded-full file:border-0 file:bg-cyan-500 file:px-4 file:py-2 file:text-xs file:font-bold file:text-black hover:file:bg-cyan-400"
+              />
+              {fontFileName && (
+                <span className="mt-2 block text-xs text-gray-400">
+                  Using uploaded font: {fontFileName}
+                </span>
+              )}
             </label>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -104,7 +146,34 @@ export default function KhmerGlyphLab() {
                   fontSize={fontSize}
                   moduleUrls={moduleUrls}
                   className="text-3xl font-black"
+                  onStatus={setRenderStatus}
                 />
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-white/10 bg-gray-900 p-6 text-xs text-gray-400">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-cyan-400">Render status</h3>
+              <div className="mt-2 space-y-2">
+                <div>
+                  <span className="font-bold text-gray-200">State:</span>{' '}
+                  <span className="text-gray-300">{renderStatus.state}</span>
+                </div>
+                {renderStatus.reason && (
+                  <div>
+                    <span className="font-bold text-gray-200">Reason:</span>{' '}
+                    <span className="text-gray-300 break-all">{renderStatus.reason}</span>
+                  </div>
+                )}
+                {!fontUrl && (
+                  <p className="text-amber-300">
+                    Provide a font URL to enable SVG glyph rendering. Without it, the component falls back to plain text.
+                  </p>
+                )}
+                {!fontUrl && (
+                  <p className="text-gray-400">
+                    Tip: upload a local font file above to test without hosting a font.
+                  </p>
+                )}
               </div>
             </div>
 

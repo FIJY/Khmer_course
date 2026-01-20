@@ -27,6 +27,7 @@ export default function KhmerColoredText({
   seriesOverrides = khmerGlyphDefaults.DEFAULT_SERIES_OVERRIDES,
   diacriticOverrides = khmerGlyphDefaults.DEFAULT_DIACRITIC_GROUPS,
   moduleUrls = khmerGlyphDefaults.DEFAULT_MODULE_URLS,
+  onStatus,
 }) {
   const [svgMarkup, setSvgMarkup] = React.useState('');
   const cacheRef = React.useRef(new Map());
@@ -36,6 +37,7 @@ export default function KhmerColoredText({
 
     if (!text || !fontUrl || !KHMER_PATTERN.test(text)) {
       setSvgMarkup('');
+      if (onStatus) onStatus({ state: 'fallback', reason: 'missing-input' });
       return () => {
         cancelled = true;
       };
@@ -46,10 +48,13 @@ export default function KhmerColoredText({
 
     if (cacheRef.current.has(cacheKey)) {
       setSvgMarkup(cacheRef.current.get(cacheKey));
+      if (onStatus) onStatus({ state: 'rendered', reason: 'cache' });
       return () => {
         cancelled = true;
       };
     }
+
+    if (onStatus) onStatus({ state: 'loading' });
 
     renderColoredKhmerToSvg({
       text,
@@ -62,12 +67,21 @@ export default function KhmerColoredText({
     })
       .then((svg) => {
         if (cancelled) return;
+        if (!svg) {
+          setSvgMarkup('');
+          if (onStatus) onStatus({ state: 'fallback', reason: 'empty-svg' });
+          return;
+        }
         cacheRef.current.set(cacheKey, svg);
         setSvgMarkup(svg);
+        if (onStatus) onStatus({ state: 'rendered' });
       })
       .catch((error) => {
         console.error('Khmer colored rendering failed:', error);
-        if (!cancelled) setSvgMarkup('');
+        if (!cancelled) {
+          setSvgMarkup('');
+          if (onStatus) onStatus({ state: 'error', reason: error?.message ?? 'render-failed' });
+        }
       });
 
     return () => {

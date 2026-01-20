@@ -10,7 +10,8 @@ import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
-const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL ?? '';
+const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
+  ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 export default function LessonPlayer() {
   const {
