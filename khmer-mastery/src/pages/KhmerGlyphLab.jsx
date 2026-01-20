@@ -111,7 +111,7 @@ export default function KhmerGlyphLab() {
                 <p className="font-bold text-gray-200">Tips</p>
                 <ul className="mt-2 space-y-1">
                   <li>• Host fonts locally to avoid CORS.</li>
-                  <li>• Put harfbuzzjs.js + opentype.module.js in public/vendor.</li>
+                  <li>• Put harfbuzzjs.js + harfbuzzjs.wasm + opentype.module.js in public/vendor.</li>
                   <li>• Module URLs must allow dynamic import in the browser.</li>
                   <li>• Provide A/O series overrides in the renderer when ready.</li>
                 </ul>

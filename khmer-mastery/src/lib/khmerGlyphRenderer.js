@@ -162,13 +162,21 @@ function loadScript(url) {
 }
 
 function getHbFactory(mod) {
-  return (
-    mod?.default
-    ?? mod?.hbjs
-    ?? mod
-    ?? globalThis.hbjs
-    ?? globalThis.hbjs?.default
-  );
+  const candidates = [
+    mod?.Module,
+    mod?.default?.hbjs,
+    mod?.default,
+    mod?.hbjs,
+    mod?.hbjs?.default,
+    mod,
+    globalThis.hbjs,
+    globalThis.hbjs?.default,
+    globalThis.harfbuzzjs,
+    globalThis.harfbuzzjs?.default,
+    globalThis.Module,
+  ];
+
+  return candidates.find((candidate) => typeof candidate === 'function');
 }
 
 async function loadHarfbuzz(moduleUrl) {
