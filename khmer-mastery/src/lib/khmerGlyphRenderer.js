@@ -21,6 +21,7 @@ const DEFAULT_MODULE_URLS = {
 };
 
 let hbPromise = null;
+const scriptLoadCache = new Map();
 const fontCache = new Map();
 
 function isInRange(cp, [start, end]) {
@@ -139,29 +140,68 @@ function applySeriesSwitches(text, categories, clusters, byteToCp, byteLength, d
   return updated;
 }
 
+function loadScript(url) {
+  if (scriptLoadCache.has(url)) return scriptLoadCache.get(url);
+
+  const promise = new Promise((resolve, reject) => {
+    if (typeof document === 'undefined') {
+      reject(new Error('Script loading is only supported in the browser.'));
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = url;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
+    document.head.appendChild(script);
+  });
+
+  scriptLoadCache.set(url, promise);
+  return promise;
+}
+
+function getHbFactory(mod) {
+  return (
+    mod?.default
+    ?? mod?.hbjs
+    ?? mod
+    ?? globalThis.hbjs
+    ?? globalThis.hbjs?.default
+  );
+}
+
 async function loadHarfbuzz(moduleUrl) {
   if (!hbPromise) {
-    hbPromise = import(/* @vite-ignore */ moduleUrl).then((mod) => {
-      const factory =
-        mod?.default
-        ?? mod?.hbjs
-        ?? mod
-        ?? globalThis.hbjs
-        ?? globalThis.hbjs?.default;
-
-      if (typeof factory !== 'function') {
-        throw new Error('HarfBuzz module did not expose a factory function.');
-      }
-
-      return factory();
-    });
+    hbPromise = import(/* @vite-ignore */ moduleUrl)
+      .then((mod) => {
+        const factory = getHbFactory(mod);
+        if (typeof factory !== 'function') {
+          throw new Error('HarfBuzz module did not expose a factory function.');
+        }
+        return factory();
+      })
+      .catch(async () => {
+        await loadScript(moduleUrl);
+        const factory = getHbFactory();
+        if (typeof factory !== 'function') {
+          throw new Error('HarfBuzz module did not expose a factory function.');
+        }
+        return factory();
+      });
   }
   return hbPromise;
 }
 
 async function loadOpenType(moduleUrl) {
-  const module = await import(/* @vite-ignore */ moduleUrl);
-  return module.default ?? module;
+  try {
+    const module = await import(/* @vite-ignore */ moduleUrl);
+    return module.default ?? module;
+  } catch (error) {
+    await loadScript(moduleUrl);
+    if (globalThis.opentype) return globalThis.opentype;
+    throw error;
+  }
 }
 
 async function loadFont(fontUrl, opentype) {
