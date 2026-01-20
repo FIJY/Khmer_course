@@ -1,5 +1,7 @@
 import React from 'react';
 import KhmerColoredText from '../components/KhmerColoredText';
+import KhmerWordAnalyzer from '../components/KhmerWordAnalyzer';
+import KhmerWordReader from '../components/KhmerWordReader';
 import { khmerGlyphDefaults } from '../lib/khmerGlyphRenderer';
 import { supabase } from '../supabaseClient';
 
@@ -213,6 +215,27 @@ export default function KhmerGlyphLab() {
                   className="text-3xl font-black"
                   onStatus={setRenderStatus}
                 />
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-white/10 bg-gray-900 p-6">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-cyan-400">Text reader</h2>
+              <div className="mt-4 rounded-2xl border border-white/5 bg-black/40 p-4">
+                <KhmerWordReader
+                  text={text}
+                  selectedWord={selectedWord}
+                  onSelectWord={setSelectedWord}
+                />
+              </div>
+              <div className="mt-3 text-[10px] text-gray-500 uppercase tracking-widest">
+                Click a word to analyze only that word.
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-white/10 bg-gray-900 p-6 text-xs text-gray-400">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-cyan-400">Word analyzer</h3>
+              <div className="mt-4">
+                <KhmerWordAnalyzer word={selectedWord} fontUrl={fontUrl} />
               </div>
             </div>
 
