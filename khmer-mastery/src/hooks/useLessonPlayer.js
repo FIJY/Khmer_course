@@ -107,7 +107,13 @@ export default function useLessonPlayer() {
     setSelectedOption(null);
     setIsFlipped(false);
     if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
-    if (items[step]?.type === 'theory') setCanAdvance(true);
+    const stepType = items[step]?.type;
+    if (stepType === 'theory') {
+      setCanAdvance(true);
+    } else if (stepType && !['quiz', 'vocab_card', 'visual_decoder'].includes(stepType)) {
+      console.warn(`Unknown lesson item type: ${stepType}`);
+      setCanAdvance(true);
+    }
 
     // Останавливаем звук при смене шага
     if (audioRef.current) {
