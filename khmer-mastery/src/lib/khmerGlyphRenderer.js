@@ -229,6 +229,34 @@ async function loadFont(fontUrl, opentype) {
   return fontPromise;
 }
 
+function renderWithOpenType({ text, font, fontSize, colors, padding, categories }) {
+  const scale = fontSize / font.unitsPerEm;
+  const glyphs = font.stringToGlyphs(text);
+
+  let advance = 0;
+  glyphs.forEach((glyph) => {
+    advance += glyph.advanceWidth ?? font.unitsPerEm;
+  });
+
+  const width = padding * 2 + advance * scale + 2;
+  const height = Math.ceil(fontSize * 1.6) + padding * 2;
+  const baseline = padding + fontSize * 1.15;
+
+  let x = padding;
+  let paths = '';
+
+  glyphs.forEach((glyph, index) => {
+    const category = categories[index] ?? 'OTHER';
+    const fill = colors?.[category] ?? colors?.OTHER ?? '#ffffff';
+    const path = glyph.getPath(x, baseline, fontSize);
+    const d = path.toPathData(3);
+    paths += `<path d="${d}" fill="${fill}" />`;
+    x += (glyph.advanceWidth ?? font.unitsPerEm) * scale;
+  });
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${paths}</svg>`;
+}
+
 export async function renderColoredKhmerToSvg({
   text,
   fontUrl,
@@ -259,6 +287,17 @@ export async function renderColoredKhmerToSvg({
   const seriesSets = buildSeriesSets(seriesOverrides);
   const diacriticSets = buildDiacriticSets(diacriticOverrides);
   const categories = classifyText(text, seriesSets, diacriticSets);
+
+  if (!hb) {
+    return renderWithOpenType({
+      text,
+      font,
+      fontSize,
+      colors,
+      padding,
+      categories,
+    });
+  }
 
   const face = hb.createFace(buffer);
   const hbFont = hb.createFont(face);
