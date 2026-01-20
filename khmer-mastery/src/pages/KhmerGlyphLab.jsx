@@ -50,8 +50,8 @@ export default function KhmerGlyphLab() {
           <h1 className="text-3xl font-black">Khmer Glyph Lab</h1>
           <p className="text-gray-400 text-sm max-w-2xl">
             Test Khmer glyph shaping and per-category coloring using HarfBuzz + OpenType outlines.
-            Provide a font URL (local or remote) and optional module URLs if you host harfbuzzjs/opentype
-            yourself. The preview renders glyphs as SVG paths.
+            Provide a font URL (local or remote) and module URLs for harfbuzzjs/opentype. The preview
+            renders glyphs as SVG paths.
           </p>
         </header>
 
@@ -111,7 +111,8 @@ export default function KhmerGlyphLab() {
                 <p className="font-bold text-gray-200">Tips</p>
                 <ul className="mt-2 space-y-1">
                   <li>• Host fonts locally to avoid CORS.</li>
-                  <li>• HarfBuzz module URL must allow dynamic import.</li>
+                  <li>• Put harfbuzzjs.js + opentype.module.js in public/vendor.</li>
+                  <li>• Module URLs must allow dynamic import in the browser.</li>
                   <li>• Provide A/O series overrides in the renderer when ready.</li>
                 </ul>
               </div>
@@ -123,6 +124,7 @@ export default function KhmerGlyphLab() {
                 value={harfbuzzUrl}
                 onChange={(event) => setHarfbuzzUrl(event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-gray-900 p-3 text-sm"
+                placeholder="/vendor/harfbuzzjs.js"
               />
             </label>
 
@@ -132,6 +134,7 @@ export default function KhmerGlyphLab() {
                 value={opentypeUrl}
                 onChange={(event) => setOpentypeUrl(event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-gray-900 p-3 text-sm"
+                placeholder="/vendor/opentype.module.js"
               />
             </label>
           </div>

@@ -90,7 +90,11 @@ export default function KhmerColoredText({
   }, [text, fontUrl, fontSize, colors, seriesOverrides, diacriticOverrides, moduleUrls]);
 
   if (!svgMarkup) {
-    return <span className={className}>{text}</span>;
+    return (
+      <span className={className} style={{ fontSize, lineHeight: 1.1 }}>
+        {text}
+      </span>
+    );
   }
 
   return (

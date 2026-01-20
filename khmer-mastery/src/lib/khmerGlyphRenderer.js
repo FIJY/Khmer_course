@@ -16,8 +16,8 @@ const KHMER_DIACRITICS = [0x17c6, 0x17d3];
 const KHMER_NUMERALS = [0x17e0, 0x17e9];
 
 const DEFAULT_MODULE_URLS = {
-  harfbuzz: 'https://cdn.jsdelivr.net/npm/harfbuzzjs@2.1.0/harfbuzzjs.js',
-  opentype: 'https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.module.js',
+  harfbuzz: '/vendor/harfbuzzjs.js',
+  opentype: '/vendor/opentype.module.js',
 };
 
 let hbPromise = null;
