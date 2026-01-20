@@ -18,7 +18,7 @@ import ReviewPlayer from './pages/ReviewPlayer';
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const showGlyphLab = import.meta.env.DEV;
+  const showGlyphLab = import.meta.env.DEV || import.meta.env.VITE_ENABLE_KHMER_DEBUG === 'true';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
