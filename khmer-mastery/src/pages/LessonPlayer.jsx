@@ -1,6 +1,7 @@
 import React from 'react';
 import { Volume2, ArrowRight, X, CheckCircle2, Trophy, BookOpen, ChevronLeft, Frown } from 'lucide-react';
 import VisualDecoder from '../components/VisualDecoder';
+import KhmerColoredText from '../components/KhmerColoredText';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
@@ -9,6 +10,7 @@ import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
+const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL ?? '';
 
 export default function LessonPlayer() {
   const {
@@ -215,7 +217,12 @@ export default function LessonPlayer() {
               {/* Back side */}
               <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
                 <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
-                <h2 className="text-4xl font-black mb-2">{khmerText}</h2>
+                <KhmerColoredText
+                  text={khmerText}
+                  fontUrl={DEFAULT_KHMER_FONT_URL}
+                  fontSize={72}
+                  className="text-4xl font-black mb-2"
+                />
                 <p className="text-base text-cyan-100 font-semibold tracking-wide mb-4">
                   <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">
                     {t('lesson.pronunciationLabel')}:
