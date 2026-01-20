@@ -3,6 +3,7 @@ import KhmerColoredText from '../components/KhmerColoredText';
 import KhmerWordAnalyzer from '../components/KhmerWordAnalyzer';
 import KhmerWordReader from '../components/KhmerWordReader';
 import { khmerGlyphDefaults } from '../lib/khmerGlyphRenderer';
+import { useFontFace } from '../hooks/useFontFace';
 import { supabase } from '../supabaseClient';
 
 const DEFAULT_TEXT = 'ខ្មែរ';
@@ -10,9 +11,39 @@ const DEFAULT_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
   ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 const AUDIO_BASE_URL = import.meta.env.VITE_AUDIO_BASE_URL ?? '/sounds';
 const KHMER_CHAR_PATTERN = /[\u1780-\u17ff]/;
+const TOKEN_COLORS = {
+  CONSONANT_A: '#ffb020',
+  CONSONANT_O: '#6b5cff',
+  SUBSCRIPT: '#6a7b9c',
+  VOWEL_DEP: '#ff4081',
+  VOWEL_IND: '#ffd54a',
+  DIACRITIC: '#ffffff',
+  NUMERAL: '#38d6d6',
+  PUNCT: '#6a7b9c',
+  OTHER: '#ffffff',
+};
+
+function getCharColor(entry) {
+  const type = entry?.data?.type;
+  const series = entry?.data?.series;
+
+  if (type === 'CONSONANT') {
+    if (series === 1) return TOKEN_COLORS.CONSONANT_A;
+    if (series === 2) return TOKEN_COLORS.CONSONANT_O;
+    return TOKEN_COLORS.CONSONANT_O;
+  }
+  if (type === 'SUBSCRIPT') return TOKEN_COLORS.SUBSCRIPT;
+  if (type === 'VOWEL_DEP') return TOKEN_COLORS.VOWEL_DEP;
+  if (type === 'VOWEL_IND') return TOKEN_COLORS.VOWEL_IND;
+  if (type === 'DIACRITIC') return TOKEN_COLORS.DIACRITIC;
+  if (type === 'NUMERAL') return TOKEN_COLORS.NUMERAL;
+  if (type === 'PUNCT') return TOKEN_COLORS.PUNCT;
+  return TOKEN_COLORS.OTHER;
+}
 
 export default function KhmerGlyphLab() {
   const [text, setText] = React.useState(DEFAULT_TEXT);
+  const [selectedWord, setSelectedWord] = React.useState('');
   const [fontUrl, setFontUrl] = React.useState(DEFAULT_FONT_URL);
   const [fontFileName, setFontFileName] = React.useState('');
   const [fontSize, setFontSize] = React.useState(96);
@@ -23,6 +54,7 @@ export default function KhmerGlyphLab() {
   const [alphabetStatus, setAlphabetStatus] = React.useState({ state: 'idle' });
   const fontObjectUrlRef = React.useRef('');
   const audioRef = React.useRef(null);
+  const fallbackFontFamily = useFontFace(fontUrl);
 
   const moduleUrls = React.useMemo(
     () => ({ harfbuzz: harfbuzzUrl.trim(), opentype: opentypeUrl.trim() }),
@@ -288,6 +320,20 @@ export default function KhmerGlyphLab() {
             <div className="text-xs text-gray-400">
               Base URL: <span className="text-gray-200">{AUDIO_BASE_URL}</span>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/5 bg-black/40 p-4 text-xl leading-relaxed">
+            {analyzedText.map((entry) => (
+              <span
+                key={`${entry.char}-${entry.index}`}
+                style={{
+                  color: entry.isKhmer ? getCharColor(entry) : '#9ca3af',
+                  fontFamily: fallbackFontFamily ? `"${fallbackFontFamily}", sans-serif` : undefined,
+                }}
+              >
+                {entry.char}
+              </span>
+            ))}
           </div>
 
           <div className="mt-4 space-y-2 text-xs text-gray-400">
