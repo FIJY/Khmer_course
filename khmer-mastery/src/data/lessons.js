@@ -5,9 +5,22 @@ export const fetchLessonById = async (id) => {
     .from('lessons')
     .select('*')
     .eq('id', id)
-    .single();
+    .maybeSingle();
   if (error) throw error;
-  return data;
+  if (data) return data;
+
+  try {
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('lessons')
+      .select('*')
+      .eq('lesson_id', id)
+      .maybeSingle();
+    if (fallbackError) throw fallbackError;
+    return fallbackData;
+  } catch (fallbackErr) {
+    console.warn('Lesson lookup by lesson_id failed', fallbackErr);
+    return null;
+  }
 };
 
 export const fetchLessonItemsByLessonId = async (lessonId) => {

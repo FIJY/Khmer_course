@@ -278,6 +278,17 @@ export default function LessonPlayer() {
             <p className="text-base text-gray-300 italic">{current.text}</p>
           </div>
         )}
+
+        {!['visual_decoder', 'vocab_card', 'quiz', 'theory'].includes(type) && (
+          <div className="w-full bg-gray-900 border border-white/10 p-8 rounded-[3.5rem] text-center text-white">
+            <h2 className="text-lg font-black uppercase tracking-widest text-cyan-400 mb-3">
+              {t('errors.lesson')}
+            </h2>
+            <p className="text-sm text-gray-400 font-semibold">
+              {t('empty.lessonContent')}
+            </p>
+          </div>
+        )}
       </main>
 
     </MobileLayout>
