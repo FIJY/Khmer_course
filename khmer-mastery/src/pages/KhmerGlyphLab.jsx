@@ -1,10 +1,12 @@
 import React from 'react';
 import KhmerColoredText from '../components/KhmerColoredText';
 import { khmerGlyphDefaults } from '../lib/khmerGlyphRenderer';
+import { supabase } from '../supabaseClient';
 
 const DEFAULT_TEXT = 'ខ្មែរ';
 const DEFAULT_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
   ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
+const AUDIO_BASE_URL = import.meta.env.VITE_AUDIO_BASE_URL ?? '/sounds';
 
 export default function KhmerGlyphLab() {
   const [text, setText] = React.useState(DEFAULT_TEXT);
@@ -14,7 +16,10 @@ export default function KhmerGlyphLab() {
   const [harfbuzzUrl, setHarfbuzzUrl] = React.useState(khmerGlyphDefaults.DEFAULT_MODULE_URLS.harfbuzz);
   const [opentypeUrl, setOpentypeUrl] = React.useState(khmerGlyphDefaults.DEFAULT_MODULE_URLS.opentype);
   const [renderStatus, setRenderStatus] = React.useState({ state: 'idle' });
+  const [alphabetRows, setAlphabetRows] = React.useState([]);
+  const [alphabetStatus, setAlphabetStatus] = React.useState({ state: 'idle' });
   const fontObjectUrlRef = React.useRef('');
+  const audioRef = React.useRef(null);
 
   const moduleUrls = React.useMemo(
     () => ({ harfbuzz: harfbuzzUrl.trim(), opentype: opentypeUrl.trim() }),
@@ -26,6 +31,32 @@ export default function KhmerGlyphLab() {
       if (fontObjectUrlRef.current) {
         URL.revokeObjectURL(fontObjectUrlRef.current);
       }
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchAlphabet = async () => {
+      setAlphabetStatus({ state: 'loading' });
+      const { data, error } = await supabase
+        .from('alphabet')
+        .select('id,name_en,type,series,frequency_rank,audio_url,description')
+        .order('frequency_rank', { ascending: true });
+
+      if (!isMounted) return;
+      if (error) {
+        setAlphabetStatus({ state: 'error', reason: error.message });
+        setAlphabetRows([]);
+        return;
+      }
+
+      setAlphabetRows(data ?? []);
+      setAlphabetStatus({ state: 'ready' });
+    };
+
+    fetchAlphabet();
+    return () => {
+      isMounted = false;
     };
   }, []);
 
@@ -41,6 +72,23 @@ export default function KhmerGlyphLab() {
     fontObjectUrlRef.current = objectUrl;
     setFontUrl(objectUrl);
     setFontFileName(file.name);
+  };
+
+  const handlePlayAudio = (audioUrl) => {
+    if (!audioUrl) return;
+    const sanitizedBase = AUDIO_BASE_URL.replace(/\/$/, '');
+    const sanitizedFile = audioUrl.replace(/^\//, '');
+    const resolvedUrl = `${sanitizedBase}/${sanitizedFile}`;
+
+    if (!audioRef.current) {
+      audioRef.current = new Audio(resolvedUrl);
+    } else {
+      audioRef.current.pause();
+      audioRef.current.src = resolvedUrl;
+    }
+
+    audioRef.current.currentTime = 0;
+    audioRef.current.play();
   };
 
   return (
@@ -188,6 +236,81 @@ export default function KhmerGlyphLab() {
                 in the browser.
               </p>
             </div>
+          </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-white/10 bg-gray-900 p-6">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-widest text-cyan-400">Alphabet audio</h2>
+              <p className="text-xs text-gray-400">
+                Click any row to hear the sound from <code className="text-gray-200">audio_url</code>.
+              </p>
+            </div>
+            <div className="text-xs text-gray-400">
+              Base URL: <span className="text-gray-200">{AUDIO_BASE_URL}</span>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2 text-xs text-gray-400">
+            <div>
+              <span className="font-bold text-gray-200">Status:</span>{' '}
+              <span className="text-gray-300">{alphabetStatus.state}</span>
+            </div>
+            {alphabetStatus.reason && (
+              <div>
+                <span className="font-bold text-gray-200">Reason:</span>{' '}
+                <span className="text-gray-300 break-all">{alphabetStatus.reason}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full text-left text-xs text-gray-300">
+              <thead className="text-[11px] uppercase tracking-widest text-gray-500">
+                <tr>
+                  <th className="py-2 pr-4">Glyph</th>
+                  <th className="py-2 pr-4">Name</th>
+                  <th className="py-2 pr-4">Type</th>
+                  <th className="py-2 pr-4">Series</th>
+                  <th className="py-2 pr-4">Rank</th>
+                  <th className="py-2 pr-4">Audio</th>
+                  <th className="py-2 pr-4">Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alphabetRows.map((row) => (
+                  <tr key={row.id} className="border-t border-white/5">
+                    <td className="py-3 pr-4 text-lg text-white">{row.id}</td>
+                    <td className="py-3 pr-4">{row.name_en ?? '-'}</td>
+                    <td className="py-3 pr-4">{row.type ?? '-'}</td>
+                    <td className="py-3 pr-4">{row.series ?? '-'}</td>
+                    <td className="py-3 pr-4">{row.frequency_rank ?? '-'}</td>
+                    <td className="py-3 pr-4">
+                      {row.audio_url ? (
+                        <button
+                          type="button"
+                          onClick={() => handlePlayAudio(row.audio_url)}
+                          className="rounded-full bg-cyan-500 px-3 py-1 text-[11px] font-bold uppercase text-black hover:bg-cyan-400"
+                        >
+                          Play
+                        </button>
+                      ) : (
+                        <span className="text-gray-500">No audio</span>
+                      )}
+                    </td>
+                    <td className="py-3 pr-4 text-gray-400">{row.description ?? '-'}</td>
+                  </tr>
+                ))}
+                {alphabetRows.length === 0 && alphabetStatus.state === 'ready' && (
+                  <tr>
+                    <td colSpan={7} className="py-6 text-center text-gray-500">
+                      No alphabet rows found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       </div>
