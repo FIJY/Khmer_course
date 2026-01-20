@@ -1,5 +1,6 @@
 import React from 'react';
 import { renderColoredKhmerToSvg, khmerGlyphDefaults } from '../lib/khmerGlyphRenderer';
+import { useFontFace } from '../hooks/useFontFace';
 
 const KHMER_PATTERN = /[\u1780-\u17ff]/;
 
@@ -45,7 +46,7 @@ export default function KhmerColoredText({
   onStatus,
 }) {
   const [svgMarkup, setSvgMarkup] = React.useState('');
-  const [fallbackFontFamily, setFallbackFontFamily] = React.useState('');
+  const fallbackFontFamily = useFontFace(fontUrl);
   const cacheRef = React.useRef(new Map());
 
   React.useEffect(() => {
