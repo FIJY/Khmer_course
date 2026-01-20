@@ -18,6 +18,21 @@ const DEFAULT_COLORS = {
   OTHER: '#ffffff',
 };
 
+const fontFaceCache = new Map();
+
+function hashString(value) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function getFontFamilyName(url) {
+  return `KhmerGlyphFallback-${hashString(url)}`;
+}
+
 export default function KhmerColoredText({
   text,
   fontUrl = '',
@@ -30,7 +45,45 @@ export default function KhmerColoredText({
   onStatus,
 }) {
   const [svgMarkup, setSvgMarkup] = React.useState('');
+  const [fallbackFontFamily, setFallbackFontFamily] = React.useState('');
   const cacheRef = React.useRef(new Map());
+
+  React.useEffect(() => {
+    let active = true;
+
+    if (!fontUrl || typeof FontFace === 'undefined' || typeof document === 'undefined') {
+      setFallbackFontFamily('');
+      return () => {
+        active = false;
+      };
+    }
+
+    const family = getFontFamilyName(fontUrl);
+    const cached = fontFaceCache.get(fontUrl);
+    const loadPromise = cached?.promise ?? (() => {
+      const fontFace = new FontFace(family, `url("${fontUrl}")`);
+      const promise = fontFace.load().then((loadedFace) => {
+        document.fonts.add(loadedFace);
+        return loadedFace;
+      });
+      fontFaceCache.set(fontUrl, { family, promise });
+      return promise;
+    })();
+
+    loadPromise
+      .then(() => {
+        if (!active) return;
+        setFallbackFontFamily(family);
+      })
+      .catch(() => {
+        if (!active) return;
+        setFallbackFontFamily('');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [fontUrl]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -91,7 +144,14 @@ export default function KhmerColoredText({
 
   if (!svgMarkup) {
     return (
-      <span className={className} style={{ fontSize, lineHeight: 1.1 }}>
+      <span
+        className={className}
+        style={{
+          fontSize,
+          lineHeight: 1.1,
+          fontFamily: fallbackFontFamily ? `"${fallbackFontFamily}", sans-serif` : undefined,
+        }}
+      >
         {text}
       </span>
     );
