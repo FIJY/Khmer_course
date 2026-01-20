@@ -24,7 +24,7 @@ const COURSE_LEVELS = [
   {
     title: "VISUAL DECODER: READING & WRITING",
     description: "Crack the code. Learn the Khmer script from scratch.",
-    range: [100, 120], // <--- ВАЖНО: Проверь эти ID в своей базе!
+    range: [10000, 12000], // <--- ВАЖНО: Проверь эти ID в своей базе!
     color: "text-amber-400", // Сделал желтым/золотым, чтобы выделялся
     bg: "from-amber-500/10 to-transparent",
     border: "border-amber-500/20"
@@ -174,7 +174,7 @@ export default function CourseMap() {
                         <div className="flex justify-between items-start mb-6">
                           <div className="max-w-[70%] text-white">
                             <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1 block">
-                              Chapter {chapter.id}
+                              Chapter {chapter.displayId ?? chapter.id}
                             </span>
                             <h3 className={`text-xl font-black uppercase tracking-tight leading-none mb-2 ${isChapterFullDone ? 'text-emerald-400' : 'text-white'}`}>
                               {chapter.title}
