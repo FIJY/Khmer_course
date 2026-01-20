@@ -278,6 +278,10 @@ export async function renderColoredKhmerToSvg({
     hb = null;
   }
 
+  if (!hb) {
+    return '';
+  }
+
   const { buffer, font } = await loadFont(fontUrl, opentype);
   const indexMap = buildUtf8IndexMap(text);
   const seriesSets = buildSeriesSets(seriesOverrides);
