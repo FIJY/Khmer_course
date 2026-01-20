@@ -141,7 +141,20 @@ function applySeriesSwitches(text, categories, clusters, byteToCp, byteLength, d
 
 async function loadHarfbuzz(moduleUrl) {
   if (!hbPromise) {
-    hbPromise = import(/* @vite-ignore */ moduleUrl).then((mod) => (mod.default ?? mod)());
+    hbPromise = import(/* @vite-ignore */ moduleUrl).then((mod) => {
+      const factory =
+        mod?.default
+        ?? mod?.hbjs
+        ?? mod
+        ?? globalThis.hbjs
+        ?? globalThis.hbjs?.default;
+
+      if (typeof factory !== 'function') {
+        throw new Error('HarfBuzz module did not expose a factory function.');
+      }
+
+      return factory();
+    });
   }
   return hbPromise;
 }
