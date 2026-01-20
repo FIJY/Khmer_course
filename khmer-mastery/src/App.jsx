@@ -9,6 +9,7 @@ import LessonPreview from './pages/LessonPreview';
 import LessonPlayer from './pages/LessonPlayer';
 import Vocab from './pages/Vocab';
 import Profile from './pages/Profile';
+import KhmerGlyphLab from './pages/KhmerGlyphLab';
 
 // 👇 ВОТ ЭТИ ДВА ФАЙЛА МЫ ДОБАВИЛИ, ПРОВЕРЬ ЧТО ОНИ ТУТ ЕСТЬ
 import ReviewHub from './pages/ReviewHub';
@@ -17,6 +18,7 @@ import ReviewPlayer from './pages/ReviewPlayer';
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const showGlyphLab = import.meta.env.DEV || import.meta.env.VITE_ENABLE_KHMER_DEBUG === 'true';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -51,6 +53,10 @@ export default function App() {
         {/* 👇 НОВЫЕ МАРШРУТЫ ДЛЯ REVIEW (БЕЗ НИХ БУДЕТ ЧЕРНЫЙ ЭКРАН) */}
         <Route path="/review" element={session ? <ReviewHub /> : <Navigate to="/login" />} />
         <Route path="/review/session" element={session ? <ReviewPlayer /> : <Navigate to="/login" />} />
+
+        {showGlyphLab && (
+          <Route path="/debug/khmer-glyphs" element={<KhmerGlyphLab />} />
+        )}
 
         {/* Если адрес не найден — отправляем на карту */}
         <Route path="*" element={<Navigate to={session ? "/map" : "/login"} />} />
