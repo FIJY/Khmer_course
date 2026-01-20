@@ -241,10 +241,18 @@ export async function renderColoredKhmerToSvg({
 }) {
   if (!text || !fontUrl) return '';
 
-  const [hb, opentype] = await Promise.all([
-    loadHarfbuzz(moduleUrls.harfbuzz),
-    loadOpenType(moduleUrls.opentype),
-  ]);
+  const opentype = await loadOpenType(moduleUrls.opentype);
+  let hb = null;
+
+  try {
+    hb = await loadHarfbuzz(moduleUrls.harfbuzz);
+  } catch (error) {
+    hb = null;
+  }
+
+  if (!hb) {
+    return '';
+  }
 
   const { buffer, font } = await loadFont(fontUrl, opentype);
   const indexMap = buildUtf8IndexMap(text);
