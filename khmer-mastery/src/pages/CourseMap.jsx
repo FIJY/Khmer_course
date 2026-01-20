@@ -24,7 +24,7 @@ const COURSE_LEVELS = [
   {
     title: "VISUAL DECODER: READING & WRITING",
     description: "Crack the code. Learn the Khmer script from scratch.",
-    range: [100, 120], // <--- ВАЖНО: Проверь эти ID в своей базе!
+    range: [10000, 10099], // <--- ВАЖНО: Проверь эти ID в своей базе!
     color: "text-amber-400", // Сделал желтым/золотым, чтобы выделялся
     bg: "from-amber-500/10 to-transparent",
     border: "border-amber-500/20"

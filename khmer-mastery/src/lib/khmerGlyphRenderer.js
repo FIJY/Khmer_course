@@ -161,6 +161,24 @@ function loadScript(url) {
   return promise;
 }
 
+function shouldLoadViaScript(moduleUrl) {
+  return moduleUrl.startsWith('/vendor/');
+}
+
+async function importModuleFromUrl(moduleUrl) {
+  const response = await fetch(moduleUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch module: ${response.status}`);
+  }
+  const blob = await response.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  try {
+    return await import(/* @vite-ignore */ blobUrl);
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
+
 function getHbFactory(mod) {
   const candidates = [
     mod?.Module,
@@ -180,6 +198,15 @@ function getHbFactory(mod) {
 }
 
 async function loadHarfbuzz(moduleUrl) {
+  if (shouldLoadViaScript(moduleUrl)) {
+    await loadScript(moduleUrl);
+    const factory = getHbFactory();
+    if (typeof factory !== 'function') {
+      throw new Error('HarfBuzz module did not expose a factory function.');
+    }
+    return factory();
+  }
+
   if (!hbPromise) {
     hbPromise = import(/* @vite-ignore */ moduleUrl)
       .then((mod) => {
@@ -202,6 +229,17 @@ async function loadHarfbuzz(moduleUrl) {
 }
 
 async function loadOpenType(moduleUrl) {
+  if (shouldLoadViaScript(moduleUrl)) {
+    try {
+      const module = await importModuleFromUrl(moduleUrl);
+      return module.default ?? module;
+    } catch (error) {
+      await loadScript(moduleUrl);
+      if (globalThis.opentype) return globalThis.opentype;
+      throw error;
+    }
+  }
+
   try {
     const module = await import(/* @vite-ignore */ moduleUrl);
     return module.default ?? module;
@@ -276,10 +314,6 @@ export async function renderColoredKhmerToSvg({
     hb = await loadHarfbuzz(moduleUrls.harfbuzz);
   } catch (error) {
     hb = null;
-  }
-
-  if (!hb) {
-    return '';
   }
 
   const { buffer, font } = await loadFont(fontUrl, opentype);

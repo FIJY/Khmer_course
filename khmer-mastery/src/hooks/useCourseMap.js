@@ -14,6 +14,23 @@ const buildChaptersMap = (allLessons) => {
   });
 
   allLessons.filter(l => l.id >= 100).forEach(l => {
+    if (l.id >= 10000) {
+      const chapterId = Math.floor(l.id / 10000) * 10000;
+      if (!chaptersMap[chapterId]) {
+        chaptersMap[chapterId] = {
+          id: chapterId,
+          title: 'Alphabet',
+          description: 'Alphabet focus lessons.',
+          subLessons: []
+        };
+      }
+      chaptersMap[chapterId].subLessons.push({
+        id: l.id,
+        title: l.title || `Alphabet ${l.id}`
+      });
+      return;
+    }
+
     const chapterId = Math.floor(l.id / 100);
     if (!chaptersMap[chapterId]) {
       chaptersMap[chapterId] = {
