@@ -1,0 +1,469 @@
+{
+  "chapter_id": 10000,
+  "title": "READING BOOTCAMP: THE CODEBREAKER",
+  "lessons": [
+    {
+      "lesson_id": 10100,
+      "title": "Unit R1: THE FOUNDATION (Ka-Group)",
+      "desc": "The Throat Sounds. The base of the pyramid.",
+      "module_id": 10000,
+      "order_index": 0,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "THEORY: THE MATRIX (Gagaga)",
+            "text": "Different sounds start here. 'K' is the master key. Low sounds vs High sounds. \n🔴 RED Team (High/A-series): Light, airy voice.\n🔵 BLUE Team (Low/O-series): Deep, chest voice."
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "THE HEROES (K-GROUP)",
+            "text": "Meet the characters for this group."
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ក",
+            "name": "Ka",
+            "group": "high",
+            "hook": "Chicken head (Ko). Beak points right.",
+            "audio": "ka.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ខ",
+            "name": "Kha",
+            "group": "high",
+            "hook": "Spiral / Egg. Sounds like 'Kh' (air).",
+            "audio": "kha.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "គ",
+            "name": "Ko",
+            "group": "low",
+            "hook": "Camel/Ox hump. Deep sound 'Ko'.",
+            "audio": "ko.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ឃ",
+            "name": "Kho",
+            "group": "low",
+            "hook": "Big guy, wide stance. Deep 'Kho'.",
+            "audio": "kho.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ង",
+            "name": "Ngo",
+            "group": "low",
+            "hook": "Elephant trunk curling up. Nasal 'Ng'.",
+            "audio": "ngo.mp3"
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "THE INVENTORY (RIGHT NOW)",
+            "text": "Words you can read immediately."
+          }
+        },
+        {
+          "type": "word_breakdown",
+          "data": {
+            "word": "កក",
+            "pronunciation": "kok",
+            "translation": "Frozen / Hard",
+            "chars": [
+              "ក",
+              "ក"
+            ]
+          }
+        },
+        {
+          "type": "word_breakdown",
+          "data": {
+            "word": "គ",
+            "pronunciation": "ko",
+            "translation": "Mute / Dumb",
+            "chars": [
+              "គ"
+            ]
+          }
+        },
+        {
+          "type": "word_breakdown",
+          "data": {
+            "word": "ងា",
+            "pronunciation": "ngea",
+            "translation": "Easy (slang)",
+            "chars": [
+              "ង",
+              "ា"
+            ]
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Which letter is the 'Chicken'?",
+            "options": [
+              "ក",
+              "គ",
+              "ខ",
+              "ង"
+            ],
+            "correct_answer": "ក",
+            "explanation": "Ka looks like a chicken head.",
+            "pronunciation_map": {}
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "REAL WORLD WIN",
+            "text": "You can now read the start of 'Cambodia' (Kampuchea) -> ក (Ka)!",
+            "image": "sign_kampuchea.jpg"
+          }
+        }
+      ]
+    },
+    {
+      "lesson_id": 10200,
+      "title": "Unit R2: THE HAIR CLUB (Ch-Group)",
+      "desc": "The Palatals. Teeth and air.",
+      "module_id": 10000,
+      "order_index": 1,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "THEORY: THE HAIR CHECK",
+            "text": "These sounds push air through your teeth. 'Cha' vs 'Chha'. \nImagine checking your hair in the mirror."
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "THE HEROES (CH-GROUP)",
+            "text": "Meet the characters."
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ច",
+            "name": "Cha",
+            "group": "high",
+            "hook": "A Plate or Digging tool.",
+            "audio": "cha.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ឆ",
+            "name": "Chha",
+            "group": "high",
+            "hook": "Cha under an UMBRELLA. The umbrella adds breath (H).",
+            "audio": "chha.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ជ",
+            "name": "Cho",
+            "group": "low",
+            "hook": "Sapling tree bending left.",
+            "audio": "cho.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ឈ",
+            "name": "Chho",
+            "group": "low",
+            "hook": "Two trees (Forest). Line crosses the trunk.",
+            "audio": "chho.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ញ",
+            "name": "Nho",
+            "group": "low",
+            "hook": "Fangs / Vampire teeth hanging down.",
+            "audio": "nho.mp3"
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "THE INVENTORY (CAN READ)",
+            "text": "Words you can read right now."
+          }
+        },
+        {
+          "type": "word_breakdown",
+          "data": {
+            "word": "ឆា",
+            "pronunciation": "chha",
+            "translation": "To Fry (Fried Rice)",
+            "chars": [
+              "ឆ",
+              "ា"
+            ]
+          }
+        },
+        {
+          "type": "word_breakdown",
+          "data": {
+            "word": "ជា",
+            "pronunciation": "jea",
+            "translation": "To be / Is / Heal",
+            "chars": [
+              "ជ",
+              "ា"
+            ]
+          }
+        },
+        {
+          "type": "word_breakdown",
+          "data": {
+            "word": "ញុំា",
+            "pronunciation": "nham",
+            "translation": "To Eat",
+            "chars": [
+              "ញ",
+              "ុំ",
+              "ា"
+            ]
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "REAL WORLD WIN",
+            "text": "Look for ឆា on menus. Baay-Chha = Fried Rice!",
+            "image": "menu_baay_chha.jpg"
+          }
+        }
+      ]
+    },
+    {
+      "lesson_id": 10300,
+      "title": "Unit R3: THE TRAP (Tickling T-Group)",
+      "desc": "The Dentals. Sounds that look alike.",
+      "module_id": 10000,
+      "order_index": 2,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "THEORY: KANGAROO JUMP",
+            "text": "Warning! These letters look jumpy. Da, Ta, Tha. \nFocus on the 'Hair' (the line above) and the 'Feet'."
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "THE HEROES (D/T GROUP)",
+            "text": "Watch out for similarities."
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ដ",
+            "name": "Da",
+            "group": "high",
+            "hook": "Looks like a Bird on a nest.",
+            "audio": "da.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ឋ",
+            "name": "Tha",
+            "group": "high",
+            "hook": "A pedestal or base.",
+            "audio": "tha.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ឌ",
+            "name": "Do",
+            "group": "low",
+            "hook": "Fat belly D.",
+            "audio": "do.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ឍ",
+            "name": "Tho",
+            "group": "low",
+            "hook": "Jumping down.",
+            "audio": "tho.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ណ",
+            "name": "No",
+            "group": "high",
+            "hook": "Looks like a Knot. High class N.",
+            "audio": "no_high.mp3"
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "THE INVENTORY (HARD MODE)",
+            "text": "Advanced words."
+          }
+        },
+        {
+          "type": "word_breakdown",
+          "data": {
+            "word": "ដាក់",
+            "pronunciation": "dak",
+            "translation": "To Put",
+            "chars": [
+              "ដ",
+              "ា",
+              "ក",
+              "់"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "lesson_id": 10400,
+      "title": "Unit R4: THE WRAPPERS (O-Group/U-Group)",
+      "desc": "The Labials. Ba, Pa, Pha.",
+      "module_id": 10000,
+      "order_index": 3,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "THEORY: FISH MOUTH",
+            "text": "Use your lips. Ba, Pa, Pha."
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "THE HEROES (P/B GROUP)",
+            "text": "The Lip sounds."
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ប",
+            "name": "Ba",
+            "group": "high",
+            "hook": "The Bucket (U-shape).",
+            "audio": "ba.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ផ",
+            "name": "Pha",
+            "group": "high",
+            "hook": "Bucket with a LID (hair).",
+            "audio": "pha.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ព",
+            "name": "Po",
+            "group": "low",
+            "hook": "Like a W (McDonalds).",
+            "audio": "po.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ភ",
+            "name": "Pho",
+            "group": "low",
+            "hook": "W with a Lid/Hat.",
+            "audio": "pho.mp3"
+          }
+        },
+        {
+          "type": "learn_char",
+          "data": {
+            "char": "ម",
+            "name": "Mo",
+            "group": "low",
+            "hook": "Looking like a Mouse/Mouth.",
+            "audio": "mo.mp3"
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "THE INVENTORY (WRAP AROUND)",
+            "text": "Reading practice."
+          }
+        },
+        {
+          "type": "word_breakdown",
+          "data": {
+            "word": "បា",
+            "pronunciation": "baa",
+            "translation": "Father (formal)",
+            "chars": [
+              "ប",
+              "ា"
+            ]
+          }
+        },
+        {
+          "type": "word_breakdown",
+          "data": {
+            "word": "ភាសា",
+            "pronunciation": "pheasa",
+            "translation": "Language",
+            "chars": [
+              "ភ",
+              "ា",
+              "ស",
+              "ា"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

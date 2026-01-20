@@ -1,0 +1,851 @@
+{
+  "chapter_id": 2,
+  "title": "I Want... (Basic Needs)",
+  "lessons": [
+    {
+      "lesson_id": 201,
+      "title": "Expressing Desire (Jong)",
+      "desc": "Learn how to say what you want using the magic word 'Jong'.",
+      "module_id": 2,
+      "order_index": 0,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "The Formula of Desire",
+            "text": "In Khmer, 'to want' is simply 'Jong'. There are no conjugations. The formula is strict but simple: Who + Wants + What.\n\nExample: Knyom (I) + Jong (Want) + Kaa-fe (Coffee).\n\nTip: Be direct. You don't need extra polite words just yet. It is not rude, it is clear.",
+            "sublesson_title": "Saying 'I want'"
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "To Want",
+            "back": "ចង់",
+            "pronunciation": "jong",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "I want...",
+            "back": "ខ្ញុំចង់",
+            "pronunciation": "knyom-jong",
+            "item_type": "phrase",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "This",
+            "back": "នេះ",
+            "pronunciation": "nih",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "That",
+            "back": "នោះ",
+            "pronunciation": "nuh",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Coffee",
+            "back": "កាហ្វេ",
+            "pronunciation": "kaa-fe",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Water",
+            "back": "ទឹក",
+            "pronunciation": "teuk",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Beer",
+            "back": "ស្រាបៀរ",
+            "pronunciation": "sra-bier",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "What? (Formal)",
+            "back": "អ្វី",
+            "pronunciation": "a-vey",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'I want coffee'",
+            "options": [
+              "ខ្ញុំចង់កាហ្វេ",
+              "ខ្ញុំចង់ទឹក",
+              "ខ្ញុំមានកាហ្វេ",
+              "សុំកាហ្វេ"
+            ],
+            "correct_answer": "ខ្ញុំចង់កាហ្វេ",
+            "explanation": "Knyom (I) + Jong (Want) + Kaa-fe (Coffee).",
+            "pronunciation_map": {
+              "ខ្ញុំចង់កាហ្វេ": "knyom-jong-kaa-fe",
+              "ខ្ញុំចង់ទឹក": "knyom-jong-teuk",
+              "ខ្ញុំមានកាហ្វេ": "knyom-mean-kaa-fe",
+              "សុំកាហ្វេ": "som-kaa-fe"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "What is the word for 'Water'?",
+            "options": [
+              "ទឹក",
+              "ស្រាបៀរ",
+              "កាហ្វេ",
+              "អ្វី"
+            ],
+            "correct_answer": "ទឹក",
+            "explanation": "'Teuk' is water.",
+            "pronunciation_map": {
+              "ទឹក": "teuk",
+              "ស្រាបៀរ": "sra-bier",
+              "កាហ្វេ": "kaa-fe",
+              "អ្វី": "a-vey"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'That'",
+            "options": [
+              "នោះ",
+              "នេះ",
+              "អ្វី",
+              "ចង់"
+            ],
+            "correct_answer": "នោះ",
+            "explanation": "'Nuh' is used for things far away (That). 'Nih' is for things close (This).",
+            "pronunciation_map": {
+              "នោះ": "nuh",
+              "នេះ": "nih",
+              "អ្វី": "a-vey",
+              "ចង់": "jong"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "How do you say 'Beer'?",
+            "options": [
+              "ស្រាបៀរ",
+              "ទឹក",
+              "កាហ្វេ",
+              "លុយ"
+            ],
+            "correct_answer": "ស្រាបៀរ",
+            "explanation": "'Sra-bier' sounds very similar to the English word.",
+            "pronunciation_map": {
+              "ស្រាបៀរ": "sra-bier",
+              "ទឹក": "teuk",
+              "កាហ្វេ": "kaa-fe",
+              "លុយ": "luy"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'What?' (Formal)",
+            "options": [
+              "អ្វី",
+              "នេះ",
+              "នោះ",
+              "ទឹក"
+            ],
+            "correct_answer": "អ្វី",
+            "explanation": "'A-vey' is the formal word for 'What'.",
+            "pronunciation_map": {
+              "អ្វី": "a-vey",
+              "នេះ": "nih",
+              "នោះ": "nuh",
+              "ទឹក": "teuk"
+            },
+            "audio_map": {}
+          }
+        }
+      ]
+    },
+    {
+      "lesson_id": 202,
+      "title": "Have / Don't Have (Mean)",
+      "desc": "Asking for availability and stating facts of existence.",
+      "module_id": 2,
+      "order_index": 1,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "Existence and Negation",
+            "text": "'Mean' (មាន) serves two purposes: 'To Have' (Possession) and 'There is' (Existence).\n\nTo say NO, we make a sandwich: Ot ... Te.\n'Mean' -> 'Ot mean' (Don't have).\n'Luy' (Money) -> 'Ot luy' (No money).",
+            "sublesson_title": "Mean vs Ot-Mean"
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "To Have / There is",
+            "back": "មាន",
+            "pronunciation": "mean",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "To Not Have",
+            "back": "អត់មាន",
+            "pronunciation": "ot-mean",
+            "item_type": "phrase",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Money",
+            "back": "លុយ",
+            "pronunciation": "luy",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Time",
+            "back": "ពេល",
+            "pronunciation": "peel",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Internet",
+            "back": "អ៊ីនធឺណិត",
+            "pronunciation": "in-təə-net",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "SIM Card",
+            "back": "ស៊ីមកាត",
+            "pronunciation": "sim-kaat",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "A lot / Much",
+            "back": "ច្រើន",
+            "pronunciation": "chraen",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "A little",
+            "back": "បន្តិច",
+            "pronunciation": "ban-tech",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'Don't have'",
+            "options": [
+              "អត់មាន",
+              "មាន",
+              "ចង់",
+              "អត់"
+            ],
+            "correct_answer": "អត់មាន",
+            "explanation": "Ot (No) + Mean (Have).",
+            "pronunciation_map": {
+              "អត់មាន": "ot-mean",
+              "មាន": "mean",
+              "ចង់": "jong",
+              "អត់": "ot"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "How do you say 'Money'?",
+            "options": [
+              "លុយ",
+              "ពេល",
+              "កាហ្វេ",
+              "ស៊ីមកាត"
+            ],
+            "correct_answer": "លុយ",
+            "explanation": "'Luy' means money.",
+            "pronunciation_map": {
+              "លុយ": "luy",
+              "ពេល": "peel",
+              "កាហ្វេ": "kaa-fe",
+              "ស៊ីមកាត": "sim-kaat"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'Do you have internet?'",
+            "options": [
+              "មានអ៊ីនធឺណិតទេ?",
+              "ចង់អ៊ីនធឺណិត?",
+              "អត់អ៊ីនធឺណិត",
+              "អ៊ីនធឺណិតអត់"
+            ],
+            "correct_answer": "មានអ៊ីនធឺណិតទេ?",
+            "explanation": "Mean (Have) + Internet + Te (Question particle)?",
+            "pronunciation_map": {
+              "មានអ៊ីនធឺណិតទេ?": "mean-in-təə-net-te",
+              "ចង់អ៊ីនធឺណិត?": "jong-in-təə-net",
+              "អត់អ៊ីនធឺណិត": "ot-in-təə-net",
+              "អ៊ីនធឺណិតអត់": "in-təə-net-ot"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Opposite of 'A lot' (Chraen)",
+            "options": [
+              "បន្តិច",
+              "លុយ",
+              "ធំ",
+              "ល្អ"
+            ],
+            "correct_answer": "បន្តិច",
+            "explanation": "'Ban-tech' means a little bit.",
+            "pronunciation_map": {
+              "បន្តិច": "ban-tech",
+              "លុយ": "luy",
+              "ធំ": "thom",
+              "ល្អ": "l-or"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'I have time'",
+            "options": [
+              "ខ្ញុំមានពេល",
+              "ខ្ញុំអត់ពេល",
+              "ខ្ញុំចង់ពេល",
+              "ខ្ញុំពេល"
+            ],
+            "correct_answer": "ខ្ញុំមានពេល",
+            "explanation": "Knyom (I) + Mean (Have) + Peel (Time).",
+            "pronunciation_map": {
+              "ខ្ញុំមានពេល": "knyom-mean-peel",
+              "ខ្ញុំអត់ពេល": "knyom-ot-peel",
+              "ខ្ញុំចង់ពេល": "knyom-jong-peel",
+              "ខ្ញុំពេល": "knyom-peel"
+            },
+            "audio_map": {}
+          }
+        }
+      ]
+    },
+    {
+      "lesson_id": 203,
+      "title": "Like & Need (Refining Needs)",
+      "desc": "Moving beyond basic wants to 'Like', 'Need', and 'Must'.",
+      "module_id": 2,
+      "order_index": 2,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "Emotional Nuance",
+            "text": "1. 'Joul-jet' (Literally: Enter Heart) means To Like or To Love (a thing).\n2. 'Trov-kaa' means To Need (Necessary). \n3. 'Trov' by itself means 'Must' or 'Correct'.\n\nUse 'Jong' for whims, 'Trov-kaa' for necessities (like a password or medicine).",
+            "sublesson_title": "Joul-jet vs Trov-kaa"
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "To Like / Love (Enter Heart)",
+            "back": "ចូលចិត្ត",
+            "pronunciation": "joul-jet",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "To Need",
+            "back": "ត្រូវការ",
+            "pronunciation": "trov-kaa",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Must / Correct / To Hit",
+            "back": "ត្រូវ",
+            "pronunciation": "trov",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Telephone",
+            "back": "ទូរស័ព្ទ",
+            "pronunciation": "tu-rea-sap",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Password (Secret Number)",
+            "back": "លេខសម្ងាត់",
+            "pronunciation": "lek-som-ngat",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Now",
+            "back": "ឥឡូវ",
+            "pronunciation": "ei-lov",
+            "item_type": "word",
+            "audio": "",
+            "audio_alt": {}
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "កាហ្វេ",
+            "word_pronunciation": "kaa-fe",
+            "target_char": "ា",
+            "char_split": [
+              "ក",
+              "ា",
+              "ហ្វេ"
+            ],
+            "char_position": "middle",
+            "english_translation": "Coffee",
+            "letter_series": 2,
+            "word_audio": "",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'I need a password'",
+            "options": [
+              "ខ្ញុំត្រូវការលេខសម្ងាត់",
+              "ខ្ញុំចង់លេខសម្ងាត់",
+              "ខ្ញុំចូលចិត្តលេខសម្ងាត់",
+              "ខ្ញុំមានលេខសម្ងាត់"
+            ],
+            "correct_answer": "ខ្ញុំត្រូវការលេខសម្ងាត់",
+            "explanation": "'Trov-kaa' implies necessity.",
+            "pronunciation_map": {
+              "ខ្ញុំត្រូវការលេខសម្ងាត់": "knyom-trov-kaa-lek-som-ngat",
+              "ខ្ញុំចង់លេខសម្ងាត់": "knyom-jong-lek-som-ngat",
+              "ខ្ញុំចូលចិត្តលេខសម្ងាត់": "knyom-joul-jet-lek-som-ngat",
+              "ខ្ញុំមានលេខសម្ងាត់": "knyom-mean-lek-som-ngat"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "What does 'Joul-jet' mean?",
+            "options": [
+              "ចូលចិត្ត",
+              "ត្រូវការ",
+              "មាន",
+              "ចង់"
+            ],
+            "correct_answer": "ចូលចិត្ត",
+            "explanation": "Literally 'Enter Heart' (Like/Love).",
+            "pronunciation_map": {
+              "ចូលចិត្ត": "joul-jet",
+              "ត្រូវការ": "trov-kaa",
+              "មាន": "mean",
+              "ចង់": "jong"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'Telephone'",
+            "options": [
+              "ទូរស័ព្ទ",
+              "លេខសម្ងាត់",
+              "កាហ្វេ",
+              "អ៊ីនធឺណិត"
+            ],
+            "correct_answer": "ទូរស័ព្ទ",
+            "explanation": "'Tu-rea-sap' is telephone.",
+            "pronunciation_map": {
+              "ទូរស័ព្ទ": "tu-rea-sap",
+              "លេខសម្ងាត់": "lek-som-ngat",
+              "កាហ្វេ": "kaa-fe",
+              "អ៊ីនធឺណិត": "in-təə-net"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'Now'",
+            "options": [
+              "ឥឡូវ",
+              "ពេល",
+              "បន្តិច",
+              "ច្រើន"
+            ],
+            "correct_answer": "ឥឡូវ",
+            "explanation": "'Ei-lov' means Now.",
+            "pronunciation_map": {
+              "ឥឡូវ": "ei-lov",
+              "ពេល": "peel",
+              "បន្តិច": "ban-tech",
+              "ច្រើន": "chraen"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Which word means 'Correct' or 'Must'?",
+            "options": [
+              "ត្រូវ",
+              "ខុស",
+              "ល្អ",
+              "អាក្រក់"
+            ],
+            "correct_answer": "ត្រូវ",
+            "explanation": "'Trov' means correct/must.",
+            "pronunciation_map": {
+              "ត្រូវ": "trov",
+              "ខុស": "khos",
+              "ល្អ": "l-or",
+              "អាក្រក់": "a-krak"
+            },
+            "audio_map": {}
+          }
+        }
+      ]
+    },
+    {
+      "lesson_id": 299,
+      "title": "Final Quiz",
+      "desc": "Chapter Review: Test your ability to express Needs and Wants.",
+      "module_id": 2,
+      "order_index": 3,
+      "content": [
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'I don't have money'",
+            "options": [
+              "ខ្ញុំអត់មានលុយ",
+              "ខ្ញុំមានលុយ",
+              "ខ្ញុំចង់លុយ",
+              "ខ្ញុំត្រូវការលុយ"
+            ],
+            "correct_answer": "ខ្ញុំអត់មានលុយ",
+            "explanation": "Knyom (I) + Ot-mean (Don't have) + Luy (Money).",
+            "pronunciation_map": {
+              "ខ្ញុំអត់មានលុយ": "knyom-ot-mean-luy",
+              "ខ្ញុំមានលុយ": "knyom-mean-luy",
+              "ខ្ញុំចង់លុយ": "knyom-jong-luy",
+              "ខ្ញុំត្រូវការលុយ": "knyom-trov-kaa-luy"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "You are at a cafe. You say:",
+            "options": [
+              "ខ្ញុំចង់កាហ្វេ",
+              "ខ្ញុំចូលចិត្តទឹក",
+              "ខ្ញុំអត់មានកាហ្វេ",
+              "ខ្ញុំត្រូវការលុយ"
+            ],
+            "correct_answer": "ខ្ញុំចង់កាហ្វេ",
+            "explanation": "Knyom jong kaa-fe (I want coffee).",
+            "pronunciation_map": {
+              "ខ្ញុំចង់កាហ្វេ": "knyom-jong-kaa-fe",
+              "ខ្ញុំចូលចិត្តទឹក": "knyom-joul-jet-teuk",
+              "ខ្ញុំអត់មានកាហ្វេ": "knyom-ot-mean-kaa-fe",
+              "ខ្ញុំត្រូវការលុយ": "knyom-trov-kaa-luy"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "What is 'Sra-bier'?",
+            "options": [
+              "ស្រាបៀរ",
+              "កាហ្វេ",
+              "ទឹក",
+              "លុយ"
+            ],
+            "correct_answer": "ស្រាបៀរ",
+            "explanation": "Beer.",
+            "pronunciation_map": {
+              "ស្រាបៀរ": "sra-bier",
+              "កាហ្វេ": "kaa-fe",
+              "ទឹក": "teuk",
+              "លុយ": "luy"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'Do you have internet?'",
+            "options": [
+              "មានអ៊ីនធឺណិតទេ?",
+              "ចង់អ៊ីនធឺណិតទេ?",
+              "ត្រូវការអ៊ីនធឺណិតទេ?",
+              "ចូលចិត្តអ៊ីនធឺណិតទេ?"
+            ],
+            "correct_answer": "មានអ៊ីនធឺណិតទេ?",
+            "explanation": "Mean (Have) ... Te (Question)?",
+            "pronunciation_map": {
+              "មានអ៊ីនធឺណិតទេ?": "mean-in-təə-net-te",
+              "ចង់អ៊ីនធឺណិតទេ?": "jong-in-təə-net-te",
+              "ត្រូវការអ៊ីនធឺណិតទេ?": "trov-kaa-in-təə-net-te",
+              "ចូលចិត្តអ៊ីនធឺណិតទេ?": "joul-jet-in-təə-net-te"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'Password'",
+            "options": [
+              "លេខសម្ងាត់",
+              "ទូរស័ព្ទ",
+              "ស៊ីមកាត",
+              "អ៊ីនធឺណិត"
+            ],
+            "correct_answer": "លេខសម្ងាត់",
+            "explanation": "Lek-som-ngat.",
+            "pronunciation_map": {
+              "លេខសម្ងាត់": "lek-som-ngat",
+              "ទូរស័ព្ទ": "tu-rea-sap",
+              "ស៊ីមកាត": "sim-kaat",
+              "អ៊ីនធឺណិត": "in-təə-net"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'I like beer'",
+            "options": [
+              "ខ្ញុំចូលចិត្តស្រាបៀរ",
+              "ខ្ញុំចង់ស្រាបៀរ",
+              "ខ្ញុំមានស្រាបៀរ",
+              "ខ្ញុំត្រូវការស្រាបៀរ"
+            ],
+            "correct_answer": "ខ្ញុំចូលចិត្តស្រាបៀរ",
+            "explanation": "Joul-jet means Like.",
+            "pronunciation_map": {
+              "ខ្ញុំចូលចិត្តស្រាបៀរ": "knyom-joul-jet-sra-bier",
+              "ខ្ញុំចង់ស្រាបៀរ": "knyom-jong-sra-bier",
+              "ខ្ញុំមានស្រាបៀរ": "knyom-mean-sra-bier",
+              "ខ្ញុំត្រូវការស្រាបៀរ": "knyom-trov-kaa-sra-bier"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "What does 'Trov-kaa' mean?",
+            "options": [
+              "ត្រូវការ",
+              "ចង់",
+              "មាន",
+              "ចូលចិត្ត"
+            ],
+            "correct_answer": "ត្រូវការ",
+            "explanation": "To Need.",
+            "pronunciation_map": {
+              "ត្រូវការ": "trov-kaa",
+              "ចង់": "jong",
+              "មាន": "mean",
+              "ចូលចិត្ត": "joul-jet"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'A little bit'",
+            "options": [
+              "បន្តិច",
+              "ច្រើន",
+              "ឥឡូវ",
+              "នេះ"
+            ],
+            "correct_answer": "បន្តិច",
+            "explanation": "Ban-tech.",
+            "pronunciation_map": {
+              "បន្តិច": "ban-tech",
+              "ច្រើន": "chraen",
+              "ឥឡូវ": "ei-lov",
+              "នេះ": "nih"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Which phrase means 'I want this'?",
+            "options": [
+              "ខ្ញុំចង់នេះ",
+              "ខ្ញុំចង់នោះ",
+              "ខ្ញុំមាននេះ",
+              "ខ្ញុំត្រូវការនេះ"
+            ],
+            "correct_answer": "ខ្ញុំចង់នេះ",
+            "explanation": "Knyom jong nih.",
+            "pronunciation_map": {
+              "ខ្ញុំចង់នេះ": "knyom-jong-nih",
+              "ខ្ញុំចង់នោះ": "knyom-jong-nuh",
+              "ខ្ញុំមាននេះ": "knyom-mean-nih",
+              "ខ្ញុំត្រូវការនេះ": "knyom-trov-kaa-nih"
+            },
+            "audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'Do you have a SIM card?'",
+            "options": [
+              "មានស៊ីមកាតទេ?",
+              "ចង់ស៊ីមកាតទេ?",
+              "ត្រូវការស៊ីមកាតទេ?",
+              "លក់ស៊ីមកាតទេ?"
+            ],
+            "correct_answer": "មានស៊ីមកាតទេ?",
+            "explanation": "Mean sim-kaat te?",
+            "pronunciation_map": {
+              "មានស៊ីមកាតទេ?": "mean-sim-kaat-te",
+              "ចង់ស៊ីមកាតទេ?": "jong-sim-kaat-te",
+              "ត្រូវការស៊ីមកាតទេ?": "trov-kaa-sim-kaat-te",
+              "លក់ស៊ីមកាតទេ?": "luok-sim-kaat-te"
+            },
+            "audio_map": {}
+          }
+        }
+      ]
+    }
+  ]
+}
