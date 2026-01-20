@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { supabase } from './supabaseClient';
+import { hasSupabaseConfig, supabase } from './supabaseClient';
 
 // --- ИМПОРТ СТРАНИЦ ---
 import Login from './pages/Login';
@@ -21,6 +21,10 @@ export default function App() {
   const showGlyphLab = import.meta.env.DEV || import.meta.env.VITE_ENABLE_KHMER_DEBUG === 'true';
 
   useEffect(() => {
+    if (!hasSupabaseConfig) {
+      setLoading(false);
+      return undefined;
+    }
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);

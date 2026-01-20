@@ -13,6 +13,7 @@ const KHMER_CHAR_PATTERN = /[\u1780-\u17ff]/;
 
 export default function KhmerGlyphLab() {
   const [text, setText] = React.useState(DEFAULT_TEXT);
+  const [selectedWord, setSelectedWord] = React.useState('');
   const [fontUrl, setFontUrl] = React.useState(DEFAULT_FONT_URL);
   const [fontFileName, setFontFileName] = React.useState('');
   const [fontSize, setFontSize] = React.useState(96);
