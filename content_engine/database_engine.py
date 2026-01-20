@@ -182,11 +182,39 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                     "item_type": get_item_type(clean_k, english)
                 }, on_conflict="khmer"))
 
+        # Б2) НОВОЕ: Генерация аудио для Learn Char и Inventory
+        # Если в JSON есть поле audio (например "ka.mp3"), мы генерируем реальный файл и подменяем имя
+        if item['type'] in ['learn_char', 'word_breakdown']:
+            data = item.get('data', {})
+            # Если это буква
+            char_text = data.get('char')
+            if char_text:
+                audio_name = get_safe_audio_name(char_text, f"char_{data.get('name', 'unknown')}")
+                await generate_audio(char_text, audio_name)
+                item['data']['audio'] = audio_name
+
+            # Если это слово (Inventory)
+            word_text = data.get('word')
+            if word_text:
+                audio_name = get_safe_audio_name(word_text, f"word_{data.get('translation', 'unknown')}")
+                await generate_audio(word_text, audio_name)
+                item['data']['audio'] = audio_name
+
+
         # Запись карточки
         db_execute_retry(supabase.table("lesson_items").insert({
             "lesson_id": lesson_id, "type": item['type'],
             "order_index": idx, "data": item['data']
         }))
+
+    # 4. ВАЖНО: Обновляем JSON в таблице lessons, чтобы Fallback тоже имел правильные ссылки на аудио!
+    try:
+        db_execute_retry(supabase.table("lessons").update({
+            "content": content_list  # <-- Тут уже лежат сгенерированные имена аудио
+        }).eq("id", lesson_id))
+        print(f"   💾 Updated lesson content JSON for fallback compatibility.")
+    except Exception as e:
+        print(f"   ⚠️ Could not update lesson content JSON: {e}")
 
     print(f"🎉 Lesson {lesson_id} synced!")
 

@@ -21,10 +21,8 @@ export default function useLessonPlayer() {
   const [error, setError] = useState(null);
   const [lessonId, setLessonId] = useState(id);
   const audioRef = useRef(null);
-  // Реф для хранения таймера, чтобы очищать его при уходе со страницы
   const audioTimeoutRef = useRef(null);
 
-  // Вспомогательная функция для перемешивания
   const shuffleArray = (array) => {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -52,25 +50,42 @@ export default function useLessonPlayer() {
     try {
       setLoading(true);
       setError(null);
+
+      // 1. Загружаем сам урок
       const lesson = await fetchLessonById(id);
       if (!lesson) {
         setError('Lesson not found.');
-        setLessonInfo(null);
-        setItems([]);
         return;
       }
       setLessonInfo(lesson);
       const resolvedLessonId = lesson?.lesson_id ?? lesson?.id ?? id;
       setLessonId(resolvedLessonId);
-      const itemsData = await fetchLessonItemsByLessonId(resolvedLessonId);
 
-      const normalizedItems = (Array.isArray(itemsData) ? itemsData : []).map(item => {
-        const safeData = normalizeItemData(item.data);
+      // 2. Пробуем загрузить элементы из таблицы lesson_items
+      let rawItems = await fetchLessonItemsByLessonId(resolvedLessonId);
 
-        if (item.type !== 'quiz') return { ...item, data: safeData };
+      // 3. ФОЛБЭК: Если таблица lesson_items пуста, ищем контент внутри самого урока (JSON)
+      // ЭТО РЕШИТ ПРОБЛЕМУ "LESSON ERROR"
+      if ((!rawItems || rawItems.length === 0) && lesson.content && Array.isArray(lesson.content)) {
+          console.log("Using fallback content from lesson table");
+          rawItems = lesson.content.map((item, index) => ({
+            ...item,
+            id: index, // генерируем временный ID
+            data: item.data || item // структура может отличаться
+          }));
+      }
 
-        const options = Array.isArray(safeData.options) ? safeData.options.filter(Boolean) : [];
-        const correctAnswer = safeData.correct_answer;
+      // 4. Нормализуем данные
+      const normalizedItems = (Array.isArray(rawItems) ? rawItems : []).map(item => {
+        const itemContent = item.data ? normalizeItemData(item.data) : item;
+        const type = item.type || itemContent.type;
+
+        if (type !== 'quiz') {
+            return { type, data: itemContent };
+        }
+
+        const options = Array.isArray(itemContent.options) ? itemContent.options.filter(Boolean) : [];
+        const correctAnswer = itemContent.correct_answer;
         const mergedOptions = [...options];
 
         if (correctAnswer && !mergedOptions.includes(correctAnswer)) {
@@ -81,9 +96,9 @@ export default function useLessonPlayer() {
         const shuffledOptions = shuffleArray(uniqueOptions);
 
         return {
-          ...item,
+          type,
           data: {
-            ...safeData,
+            ...itemContent,
             options: shuffledOptions
           }
         };
@@ -101,15 +116,18 @@ export default function useLessonPlayer() {
 
   useEffect(() => { fetchLessonData(); }, [fetchLessonData]);
 
-  // Очистка при переключении шагов или размонтировании
   useEffect(() => {
     setCanAdvance(false);
     setSelectedOption(null);
     setIsFlipped(false);
     if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
-    if (items[step]?.type === 'theory') setCanAdvance(true);
 
-    // Останавливаем звук при смене шага
+    // Авто-разблокировка для теории и новых слайдов
+    const currentType = items[step]?.type;
+    if (currentType === 'theory' || currentType === 'learn_char' || currentType === 'word_breakdown') {
+        setCanAdvance(true);
+    }
+
     if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -121,9 +139,7 @@ export default function useLessonPlayer() {
       if (!isFinished || !lessonPassed) return;
       try {
         const user = await fetchCurrentUser();
-        if (user) {
-          await markLessonCompleted(user.id, lessonId);
-        }
+        if (user) await markLessonCompleted(user.id, lessonId);
       } catch (err) {
         console.error('Failed to save lesson completion', err);
       }
@@ -143,73 +159,52 @@ export default function useLessonPlayer() {
 
   const playLocalAudio = (file) => {
     if (!file) return;
-
-    // Если что-то играло — останавливаем
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-
     const audio = new Audio(`/sounds/${file}`);
     audioRef.current = audio;
     audio.play().catch((e) => console.warn("Audio play failed", e));
   };
 
   const handleVocabCardFlip = (audioFile) => {
-    if (!isFlipped) {
-      playLocalAudio(audioFile);
-    }
+    if (!isFlipped) playLocalAudio(audioFile);
     setIsFlipped(!isFlipped);
     setCanAdvance(true);
   };
 
   const handleQuizAnswer = (option, correctAnswer, selectedAudio) => {
-    // Блокируем повторные клики
     if (selectedOption) return;
 
     setSelectedOption(option);
     setCanAdvance(true);
 
-    const correct = option === correctAnswer;
-    if (correct) setScore(s => s + 1);
+    // --- ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ ДЛЯ КВИЗА ---
+    // Превращаем всё в строки и убираем пробелы перед сравнением
+    const cleanOption = String(option).trim();
+    const cleanCorrect = String(correctAnswer).trim();
 
-    // 1. Сначала играем звук реакции (Успех / Ошибка)
+    const correct = cleanOption === cleanCorrect;
+    // -----------------------------------------
+
+    if (correct) setScore(s => s + 1);
     playLocalAudio(correct ? 'success.mp3' : 'error.mp3');
 
-    // 2. Если есть аудио самого слова (оно приходит из LessonPlayer.jsx),
-    // запускаем его через задержку 800мс
     if (selectedAudio) {
         if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
-
         audioTimeoutRef.current = setTimeout(() => {
             playLocalAudio(selectedAudio);
-        }, 800); // <-- ЗАДЕРЖКА ЗДЕСЬ (можно менять)
+        }, 800);
     }
   };
 
   const goBack = () => setStep(s => s - 1);
 
   return {
-    id,
-    navigate,
-    lessonInfo,
-    items,
-    step,
-    score,
-    quizCount,
-    canAdvance,
-    isFlipped,
-    loading,
-    error,
-    selectedOption,
-    isFinished,
-    lessonPassed,
-    handleNext,
-    playLocalAudio,
-    handleVocabCardFlip,
-    handleQuizAnswer,
-    goBack,
-    setCanAdvance,
+    id, navigate, lessonInfo, items, step, score, quizCount, canAdvance, isFlipped,
+    loading, error, selectedOption, isFinished, lessonPassed, handleNext,
+    playLocalAudio, handleVocabCardFlip, handleQuizAnswer, goBack, setCanAdvance,
     refresh: fetchLessonData
   };
 }

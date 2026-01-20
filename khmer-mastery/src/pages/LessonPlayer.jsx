@@ -1,7 +1,7 @@
 import React from 'react';
 import { Volume2, ArrowRight, X, CheckCircle2, Trophy, BookOpen, ChevronLeft, Frown } from 'lucide-react';
 import VisualDecoder from '../components/VisualDecoder';
-import KhmerColoredText from '../components/UI/KhmerColoredText'; // Обновил путь до UI
+import KhmerColoredText from '../components/UI/KhmerColoredText';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
@@ -141,7 +141,6 @@ export default function LessonPlayer() {
 
       <main className="flex-1 flex flex-col items-center justify-center p-6 overflow-y-auto">
 
-        {/* --- ВОТ ЭТОГО БЛОКА НЕ БЫЛО, ПОЭТОМУ БЫЛ ЧЕРНЫЙ ЭКРАН --- */}
         {type === 'learn_char' && (
           <HeroSlide data={current} onPlayAudio={playLocalAudio} />
         )}
@@ -149,7 +148,6 @@ export default function LessonPlayer() {
         {type === 'word_breakdown' && (
           <InventorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
-        {/* --------------------------------------------------------- */}
 
         {type === 'visual_decoder' && <VisualDecoder data={current} onComplete={() => setCanAdvance(true)} hideDefaultButton={true} />}
 
@@ -182,16 +180,29 @@ export default function LessonPlayer() {
              <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
              {quizOptions.map((opt, i) => {
                const { text, pronunciation, audio: optionAudio } = getQuizOption(opt);
+
+               // Получаем "сырое" значение для сравнения (учитываем, что это может быть объект)
+               const rawValue = (typeof opt === 'object' && opt !== null) ? (opt.value || opt.text || opt.answer) : opt;
+
+               // Логика цвета кнопки
+               let buttonClass = 'bg-gray-900 border-white/5 text-white';
+               if (selectedOption === rawValue) {
+                  const isCorrect = String(rawValue).trim() === String(current.correct_answer).trim();
+                  buttonClass = isCorrect
+                    ? 'bg-emerald-600 border-emerald-400 text-white'
+                    : 'bg-red-600 border-red-400 text-white';
+               }
+
                return (
                <button
                  key={i}
                  disabled={!!selectedOption}
-                 onClick={() => handleQuizAnswer(opt, current.correct_answer, optionAudio || current.audio)}
-                 className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${selectedOption === opt ? (opt === current.correct_answer ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-red-600 border-red-400 text-white') : 'bg-gray-900 border-white/5 text-white'}`}
+                 onClick={() => handleQuizAnswer(rawValue, current.correct_answer, optionAudio || current.audio)}
+                 className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${buttonClass}`}
                >
                  <div className="flex flex-col gap-1">
                    <span className="text-2xl font-black">{text}</span>
-                   <span className="text-xl font-semibold text-cyan-100 tracking-wide">{pronunciation || '—'}</span>
+                   {pronunciation && <span className="text-xl font-semibold text-cyan-100 tracking-wide">{pronunciation}</span>}
                  </div>
                </button>
                );
