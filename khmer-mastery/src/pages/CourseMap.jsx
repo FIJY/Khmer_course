@@ -10,37 +10,86 @@ import useCourseMap from '../hooks/useCourseMap';
 import { t } from '../i18n';
 
 const COURSE_LEVELS = [
+  // --- SURVIVAL & BASIC UNDERSTANDING ---
   {
-    title: "LEVEL 1: SURVIVAL MODE",
-    description: "The absolute basics to survive in Cambodia.",
-    range: [1, 4],
+    title: "CONTACT & REACTIONS",
+    description: "I don't get lost, I'm polite, and I am understood.",
+    range: [1, 5],
     color: "text-cyan-400",
     bg: "from-cyan-500/10 to-transparent",
     border: "border-cyan-500/20"
   },
+  // --- SPECIAL MODULE (ALPHABET) ---
+  // Вставлен сюда по твоей просьбе (после 38 урока)
   {
-    title: "LEVEL 2: DAILY LIFE",
-    description: "Handle real-world situations like a local.",
-    range: [5, 9],
-    color: "text-emerald-400",
-    bg: "from-emerald-500/10 to-transparent",
-    border: "border-emerald-500/20"
+    title: "VISUAL DECODER: READING & WRITING",
+    description: "Crack the code. Learn the Khmer script from scratch.",
+    range: [100, 120], // <--- ВАЖНО: Проверь эти ID в своей базе!
+    color: "text-amber-400", // Сделал желтым/золотым, чтобы выделялся
+    bg: "from-amber-500/10 to-transparent",
+    border: "border-amber-500/20"
   },
   {
-    title: "LEVEL 3: GRAMMAR ENGINE",
-    description: "Stop memorizing phrases, start building sentences.",
-    range: [10, 14],
+    title: "DAILY LIFE",
+    description: "I live, buy, get medical help, and move around.",
+    range: [6, 10],
+    color: "text-teal-400",
+    bg: "from-teal-500/10 to-transparent",
+    border: "border-teal-500/20"
+  },
+  {
+    title: "THINKING IN KHMER",
+    description: "I start understanding the meaning, not just the phrases.",
+    range: [11, 18],
+    color: "text-sky-400",
+    bg: "from-sky-500/10 to-transparent",
+    border: "border-sky-500/20"
+  },
+
+  // --- SYSTEMIC UNDERSTANDING ---
+  {
+    title: "GRAMMAR AS A TOOL",
+    description: "Understanding structure: Causes, conditions, and frequency.",
+    range: [19, 23],
+    color: "text-indigo-400",
+    bg: "from-indigo-500/10 to-transparent",
+    border: "border-indigo-500/20"
+  },
+  {
+    title: "EXPANDING THE WORLD",
+    description: "Work, education, technology, and travel.",
+    range: [24, 28],
+    color: "text-violet-400",
+    bg: "from-violet-500/10 to-transparent",
+    border: "border-violet-500/20"
+  },
+  {
+    title: "CONNECTED SPEECH",
+    description: "Logic, opinions, conflicts, and storytelling.",
+    range: [29, 38],
     color: "text-purple-400",
     bg: "from-purple-500/10 to-transparent",
     border: "border-purple-500/20"
   },
+
+
+
+  // --- DEEP UNDERSTANDING (B1-B2) ---
   {
-    title: "LEVEL 4: VISUAL DECODER",
-    description: "Learn to read the Khmer script from scratch.",
-    range: [15, 19],
-    color: "text-orange-400",
-    bg: "from-orange-500/10 to-transparent",
-    border: "border-orange-500/20"
+    title: "LANGUAGE AS THOUGHT",
+    description: "Abstract concepts, idioms, and native speed.",
+    range: [39, 46],
+    color: "text-fuchsia-400",
+    bg: "from-fuchsia-500/10 to-transparent",
+    border: "border-fuchsia-500/20"
+  },
+  {
+    title: "NO TRANSLATION NEEDED",
+    description: "Cultural subtext, humor, irony, and fluency.",
+    range: [47, 60],
+    color: "text-rose-400",
+    bg: "from-rose-500/10 to-transparent",
+    border: "border-rose-500/20"
   }
 ];
 
