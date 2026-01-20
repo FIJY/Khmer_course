@@ -14,7 +14,7 @@ const buildChaptersMap = (allLessons) => {
   });
 
   allLessons.filter(l => l.id >= 100).forEach(l => {
-    const chapterId = Math.floor(l.id / 100);
+    const chapterId = Math.floor(l.id / 100) * 100;
     if (!chaptersMap[chapterId]) {
       chaptersMap[chapterId] = {
         id: chapterId,
