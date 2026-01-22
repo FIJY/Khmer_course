@@ -1,0 +1,294 @@
+{
+  "chapter_id": 10000,
+  "title": "READING BOOTCAMP: THE CODEBREAKER",
+  "lessons": [
+    {
+      "lesson_id": 10101,
+      "title": "Unit R1: THE FOUNDATION",
+      "desc": "Master the Sun/Moon teams, K-Group consonants, and Right-side vowels.",
+      "module_id": 10000,
+      "order_index": 0,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "The Matrix: Sun vs Moon",
+            "text": "The Consonant is the Commander. It changes the vowel sound! ☀️ Sun Team (Smooth head) = Natural Voice. 🌑 Moon Team (Hair/Teeth/Complex) = Deep Voice.",
+            "sublesson_title": "Theory"
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "ក",
+            "target_char": "ក",
+            "hint": "Ka (Smooth Egg)",
+            "char_split": ["ក"],
+            "english_translation": "Consonant K (Sun)",
+            "letter_series": 1,
+            "word_audio": "",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "ខ",
+            "target_char": "ខ",
+            "hint": "Kha (Snail Spiral)",
+            "char_split": ["ខ"],
+            "english_translation": "Consonant Kh (Sun)",
+            "letter_series": 1,
+            "word_audio": "",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "គ",
+            "target_char": "គ",
+            "hint": "Ko (Bird with Teeth)",
+            "char_split": ["គ"],
+            "english_translation": "Consonant K (Moon)",
+            "letter_series": 2,
+            "word_audio": "",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "ឃ",
+            "target_char": "ឃ",
+            "hint": "Kho (Bowl with Pit)",
+            "char_split": ["ឃ"],
+            "english_translation": "Consonant Kh (Moon)",
+            "letter_series": 2,
+            "word_audio": "",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "ង",
+            "target_char": "ង",
+            "hint": "Ngo (Snake Tail)",
+            "char_split": ["ង"],
+            "english_translation": "Consonant Ng (Moon)",
+            "letter_series": 2,
+            "word_audio": "",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "Vowels on the Right",
+            "text": "Vowels like ា (aa), ះ (ah), ាំ (am) change sound based on the team! Sun + aa = KAA. Moon + aa = KEA.",
+            "sublesson_title": "Vowel Rules"
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Ka (Sun + aa)",
+            "back": "កា",
+            "pronunciation": "kaa",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Kea (Moon + aa)",
+            "back": "គា",
+            "pronunciation": "kea",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Kam (Sun + am)",
+            "back": "កាំ",
+            "pronunciation": "kam",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Koam (Moon + am)",
+            "back": "គាំ",
+            "pronunciation": "koam",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "កាហ្វេ",
+            "target_char": "ក",
+            "hint": "Ka (Smooth Egg)",
+            "char_split": ["កា", "ហ្វេ"],
+            "english_translation": "Coffee",
+            "letter_series": 1,
+            "word_audio": "",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Shop / Store",
+            "back": "ហាង",
+            "pronunciation": "haang",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Baby / Angel",
+            "back": "ងា",
+            "pronunciation": "ngea",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Side / Direction",
+            "back": "ខាង",
+            "pronunciation": "khaang",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Wheel / Ring / Crab",
+            "back": "កង",
+            "pronunciation": "kang",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Hut / Shelter",
+            "back": "កាក",
+            "pronunciation": "kaak",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "To Try / Test",
+            "back": "សាក",
+            "pronunciation": "sak",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Woman / Mrs.",
+            "back": "នាង",
+            "pronunciation": "naang",
+            "item_type": "word",
+            "audio": ""
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Which letter is in the Sun Team (Smooth)?",
+            "options": ["ក", "គ", "ឃ", "ង"],
+            "correct_answer": "ក",
+            "explanation": "Ka (ក) has a smooth head. The others have teeth, pits, or tails (Moon features).",
+            "pronunciation_map": {
+              "ក": "ka",
+              "គ": "ko",
+              "ឃ": "kho",
+              "ង": "ngo"
+            }
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Identify the Moon Team letter (Jagged Hair/Teeth):",
+            "options": ["គ", "ក", "ខ", "ស"],
+            "correct_answer": "គ",
+            "explanation": "Ko (គ) has the complex 'hair' design on top.",
+            "pronunciation_map": {
+              "គ": "ko",
+              "ក": "ka",
+              "ខ": "kha",
+              "ស": "sa"
+            }
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Sound Check: Ko (Moon) + aa = ?",
+            "options": ["kea", "kaa", "ko", "kam"],
+            "correct_answer": "kea",
+            "explanation": "Moon Team twists the 'aa' sound into 'ea'.",
+            "pronunciation_map": {
+              "kea": "kea",
+              "kaa": "kaa",
+              "ko": "ko",
+              "kam": "kam"
+            }
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'Shop'",
+            "options": ["ហាង", "ខាង", "ងា", "កាក"],
+            "correct_answer": "ហាង",
+            "explanation": "Haang (ហាង) is the word for Shop.",
+            "pronunciation_map": {
+              "ហាង": "haang",
+              "ខាង": "khaang",
+              "ងា": "ngea",
+              "កាក": "kaak"
+            }
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Translate: 'To Eat' (from R2 preview)",
+            "options": ["ញ៉ាំ", "ចាំ", "ជា", "ឆា"],
+            "correct_answer": "ញ៉ាំ",
+            "explanation": "Nham (ញ៉ាំ) means to eat.",
+            "pronunciation_map": {
+              "ញ៉ាំ": "nham",
+              "ចាំ": "jam",
+              "ជា": "jea",
+              "ឆា": "chha"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
