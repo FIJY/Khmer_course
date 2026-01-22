@@ -158,14 +158,25 @@ export default function useLessonPlayer() {
   };
 
   const playLocalAudio = (file) => {
-    if (!file) return;
+    if (!file) {
+      console.warn("Audio file name is missing in lesson data");
+      return;
+    }
+
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-    const audio = new Audio(`/sounds/${file}`);
+
+    // Явно указываем путь к папке sounds
+    const audioPath = `/sounds/${file}`;
+    console.log("Attempting to play:", audioPath); // Это поможет вам в консоли F12
+
+    const audio = new Audio(audioPath);
     audioRef.current = audio;
-    audio.play().catch((e) => console.warn("Audio play failed", e));
+    audio.play().catch((e) => {
+      console.error(`Audio play failed for ${audioPath}:`, e);
+    });
   };
 
   const handleVocabCardFlip = (audioFile) => {
