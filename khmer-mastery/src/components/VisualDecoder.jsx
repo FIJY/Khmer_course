@@ -3,14 +3,23 @@ import { ArrowRight, Sun, Moon, Volume2 } from 'lucide-react';
 
 export default function VisualDecoder({ data, onComplete, hideDefaultButton = false }) {
   const {
-    word, target_char, hint, english_translation,
-    letter_series, word_audio,
-    char_audio_map
+    word,
+    target_char,
+    hint,
+    english_translation,
+    letter_series,
+    word_audio,
+    char_audio_map,
+    char_split // Используем подготовленный массив из JSON
   } = data;
 
   const [status, setStatus] = useState('searching');
   const [selectedCharIndex, setSelectedCharIndex] = useState(null);
-  const chars = word ? word.split('') : [];
+
+  // ПРИОРИТЕТ: сначала берем char_split из JSON, если его нет — режем строку (fallback)
+  const chars = char_split && char_split.length > 0
+    ? char_split
+    : (word ? word.split('') : []);
 
   const getTheme = () => {
     if (letter_series === 1) return {
@@ -53,21 +62,19 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
 
   return (
     <div className="w-full flex flex-col items-center justify-between min-h-[40vh] py-4">
-      {/* Заголовок (убран лишний текст, чтобы не двоилось с LessonPlayer) */}
+      {/* ЗАГОЛОВОК: Если hint пустой, показываем target_char */}
       <div className="text-center space-y-3 mb-6">
         <div className="flex flex-col items-center gap-2">
-            <span className="text-white font-black text-2xl uppercase tracking-tighter italic italic italic italic">
-              Find: <span className="text-cyan-400">{hint}</span>
+            <span className="text-white font-black text-2xl uppercase tracking-tighter italic">
+              Find: <span className="text-cyan-400">{hint || target_char}</span>
             </span>
             {status === 'success' && <div className="animate-in fade-in zoom-in">{theme.badge}</div>}
         </div>
       </div>
 
-      {/* Буквы: теперь они используют flex-wrap, но с приоритетом в одну строку */}
       <div className="flex flex-wrap justify-center items-center gap-2 w-full max-w-md px-2">
         {chars.map((char, index) => {
           const isTarget = char === target_char;
-          // Расчет размера: если букв много, уменьшаем их сильнее
           const sizeClass = chars.length > 5
             ? "w-10 h-16 text-2xl"
             : "w-14 h-22 text-4xl sm:w-16 sm:h-24";
@@ -83,7 +90,8 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
             <button
               key={index}
               onClick={() => handleCharClick(char, index)}
-              className={`flex-shrink-0 rounded-2xl border-2 flex items-center justify-center font-serif transition-all duration-500 ${sizeClass} ${styleClass}`}
+              className={`flex-shrink-0 rounded-2xl border-2 flex items-center justify-center transition-all duration-500 ${sizeClass} ${styleClass}`}
+              style={{ fontFamily: 'Khmer, serif' }}
             >
               {char}
             </button>
@@ -91,7 +99,6 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
         })}
       </div>
 
-      {/* Блок результата: всегда занимает место, чтобы верстка не прыгала */}
       <div className={`mt-10 text-center transition-all duration-700 ${status === 'success' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
         <h2 className="text-5xl font-black text-white mb-2 tracking-tight">{word}</h2>
         <p className="text-gray-500 font-black uppercase tracking-[0.2em] text-[10px]">
