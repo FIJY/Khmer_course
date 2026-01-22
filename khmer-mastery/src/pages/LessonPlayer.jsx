@@ -1,7 +1,7 @@
 import React from 'react';
 import { Volume2, ArrowRight, X, CheckCircle2, Trophy, BookOpen, ChevronLeft, Frown } from 'lucide-react';
 import VisualDecoder from '../components/VisualDecoder';
-import KhmerColoredText from '../components/UI/KhmerColoredText';
+import KhmerColoredText from '../components/KhmerColoredText';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
