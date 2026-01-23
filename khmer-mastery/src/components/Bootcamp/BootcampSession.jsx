@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import KhmerColoredText from '../KhmerColoredText';
+import VisualDecoder from '../VisualDecoder'; // ВЕРНУЛИ ДВИЖОК ИГРЫ
+import useCourseMap from '../../hooks/useCourseMap'; // ВЕРНУЛИ БАЗУ ДАННЫХ
 import { X, Volume2, Zap, ArrowRight, ArrowLeft } from 'lucide-react';
 
-// --- 1. ТЕОРИЯ ---
+// --- 1. ТЕОРИЯ (ПРЕЗЕНТАЦИЯ) ---
 const THEORY_SLIDES = [
   {
     type: 'title',
@@ -16,8 +18,8 @@ const THEORY_SLIDES = [
     title: 'THE CHAOS',
     subtitle: 'Khmer has NO spaces between words.',
     englishAnalogy: 'ImagineIfEnglishWasWrittenLikeThisGoodLuck.',
-    khmerAnalogy: 'ភាសាខ្មែរមិនដកឃ្លាទេ',
-    solution: 'Don\'t panic. We just need to find the COMMANDERS.'
+    khmerAnalogy: 'ភាសាខ្មែរមិនដកឃ្លាទេ', // Пример текста
+    solution: 'Don\'t panic. We just need to find the COMMANDERS (Consonants).'
   },
   {
     type: 'comparison',
@@ -62,36 +64,72 @@ const THEORY_SLIDES = [
   }
 ];
 
-// Демо-данные
-const DEMO_DRILLS = [
-  { question: 'ក', correct: 0, options: ['SUN ☀️', 'MOON 🌑'] },
-  { question: 'គ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'] },
-  { question: 'ខ', correct: 0, options: ['SUN ☀️', 'MOON 🌑'] },
-  { question: 'ឃ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'] }
-];
-
 const BootcampSession = ({ onClose }) => {
+  const { loadUnitData } = useCourseMap(); // Подключаем хук базы
   const [phase, setPhase] = useState('theory');
   const [slideIndex, setSlideIndex] = useState(0);
+
+  // Состояние игры
   const [drillQuestions, setDrillQuestions] = useState([]);
   const [drillIndex, setDrillIndex] = useState(0);
   const [score, setScore] = useState(0);
 
+  // Состояние загрузки
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState(null);
+
+  // --- ЗАГРУЗКА ИЗ БАЗЫ ДАННЫХ ---
   useEffect(() => {
-    const shuffled = [...DEMO_DRILLS, ...DEMO_DRILLS].sort(() => Math.random() - 0.5);
-    setDrillQuestions(shuffled);
+    const initBootcamp = async () => {
+      try {
+        console.log("Loading Unit 10100...");
+        // ВАЖНО: Грузим Unit 10100, который ты показала на скриншоте таблицы lessons
+        const data = await loadUnitData('10100');
+
+        if (data && data.content) {
+          // Вытаскиваем все упражнения типа visual_decoder
+          const allDrills = data.content.flatMap(lesson =>
+             lesson.slides ? lesson.slides.filter(s => s.type === 'visual_decoder') : []
+          );
+
+          if (allDrills.length > 0) {
+            // Перемешиваем
+            const shuffled = [...allDrills, ...allDrills].sort(() => Math.random() - 0.5);
+            setDrillQuestions(shuffled);
+          } else {
+            console.warn("No drills found in JSON content for 10100");
+            setDataError("No drills found. Check content JSON.");
+          }
+        } else {
+           console.error("Unit 10100 not found or empty");
+           setDataError("Unit data missing.");
+        }
+      } catch (err) {
+        console.error("DB Load Error:", err);
+        setDataError("Connection error.");
+      } finally {
+        setDataLoading(false);
+      }
+    };
+    initBootcamp();
   }, []);
 
   const playAudio = (fileName) => {
     if (!fileName) return;
+    // Файлы должны лежать в папке public/sounds/ твоего проекта
     const audio = new Audio(`/sounds/${fileName}`);
-    audio.play().catch(e => console.warn("Audio file missing:", fileName));
+    audio.play().catch(e => console.warn("Audio file missing in /public/sounds/:", fileName));
   };
 
   const nextSlide = () => {
     if (slideIndex < THEORY_SLIDES.length - 1) {
       setSlideIndex(prev => prev + 1);
     } else {
+      // ПЕРЕХОД К ПРАКТИКЕ
+      if (dataError || drillQuestions.length === 0) {
+        alert("Error loading drills: " + (dataError || "No questions"));
+        return;
+      }
       setPhase('practice');
     }
   };
@@ -100,6 +138,15 @@ const BootcampSession = ({ onClose }) => {
     if (slideIndex > 0) setSlideIndex(prev => prev - 1);
   };
 
+  const handleDrillComplete = () => {
+    setScore(s => s + 10);
+    // Авто-переход
+    setTimeout(() => {
+      setDrillIndex(prev => prev + 1);
+    }, 400);
+  };
+
+  // --- RENDERERS ---
   const renderTheoryContent = () => {
     const slide = THEORY_SLIDES[slideIndex];
 
@@ -120,24 +167,30 @@ const BootcampSession = ({ onClose }) => {
              <h2 className="text-3xl font-black text-white mb-4">{slide.title}</h2>
              <p className="text-xl text-amber-400 mb-8">{slide.subtitle}</p>
 
+             {/* English Analogy */}
              <div className="bg-slate-800/50 p-6 rounded-xl mb-6 border border-slate-700">
                <p className="text-slate-400 text-sm mb-2 uppercase tracking-widest">English Analogy</p>
-               <p className="text-xl text-white font-mono tracking-tighter bg-black/50 p-4 rounded break-all">
+               <p className="text-xl md:text-2xl text-white font-mono tracking-tighter bg-black/50 p-4 rounded break-all">
                  {slide.englishAnalogy}
                </p>
              </div>
 
-             <div className="bg-slate-900 p-8 rounded-xl mb-8 border border-slate-700 shadow-2xl">
+             {/* KHMER REALITY (С ЦВЕТНЫМ ТЕКСТОМ) */}
+             <div className="bg-slate-900 p-8 rounded-xl mb-8 border border-slate-700 shadow-2xl relative">
                 <p className="text-slate-400 text-sm mb-4 uppercase tracking-widest">Khmer Reality</p>
+                {/* Компонент с фиксом краша */}
                 <KhmerColoredText
                   text={slide.khmerAnalogy}
                   fontSize={48}
                   className="block w-full text-center"
-                  colors={{ CONSONANT_A: '#ffffff', CONSONANT_O: '#ffffff', OTHER: '#64748b' }}
+                  // Подсвечиваем согласные белым, остальное серым, чтобы выделить структуру
+                  colors={{ CONSONANT_A: '#ffffff', CONSONANT_O: '#ffffff', OTHER: '#475569' }}
                 />
              </div>
 
-             <p className="text-green-400 text-lg font-bold px-4">{slide.solution}</p>
+             <div className="bg-green-500/10 p-4 rounded-lg border border-green-500/30">
+                <p className="text-green-400 text-lg font-bold">{slide.solution}</p>
+             </div>
           </div>
         );
 
@@ -155,14 +208,14 @@ const BootcampSession = ({ onClose }) => {
                 <div className="flex gap-2 mb-4">
                   {slide.leftTeam.chars.map((char, i) => (
                     <div key={i} className="flex flex-col items-center gap-2">
-                      <div className="bg-black/50 p-2 rounded-xl border border-white/5 cursor-pointer hover:bg-black/80 transition-colors active:scale-95"
+                      <button className="bg-black/50 p-2 rounded-xl border border-white/5 cursor-pointer hover:bg-black/80 transition-colors active:scale-95"
                            onClick={() => playAudio(slide.leftTeam.audioFiles[i])}>
                         <KhmerColoredText
                           text={char}
                           fontSize={42}
                           colors={{ CONSONANT_A: slide.leftTeam.color, OTHER: slide.leftTeam.color }}
                         />
-                      </div>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -178,14 +231,14 @@ const BootcampSession = ({ onClose }) => {
                 <div className="flex gap-2 mb-4">
                   {slide.rightTeam.chars.map((char, i) => (
                     <div key={i} className="flex flex-col items-center gap-2">
-                      <div className="bg-black/50 p-2 rounded-xl border border-white/5 cursor-pointer hover:bg-black/80 transition-colors active:scale-95"
+                      <button className="bg-black/50 p-2 rounded-xl border border-white/5 cursor-pointer hover:bg-black/80 transition-colors active:scale-95"
                            onClick={() => playAudio(slide.rightTeam.audioFiles[i])}>
                         <KhmerColoredText
                           text={char}
                           fontSize={42}
                           colors={{ CONSONANT_O: slide.rightTeam.color, OTHER: slide.rightTeam.color }}
                         />
-                      </div>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -229,13 +282,18 @@ const BootcampSession = ({ onClose }) => {
           <div className="text-center py-20">
             <div className="mb-6 animate-pulse text-7xl">🎯</div>
             <h2 className="text-4xl font-black text-white mb-4">{slide.title}</h2>
-            <p className="text-xl text-slate-300 mb-12 max-w-md mx-auto">{slide.description}</p>
+            <p className="text-xl text-slate-300 mb-8 max-w-md mx-auto">{slide.description}</p>
+
+            {/* ИНДИКАТОР ЗАГРУЗКИ */}
+            {dataLoading && <p className="text-amber-400 mb-4 animate-pulse">Loading drills from database...</p>}
+            {dataError && <p className="text-red-400 mb-4 bg-red-900/20 p-2 rounded border border-red-500/50">{dataError}</p>}
 
             <button
               onClick={nextSlide}
-              className="bg-amber-500 hover:bg-amber-400 text-black text-xl font-black py-5 px-16 rounded-full shadow-xl shadow-amber-500/20 transition-transform hover:scale-105 active:scale-95"
+              disabled={dataLoading || !!dataError}
+              className="bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:text-slate-500 text-black text-xl font-black py-5 px-16 rounded-full shadow-xl shadow-amber-500/20 transition-transform hover:scale-105 active:scale-95"
             >
-              {slide.buttonText}
+              {dataLoading ? 'WAIT...' : slide.buttonText}
             </button>
           </div>
         );
@@ -245,11 +303,9 @@ const BootcampSession = ({ onClose }) => {
     }
   };
 
+  // --- RENDER ---
   return (
-    // Обертка для центрирования и перекрытия (z-100 !)
     <div className="fixed inset-0 z-[100] flex justify-center bg-black/80 backdrop-blur-sm">
-
-      {/* КОНТЕЙНЕР "МОБИЛЬНОГО" РАЗМЕРА (max-w-md) */}
       <div className="w-full max-w-md h-full bg-slate-950 flex flex-col shadow-2xl relative overflow-hidden">
 
         {/* HEADER */}
@@ -269,7 +325,7 @@ const BootcampSession = ({ onClose }) => {
           </button>
         </div>
 
-        {/* PROGRESS BAR */}
+        {/* PROGRESS */}
         <div className="h-1 bg-slate-900 w-full relative z-20">
           <div
             className={`h-full transition-all duration-300 ${phase === 'theory' ? 'bg-blue-500' : 'bg-amber-400'}`}
@@ -280,24 +336,30 @@ const BootcampSession = ({ onClose }) => {
           />
         </div>
 
-        {/* SCROLLABLE BODY */}
+        {/* BODY */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-32">
           {phase === 'theory' ? renderTheoryContent() : (
             <div className="flex flex-col items-center justify-center h-full">
               {drillIndex < drillQuestions.length ? (
-                 <div className="text-white">DRILL STARTING...</div>
+                 // --- ВОТ ОН, ДВИЖОК! БОЛЬШЕ НИКАКИХ "DRILL STARTING" ---
+                 <VisualDecoder
+                    key={drillIndex}
+                    data={drillQuestions[drillIndex]}
+                    onComplete={() => handleDrillComplete()}
+                    hideContinue={true} // Режим Аркады
+                  />
               ) : (
                 <div className="text-center">
                   <h1 className="text-4xl font-black text-amber-400 mb-4">DONE!</h1>
-                  <p className="text-white mb-6">Score: {score}</p>
-                  <button onClick={onClose} className="px-6 py-3 bg-blue-600 rounded-xl font-bold">Close</button>
+                  <p className="text-white mb-6">Final Score: {score}</p>
+                  <button onClick={onClose} className="px-6 py-3 bg-blue-600 rounded-xl font-bold">Return to Base</button>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* FOOTER CONTROLS (ALWAYS VISIBLE, Z-30) */}
+        {/* FOOTER NAV (Только для теории) */}
         {phase === 'theory' && THEORY_SLIDES[slideIndex].type !== 'ready' && (
           <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent z-30">
             <div className="flex gap-3">

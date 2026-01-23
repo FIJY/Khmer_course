@@ -45,10 +45,8 @@ export default function KhmerColoredText({
   onStatus,
 }) {
   const [svgMarkup, setSvgMarkup] = React.useState('');
-
-  // --- ВОТ ЗДЕСЬ БЫЛА ОШИБКА. ИСПРАВЛЕНО: ---
+  // ИСПРАВЛЕНИЕ: Добавлено правильное объявление стейта
   const [fallbackFontFamily, setFallbackFontFamily] = React.useState('');
-  // ------------------------------------------
 
   const cacheRef = React.useRef(new Map());
 
@@ -57,9 +55,7 @@ export default function KhmerColoredText({
 
     if (!fontUrl || typeof FontFace === 'undefined' || typeof document === 'undefined') {
       setFallbackFontFamily('');
-      return () => {
-        active = false;
-      };
+      return () => { active = false; };
     }
 
     const family = getFontFamilyName(fontUrl);
@@ -78,16 +74,14 @@ export default function KhmerColoredText({
     loadPromise
       .then(() => {
         if (!active) return;
-        setFallbackFontFamily(family); // Теперь эта функция существует и работает!
+        setFallbackFontFamily(family);
       })
       .catch(() => {
         if (!active) return;
         setFallbackFontFamily('');
       });
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [fontUrl]);
 
   React.useEffect(() => {
@@ -96,20 +90,16 @@ export default function KhmerColoredText({
     if (!text || !fontUrl || !KHMER_PATTERN.test(text)) {
       setSvgMarkup('');
       if (onStatus) onStatus({ state: 'fallback', reason: 'missing-input' });
-      return () => {
-        cancelled = true;
-      };
+      return () => { cancelled = true; };
     }
 
     const mergedColors = { ...DEFAULT_COLORS, ...(colors ?? {}) };
-    const cacheKey = `${fontUrl}|${fontSize}|${text}|${JSON.stringify(mergedColors)}|${JSON.stringify(seriesOverrides)}|${JSON.stringify(diacriticOverrides)}|${JSON.stringify(moduleUrls)}`;
+    const cacheKey = `${fontUrl}|${fontSize}|${text}|${JSON.stringify(mergedColors)}`;
 
     if (cacheRef.current.has(cacheKey)) {
       setSvgMarkup(cacheRef.current.get(cacheKey));
       if (onStatus) onStatus({ state: 'rendered', reason: 'cache' });
-      return () => {
-        cancelled = true;
-      };
+      return () => { cancelled = true; };
     }
 
     if (onStatus) onStatus({ state: 'loading' });
@@ -142,21 +132,12 @@ export default function KhmerColoredText({
         }
       });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [text, fontUrl, fontSize, colors, seriesOverrides, diacriticOverrides, moduleUrls]);
+    return () => { cancelled = true; };
+  }, [text, fontUrl, fontSize, colors]);
 
   if (!svgMarkup) {
     return (
-      <span
-        className={className}
-        style={{
-          fontSize,
-          lineHeight: 1.1,
-          fontFamily: fallbackFontFamily ? `"${fallbackFontFamily}", sans-serif` : undefined,
-        }}
-      >
+      <span className={className} style={{ fontSize, fontFamily: fallbackFontFamily }}>
         {text}
       </span>
     );
