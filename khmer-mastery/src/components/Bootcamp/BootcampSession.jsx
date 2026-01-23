@@ -3,6 +3,7 @@ import KhmerColoredText from '../KhmerColoredText';
 import VisualDecoder from '../VisualDecoder';
 import useCourseMap from '../../hooks/useCourseMap';
 import { X, Zap, ArrowRight, ArrowLeft, MousePointerClick, Volume2 } from 'lucide-react';
+import { THEORY_SLIDES } from './BootcampSession.slides';
 
 /**
  * BOOTCAMP SESSION (Unit R1)
@@ -279,120 +280,6 @@ const MiniCommanderDrill = ({
 };
 
 // ---------- THEORY SLIDES ----------
-const UNIT_R1_FULL_TEXT = `📋 БЫСТРАЯ СПРАВКА
-Неделя 1: R1–R2 — Sun vs Moon, базовые буквы (55 слов) — 5 дней × 20 мин
-Неделя 2: R3–R4 — Гласные слева/вокруг, исключения (+95 слов, 150 всего) — 5 дней × 25 мин
-Неделя 3: R5–R6 — Гласные снизу, стек, модификаторы (+120 слов, 270 всего) — 5 дней × 30 мин
-Неделя 4: Consonant Clusters — Сочетания согласных (+60 слов, 330 всего) — 5 дней × 35 мин
-Результат: Беглое чтение 85–95% текстов за 28 дней.
-
-UNIT R1: THE FOUNDATION (БАЗА)
-LEARNING OBJECTIVES:
-• Различу ☀️ Sun Team и 🌑 Moon Team по визуальным признакам
-• Отличу гладкие головы букв от зубчатых
-• Прочитаю слово «Кофе» (កាហ្វេ) и 20+ других слов
-• Научусь произносить K-группу правильно
-
-Главная идея:
-Буква‑командир решает, как звучит гласная ПОСЛЕ неё.
-Две команды = две фонетические системы.
-`;
-
-const THEORY_SLIDES = [
-  {
-    type: 'title',
-    title: 'BOOTCAMP: UNIT R1',
-    subtitle: 'THE CODEBREAKER PROTOCOL',
-    description: 'Forget logic. Trust your eyes. We start from zero.',
-    icon: '🚀'
-  },
-  {
-    type: 'no-spaces',
-    title: 'SHOCKING TRUTH: NO SPACES',
-    subtitle: 'Khmer text is a continuous stream. First you hunt the COMMANDERS (consonants).',
-    englishAnalogy: 'ImagineIfEnglishWasWrittenLikeThis.',
-    khmerText: 'ភាសាខ្មែរមិនដកឃ្លាទេវាជាស្ទ្រីមតែមួយ',
-    fullText: UNIT_R1_FULL_TEXT,
-    rule: 'Spaces are not word separators. They are used like commas / for breathing.',
-    solution: 'Step 1: Ignore vowels. Click ONLY consonants (COMMANDERS) first.',
-    consonantAudioMap: {
-      // Put your real files in /public and keep these as relative URLs.
-      // Example: public/khmer/consonants/ka.mp3  ->  "khmer/consonants/ka.mp3"
-      'ក': 'khmer/consonants/ka.mp3',
-      'ខ': 'khmer/consonants/kha.mp3',
-      'គ': 'khmer/consonants/ko.mp3',
-      'ឃ': 'khmer/consonants/kho.mp3',
-      'ង': 'khmer/consonants/ngo.mp3'
-    }
-  },
-  {
-    type: 'reading-algorithm',
-    title: 'THE DECODING ALGORITHM',
-    subtitle: 'How to read ANY word step-by-step',
-    steps: [
-      { id: 1, text: 'SPOT THE COMMANDER', desc: 'Find the consonant (big letter)', icon: '👮‍♂️' },
-      { id: 2, text: 'CHECK THE UNIFORM', desc: 'Sun (Smooth) or Moon (Spiky)?', icon: '☀️🌑' },
-      { id: 3, text: 'APPLY THE VOWEL', desc: 'Sun keeps vowel pure. Moon transforms it.', icon: '🗣️' }
-    ],
-    warning: 'Never start from the vowel. The consonant controls everything.'
-  },
-  {
-    type: 'meet-teams',
-    title: 'MEET THE TWO TEAMS',
-    leftTeam: {
-      name: 'SUN TEAM (A-Series)',
-      voice: 'Light, natural voice',
-      visual: 'Smooth/simple heads'
-    },
-    rightTeam: {
-      name: 'MOON TEAM (O-Series)',
-      voice: 'Deep, bass voice',
-      visual: 'Spiky/complex heads'
-    },
-    vowel: 'ា',
-    pairs: [
-      { sun: 'ក', moon: 'គ', vowel: 'ា', sunRead: 'Kaa', moonRead: 'Kea' },
-      { sun: 'ខ', moon: 'ឃ', vowel: 'ា', sunRead: 'Khaa', moonRead: 'Khea' }
-    ],
-    microDrillText: 'ភាសាខ្មែរមិនដកឃ្លាទេវាជាស្ទ្រីមតែមួយ',
-    microDrillCount: 6,
-    consonantAudioMap: {
-      'ក': 'khmer/consonants/ka.mp3',
-      'ខ': 'khmer/consonants/kha.mp3',
-      'គ': 'khmer/consonants/ko.mp3',
-      'ឃ': 'khmer/consonants/kho.mp3',
-      'ង': 'khmer/consonants/ngo.mp3',
-      'ភ': 'khmer/consonants/pho.mp3',
-      'ស': 'khmer/consonants/sa.mp3',
-      'ម': 'khmer/consonants/mo.mp3',
-      'រ': 'khmer/consonants/ro.mp3',
-      'ទ': 'khmer/consonants/to.mp3',
-      'ជ': 'khmer/consonants/jo.mp3'
-    }
-  },
-    rightTeam: {
-      name: 'MOON TEAM (O-Series)',
-      voice: 'Deep, bass voice',
-      visual: 'Spiky/complex heads',
-      examples: ['គ', 'ឃ', 'ង', 'ជ']
-    }
-  },
-  {
-    type: 'rule',
-    title: 'THE 80% RULE',
-    subtitle: 'Your visual hack',
-    rule80: '80% of the time: Spiky head = Moon. Smooth head = Sun.',
-    rule20: 'Exceptions exist (like ប and ស). Ignore them for the first week.',
-    tip: 'Trust your eyes first. Speed > perfection.'
-  },
-  {
-    type: 'ready',
-    title: 'BRIEFING COMPLETE',
-    subtitle: 'Ready to prove your skills?',
-    description: 'Identify the commanders. Apply the rules. Speed matters.',
-    buttonText: 'START MISSION'
-  }
-];
 
 const BootcampSession = ({ onClose }) => {
   const { loadUnitData } = useCourseMap();
@@ -412,10 +299,19 @@ const BootcampSession = ({ onClose }) => {
   const [usingFallbackPractice, setUsingFallbackPractice] = useState(false);
 
   const currentSlide = THEORY_SLIDES[slideIndex];
-  const noSpacesTotal = currentSlide?.type === 'no-spaces' ? getConsonantIndices(currentSlide.khmerText).length : 0;
   const requiresUnlock = currentSlide?.type === 'no-spaces' || currentSlide?.type === 'meet-teams';
   const isUnlocked = unlockedSlides[slideIndex] || !requiresUnlock;
   const nextDisabled = !isUnlocked;
+  const headerStatus = phase === 'theory' ? (
+    <span className="text-slate-400 font-mono text-sm">
+      BRIEFING: {slideIndex + 1}/{THEORY_SLIDES.length}
+    </span>
+  ) : (
+    <div className="flex items-center gap-2 text-amber-400 font-black text-xl">
+      <Zap size={20} fill="currentColor" />
+      SCORE: {score}
+    </div>
+  );
 
   // ---------- LOAD PRACTICE DATA ----------
   useEffect(() => {
@@ -689,7 +585,7 @@ const BootcampSession = ({ onClose }) => {
               <div className="text-slate-400 text-xs mt-2">Tip: Smooth = Sun, Spiky = Moon. Don’t overthink in the beginning.</div>
               <div className="mt-4">
                 <MiniCommanderDrill
-                onComplete={() => setUnlockedSlides(u => ({ ...u, [slideIndex]: true }))}
+                  onComplete={() => setUnlockedSlides((u) => ({ ...u, [slideIndex]: true }))}
                   text={slide.microDrillText}
                   requiredCount={slide.microDrillCount}
                   audioMap={slide.consonantAudioMap}
@@ -699,7 +595,7 @@ const BootcampSession = ({ onClose }) => {
           </div>
         );
 
-case 'rule':
+      case 'rule':
         return (
           <div className="w-full max-w-2xl text-center">
             <h2 className="text-4xl font-black text-white mb-4">{slide.title}</h2>
@@ -750,6 +646,61 @@ case 'rule':
     }
   };
 
+  const bodyContent = phase === 'theory' ? (
+    <>
+      {renderTheoryContent()}
+
+      {/* Nav buttons (hide on "ready") */}
+      {THEORY_SLIDES[slideIndex]?.type !== 'ready' && (
+        <div className="flex gap-3 mt-10 w-full max-w-md">
+          <button
+            onClick={prevSlide}
+            disabled={slideIndex === 0}
+            className="flex-1 py-3 rounded-lg bg-slate-800 text-slate-300 font-bold disabled:opacity-30 hover:bg-slate-700 flex items-center justify-center gap-2"
+            type="button"
+          >
+            <ArrowLeft size={18} />
+            Back
+          </button>
+          <button
+            onClick={nextSlide}
+            disabled={nextDisabled}
+            className="flex-1 py-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:bg-blue-600"
+            type="button"
+          >
+            {nextDisabled ? 'Tap all consonants' : 'Next'}
+            <ArrowRight size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* Audio hint row on no-spaces */}
+      {THEORY_SLIDES[slideIndex]?.type === 'no-spaces' && (
+        <div className="mt-6 text-slate-400 text-sm flex items-center gap-2">
+          <Volume2 size={16} />
+          If you added audio files, consonant clicks will play pronunciation.
+        </div>
+      )}
+    </>
+  ) : (
+    <>
+      {usingFallbackPractice && (
+        <div className="mb-4 max-w-xl text-center text-slate-300 text-sm bg-slate-800/70 border border-white/10 rounded-xl p-4">
+          <div className="font-bold text-white mb-1">Using built-in practice</div>
+          I couldn’t find VisualDecoder drills in the course map for this unit, so I loaded a minimal fallback set.
+          When your course JSON is wired in, this banner will disappear.
+        </div>
+      )}
+
+      <VisualDecoder
+        key={drillIndex}
+        data={((drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]?.data) ?? (drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]}
+        onComplete={handleDrillComplete}
+        hideContinue={true}
+      />
+    </>
+  );
+
   // ---------- MAIN RETURN ----------
   if (loading) {
     return (
@@ -776,16 +727,7 @@ case 'rule':
       {/* HEADER */}
       <div className="flex justify-between items-center p-4 bg-slate-800 border-b border-white/5">
         <div className="flex items-center gap-3">
-          {phase === 'theory' ? (
-            <span className="text-slate-400 font-mono text-sm">
-              BRIEFING: {slideIndex + 1}/{THEORY_SLIDES.length}
-            </span>
-          ) : (
-            <div className="flex items-center gap-2 text-amber-400 font-black text-xl">
-              <Zap size={20} fill="currentColor" />
-              SCORE: {score}
-            </div>
-          )}
+          {headerStatus}
         </div>
 
         <button onClick={onClose} className="p-2 bg-slate-700 rounded-full hover:bg-slate-600 transition-colors" type="button">
@@ -795,60 +737,7 @@ case 'rule':
 
       {/* BODY */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto">
-        {phase === 'theory' ? (
-          <>
-            {renderTheoryContent()}
-
-            {/* Nav buttons (hide on "ready") */}
-            {THEORY_SLIDES[slideIndex]?.type !== 'ready' && (
-              <div className="flex gap-3 mt-10 w-full max-w-md">
-                <button
-                  onClick={prevSlide}
-                  disabled={slideIndex === 0}
-                  className="flex-1 py-3 rounded-lg bg-slate-800 text-slate-300 font-bold disabled:opacity-30 hover:bg-slate-700 flex items-center justify-center gap-2"
-                  type="button"
-                >
-                  <ArrowLeft size={18} />
-                  Back
-                </button>
-                <button
-                  onClick={nextSlide}
-                  disabled={nextDisabled}
-                  className="flex-1 py-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:bg-blue-600"
-                  type="button"
-                >
-                  {nextDisabled ? 'Tap all consonants' : 'Next'}
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            )}
-
-            {/* Audio hint row on no-spaces */}
-            {THEORY_SLIDES[slideIndex]?.type === 'no-spaces' && (
-              <div className="mt-6 text-slate-400 text-sm flex items-center gap-2">
-                <Volume2 size={16} />
-                If you added audio files, consonant clicks will play pronunciation.
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            {usingFallbackPractice && (
-              <div className="mb-4 max-w-xl text-center text-slate-300 text-sm bg-slate-800/70 border border-white/10 rounded-xl p-4">
-                <div className="font-bold text-white mb-1">Using built-in practice</div>
-                I couldn’t find VisualDecoder drills in the course map for this unit, so I loaded a minimal fallback set.
-                When your course JSON is wired in, this banner will disappear.
-              </div>
-            )}
-
-            <VisualDecoder
-              key={drillIndex}
-              data={((drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]?.data) ?? (drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]}
-              onComplete={handleDrillComplete}
-              hideContinue={true}
-            />
-          </>
-        )}
+        {bodyContent}
       </div>
 
       {/* PROGRESS BAR */}

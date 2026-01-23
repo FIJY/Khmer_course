@@ -160,9 +160,11 @@ Examples:
 
 ```bash
 python content_engine/seed_structure.py
-python content_engine/seed_lesson_1.py
+python content_engine/seed_lesson_json_my.py
 python content_engine/seed_alphabet.py
 ```
+
+Legacy seed scripts are archived under `content_engine/legacy/`.
 
 ## Notes
 
@@ -333,9 +335,11 @@ SUPABASE_KEY=...
 
 ```bash
 python content_engine/seed_structure.py
-python content_engine/seed_lesson_1.py
+python content_engine/seed_lesson_json_my.py
 python content_engine/seed_alphabet.py
 ```
+
+Старые скрипты посева находятся в `content_engine/legacy/`.
 
 ## Примечания
 
