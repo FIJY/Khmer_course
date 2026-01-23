@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import KhmerColoredText from '../KhmerColoredText';
-import VisualDecoder from '../VisualDecoder'; // ВЕРНУЛИ ДВИЖОК ИГРЫ
-import useCourseMap from '../../hooks/useCourseMap'; // ВЕРНУЛИ БАЗУ ДАННЫХ
-import { X, Volume2, Zap, ArrowRight, ArrowLeft } from 'lucide-react';
+import VisualDecoder from '../VisualDecoder';
+import useCourseMap from '../../hooks/useCourseMap';
+import { X, Volume2, Zap, ArrowRight, ArrowLeft, MousePointerClick } from 'lucide-react';
 
-// --- 1. ТЕОРИЯ (ПРЕЗЕНТАЦИЯ) ---
+// --- КОНФИГУРАЦИЯ СЛАЙДОВ ---
 const THEORY_SLIDES = [
   {
     type: 'title',
@@ -18,31 +18,38 @@ const THEORY_SLIDES = [
     title: 'THE CHAOS',
     subtitle: 'Khmer has NO spaces between words.',
     englishAnalogy: 'ImagineIfEnglishWasWrittenLikeThisGoodLuck.',
-    khmerAnalogy: 'ភាសាខ្មែរមិនដកឃ្លាទេ', // Пример текста
-    solution: 'Don\'t panic. We just need to find the COMMANDERS (Consonants).'
+    khmerAnalogy: 'ភាសាខ្មែរមិនដកឃ្លាទេ',
+    solution: 'Don\'t panic. Find the COMMANDERS (Consonants).'
   },
+  // --- НОВЫЙ ЭКРАН: ИНТЕРАКТИВНЫЙ ВЫБОР ---
   {
-    type: 'comparison',
-    title: 'TWO TEAMS',
-    subtitle: 'Every consonant belongs to a team. This determines the VOWEL sound.',
-    leftTeam: {
-      name: 'SUN TEAM',
-      color: '#ffb020',
-      textColor: 'text-amber-400',
-      description: 'Light, natural voice. "A" series.',
-      visualRule: 'SMOOTH HEAD',
-      chars: ['ក', 'ខ', 'ច', 'ឆ'],
-      audioFiles: ['letter_ka.mp3', 'letter_kha.mp3', 'letter_cha.mp3', 'letter_chha.mp3']
-    },
-    rightTeam: {
-      name: 'MOON TEAM',
-      color: '#6b5cff',
-      textColor: 'text-indigo-400',
-      description: 'Deep, bass voice. "O" series.',
-      visualRule: 'SPIKY HAIR',
-      chars: ['គ', 'ឃ', 'ជ', 'ឈ'],
-      audioFiles: ['letter_ko.mp3', 'letter_kho.mp3', 'letter_cho.mp3', 'letter_chho.mp3']
-    }
+    type: 'interactive-explorer',
+    title: 'MEET THE COMMANDERS',
+    subtitle: 'Tap each letter to activate voice & ID.',
+    groups: [
+      {
+        name: 'SUN TEAM ☀️',
+        desc: 'Light Voice ("A" sound)',
+        color: '#ffb020', // Янтарный
+        letters: [
+          { char: 'ក', id: 'ka', eng: 'KA', sound: 'letter_ka.mp3' },
+          { char: 'ខ', id: 'kha', eng: 'KHA', sound: 'letter_kha.mp3' },
+          { char: 'ច', id: 'cha', eng: 'CHA', sound: 'letter_cha.mp3' },
+          { char: 'ឆ', id: 'chha', eng: 'CHHA', sound: 'letter_chha.mp3' }
+        ]
+      },
+      {
+        name: 'MOON TEAM 🌑',
+        desc: 'Deep Voice ("O" sound)',
+        color: '#6b5cff', // Индиго
+        letters: [
+          { char: 'គ', id: 'ko', eng: 'KO', sound: 'letter_ko.mp3' },
+          { char: 'ឃ', id: 'kho', eng: 'KHO', sound: 'letter_kho.mp3' },
+          { char: 'ជ', id: 'cho', eng: 'CHO', sound: 'letter_cho.mp3' },
+          { char: 'ឈ', id: 'chho', eng: 'CHHO', sound: 'letter_chho.mp3' }
+        ]
+      }
+    ]
   },
   {
     type: 'reading-algorithm',
@@ -64,96 +71,108 @@ const THEORY_SLIDES = [
   }
 ];
 
+// ЗАПАСНЫЕ ДАННЫЕ (Если база отвалится)
+const FALLBACK_DRILLS = [
+  { question: 'ក', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control', sound: 'letter_ka.mp3' },
+  { question: 'គ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control', sound: 'letter_ko.mp3' },
+  { question: 'ខ', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Hair Check', sound: 'letter_kha.mp3' },
+  { question: 'ឃ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Hair Check', sound: 'letter_kho.mp3' },
+  { question: 'ច', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control', sound: 'letter_cha.mp3' },
+  { question: 'ជ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control', sound: 'letter_cho.mp3' },
+];
+
 const BootcampSession = ({ onClose }) => {
-  const { loadUnitData } = useCourseMap(); // Подключаем хук базы
+  // Хук базы данных (может быть undefined, если импорт кривой)
+  const courseMap = useCourseMap();
+
   const [phase, setPhase] = useState('theory');
   const [slideIndex, setSlideIndex] = useState(0);
 
-  // Состояние игры
   const [drillQuestions, setDrillQuestions] = useState([]);
   const [drillIndex, setDrillIndex] = useState(0);
   const [score, setScore] = useState(0);
 
-  // Состояние загрузки
-  const [dataLoading, setDataLoading] = useState(true);
-  const [dataError, setDataError] = useState(null);
+  const [dataStatus, setDataStatus] = useState('loading'); // loading, success, error, fallback
+  const [activeLetter, setActiveLetter] = useState(null); // Для интерактивного слайда
 
-  // --- ЗАГРУЗКА ИЗ БАЗЫ ДАННЫХ ---
+  // --- ЗАГРУЗКА ДАННЫХ (УМНАЯ) ---
   useEffect(() => {
     const initBootcamp = async () => {
       try {
-        console.log("Loading Unit 10100...");
-        // ВАЖНО: Грузим Unit 10100, который ты показала на скриншоте таблицы lessons
-        const data = await loadUnitData('10100');
+        console.log("🚀 Starting Drill Load...");
+        let drills = [];
 
-        if (data && data.content) {
-          // Вытаскиваем все упражнения типа visual_decoder
-          const allDrills = data.content.flatMap(lesson =>
-             lesson.slides ? lesson.slides.filter(s => s.type === 'visual_decoder') : []
-          );
-
-          if (allDrills.length > 0) {
-            // Перемешиваем
-            const shuffled = [...allDrills, ...allDrills].sort(() => Math.random() - 0.5);
-            setDrillQuestions(shuffled);
-          } else {
-            console.warn("No drills found in JSON content for 10100");
-            setDataError("No drills found. Check content JSON.");
+        // 1. Пытаемся загрузить из базы, если хук доступен
+        if (courseMap && courseMap.loadUnitData) {
+          const data = await courseMap.loadUnitData('10100');
+          if (data && data.content) {
+             drills = data.content.flatMap(lesson =>
+               lesson.slides ? lesson.slides.filter(s => s.type === 'visual_decoder') : []
+             );
           }
-        } else {
-           console.error("Unit 10100 not found or empty");
-           setDataError("Unit data missing.");
         }
+
+        // 2. Если база пуста или ошибка - берем запасные (Fallback)
+        if (!drills || drills.length === 0) {
+          console.warn("⚠️ Using Fallback Drills (Database empty or failed)");
+          drills = FALLBACK_DRILLS;
+          setDataStatus('fallback');
+        } else {
+          setDataStatus('success');
+        }
+
+        // 3. Перемешиваем
+        const shuffled = [...drills, ...drills].sort(() => Math.random() - 0.5);
+        setDrillQuestions(shuffled);
+
       } catch (err) {
-        console.error("DB Load Error:", err);
-        setDataError("Connection error.");
-      } finally {
-        setDataLoading(false);
+        console.error("❌ Critical Load Error:", err);
+        // В любой непонятной ситуации - грузим запасные, чтобы пользователь мог играть
+        setDrillQuestions(FALLBACK_DRILLS);
+        setDataStatus('fallback');
       }
     };
     initBootcamp();
   }, []);
 
+  // --- АУДИО ДВИЖОК ---
   const playAudio = (fileName) => {
     if (!fileName) return;
-    // Файлы должны лежать в папке public/sounds/ твоего проекта
     const audio = new Audio(`/sounds/${fileName}`);
-    audio.play().catch(e => console.warn("Audio file missing in /public/sounds/:", fileName));
+    audio.play().catch(e => console.warn("Audio file missing:", fileName));
   };
 
+  // --- НАВИГАЦИЯ ---
   const nextSlide = () => {
     if (slideIndex < THEORY_SLIDES.length - 1) {
       setSlideIndex(prev => prev + 1);
+      setActiveLetter(null); // Сброс выделения
     } else {
-      // ПЕРЕХОД К ПРАКТИКЕ
-      if (dataError || drillQuestions.length === 0) {
-        alert("Error loading drills: " + (dataError || "No questions"));
-        return;
-      }
+      // Старт практики (всегда разрешаем, так как есть Fallback)
       setPhase('practice');
     }
   };
 
   const prevSlide = () => {
-    if (slideIndex > 0) setSlideIndex(prev => prev - 1);
+    if (slideIndex > 0) {
+      setSlideIndex(prev => prev - 1);
+      setActiveLetter(null);
+    }
   };
 
   const handleDrillComplete = () => {
     setScore(s => s + 10);
-    // Авто-переход
-    setTimeout(() => {
-      setDrillIndex(prev => prev + 1);
-    }, 400);
+    setTimeout(() => setDrillIndex(prev => prev + 1), 400);
   };
 
-  // --- RENDERERS ---
+  // --- РЕНДЕР СЛАЙДОВ ---
   const renderTheoryContent = () => {
     const slide = THEORY_SLIDES[slideIndex];
 
     switch (slide.type) {
       case 'title':
         return (
-          <div className="text-center animate-in fade-in zoom-in duration-500 py-10">
+          <div className="text-center py-10 animate-in fade-in zoom-in duration-500">
             <div className="text-8xl mb-6">{slide.icon}</div>
             <h1 className="text-4xl md:text-5xl font-black text-white mb-4 uppercase tracking-tighter">{slide.title}</h1>
             <p className="text-xl md:text-2xl text-amber-400 mb-8 font-mono">{slide.subtitle}</p>
@@ -166,115 +185,118 @@ const BootcampSession = ({ onClose }) => {
           <div className="w-full text-center py-4">
              <h2 className="text-3xl font-black text-white mb-4">{slide.title}</h2>
              <p className="text-xl text-amber-400 mb-8">{slide.subtitle}</p>
-
-             {/* English Analogy */}
              <div className="bg-slate-800/50 p-6 rounded-xl mb-6 border border-slate-700">
                <p className="text-slate-400 text-sm mb-2 uppercase tracking-widest">English Analogy</p>
-               <p className="text-xl md:text-2xl text-white font-mono tracking-tighter bg-black/50 p-4 rounded break-all">
-                 {slide.englishAnalogy}
-               </p>
+               <p className="text-xl md:text-2xl text-white font-mono tracking-tighter bg-black/50 p-4 rounded break-all">{slide.englishAnalogy}</p>
              </div>
-
-             {/* KHMER REALITY (С ЦВЕТНЫМ ТЕКСТОМ) */}
              <div className="bg-slate-900 p-8 rounded-xl mb-8 border border-slate-700 shadow-2xl relative">
                 <p className="text-slate-400 text-sm mb-4 uppercase tracking-widest">Khmer Reality</p>
-                {/* Компонент с фиксом краша */}
                 <KhmerColoredText
                   text={slide.khmerAnalogy}
                   fontSize={48}
                   className="block w-full text-center"
-                  // Подсвечиваем согласные белым, остальное серым, чтобы выделить структуру
                   colors={{ CONSONANT_A: '#ffffff', CONSONANT_O: '#ffffff', OTHER: '#475569' }}
                 />
              </div>
-
-             <div className="bg-green-500/10 p-4 rounded-lg border border-green-500/30">
-                <p className="text-green-400 text-lg font-bold">{slide.solution}</p>
-             </div>
+             <p className="text-green-400 text-lg font-bold px-4">{slide.solution}</p>
           </div>
         );
 
-      case 'comparison':
+      // --- НОВЫЙ ИНТЕРАКТИВНЫЙ СЛАЙД ---
+      case 'interactive-explorer':
         return (
           <div className="w-full py-2">
             <h2 className="text-2xl font-black text-white mb-2 text-center">{slide.title}</h2>
             <p className="text-slate-400 text-center mb-6 text-sm">{slide.subtitle}</p>
 
             <div className="grid grid-cols-1 gap-6 pb-24">
-              {/* LEFT: SUN TEAM */}
-              <div className="bg-slate-900 border border-amber-500/30 p-4 rounded-2xl flex flex-col items-center shadow-lg shadow-amber-900/10">
-                <h3 className={`text-2xl font-black ${slide.leftTeam.textColor} mb-4 uppercase tracking-widest`}>{slide.leftTeam.name}</h3>
+              {slide.groups.map((group, gIdx) => (
+                <div key={gIdx} className="bg-slate-900 border border-white/10 p-4 rounded-2xl flex flex-col items-center shadow-lg relative overflow-hidden">
+                  {/* Цветная полоска сверху */}
+                  <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: group.color }}></div>
 
-                <div className="flex gap-2 mb-4">
-                  {slide.leftTeam.chars.map((char, i) => (
-                    <div key={i} className="flex flex-col items-center gap-2">
-                      <button className="bg-black/50 p-2 rounded-xl border border-white/5 cursor-pointer hover:bg-black/80 transition-colors active:scale-95"
-                           onClick={() => playAudio(slide.leftTeam.audioFiles[i])}>
-                        <KhmerColoredText
-                          text={char}
-                          fontSize={42}
-                          colors={{ CONSONANT_A: slide.leftTeam.color, OTHER: slide.leftTeam.color }}
-                        />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 mb-2">
-                  <p className="text-amber-200 font-bold text-xs uppercase">{slide.leftTeam.visualRule}</p>
-                </div>
-              </div>
+                  <h3 className="text-xl font-black mb-1 uppercase tracking-widest" style={{ color: group.color }}>
+                    {group.name}
+                  </h3>
+                  <p className="text-xs text-slate-400 mb-4">{group.desc}</p>
 
-              {/* RIGHT: MOON TEAM */}
-              <div className="bg-slate-900 border border-indigo-500/30 p-4 rounded-2xl flex flex-col items-center shadow-lg shadow-indigo-900/10">
-                <h3 className={`text-2xl font-black ${slide.rightTeam.textColor} mb-4 uppercase tracking-widest`}>{slide.rightTeam.name}</h3>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {group.letters.map((letter, lIdx) => {
+                      const isActive = activeLetter === letter.id;
+                      return (
+                        <button
+                          key={lIdx}
+                          onClick={() => {
+                            setActiveLetter(letter.id);
+                            playAudio(letter.sound);
+                          }}
+                          className={`
+                            relative flex flex-col items-center justify-center w-20 h-24 rounded-xl border-2 transition-all duration-200
+                            ${isActive
+                               ? `bg-slate-800 border-[${group.color}] shadow-[0_0_15px_${group.color}] scale-110 z-10`
+                               : 'bg-black/40 border-white/5 hover:bg-slate-800 hover:border-white/20'
+                            }
+                          `}
+                          style={{ borderColor: isActive ? group.color : '' }}
+                        >
+                          {/* БУКВА */}
+                          <KhmerColoredText
+                            text={letter.char}
+                            fontSize={40}
+                            colors={{
+                              CONSONANT_A: isActive ? '#ffffff' : group.color,
+                              CONSONANT_O: isActive ? '#ffffff' : group.color,
+                              OTHER: group.color
+                            }}
+                          />
 
-                <div className="flex gap-2 mb-4">
-                  {slide.rightTeam.chars.map((char, i) => (
-                    <div key={i} className="flex flex-col items-center gap-2">
-                      <button className="bg-black/50 p-2 rounded-xl border border-white/5 cursor-pointer hover:bg-black/80 transition-colors active:scale-95"
-                           onClick={() => playAudio(slide.rightTeam.audioFiles[i])}>
-                        <KhmerColoredText
-                          text={char}
-                          fontSize={42}
-                          colors={{ CONSONANT_O: slide.rightTeam.color, OTHER: slide.rightTeam.color }}
-                        />
-                      </button>
-                    </div>
-                  ))}
+                          {/* АНГЛИЙСКОЕ ИМЯ (Показываем только если активно) */}
+                          <div className={`mt-1 text-xs font-bold tracking-wider transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`} style={{ color: group.color }}>
+                             {letter.eng}
+                          </div>
+
+                          {/* Индикатор звука */}
+                          {isActive && <Volume2 size={12} className="absolute top-1 right-1 text-white/50" />}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 mb-2">
-                  <p className="text-indigo-200 font-bold text-xs uppercase">{slide.rightTeam.visualRule}</p>
-                </div>
-              </div>
+              ))}
             </div>
+
+            {/* Подсказка если ничего не выбрано */}
+            {!activeLetter && (
+              <div className="text-center animate-pulse mt-4 flex justify-center items-center gap-2 text-slate-500 text-sm">
+                <MousePointerClick size={16} /> Tap letters to listen
+              </div>
+            )}
           </div>
         );
 
       case 'reading-algorithm':
         return (
           <div className="w-full py-4">
-            <h2 className="text-2xl font-black text-white mb-6 text-center">{slide.title}</h2>
-            <div className="space-y-4 mb-8">
-              {slide.steps.map((step, i) => (
-                <div key={i} className="flex items-center gap-4 bg-slate-800 p-4 rounded-2xl border border-white/5">
-                  <div className="bg-slate-900 w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold text-white shrink-0 border border-white/10 shadow-inner">
-                    {step.id}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-2xl">{step.icon}</span>
-                      <h3 className="text-lg font-black text-white uppercase">{step.text}</h3>
-                    </div>
-                    <p className="text-slate-400 text-sm">{step.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="bg-red-500/10 p-4 rounded-lg border border-red-500/30 flex items-center justify-center gap-3">
-              <span className="text-2xl">⚠️</span>
-              <p className="text-red-300 font-bold text-sm">{slide.warning}</p>
-            </div>
-          </div>
+             <h2 className="text-2xl font-black text-white mb-6 text-center">{slide.title}</h2>
+             <div className="space-y-4 mb-8">
+               {slide.steps.map((step, i) => (
+                 <div key={i} className="flex items-center gap-4 bg-slate-800 p-4 rounded-2xl border border-white/5">
+                   <div className="bg-slate-900 w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold text-white shrink-0 border border-white/10 shadow-inner">{step.id}</div>
+                   <div>
+                     <div className="flex items-center gap-2 mb-1">
+                       <span className="text-2xl">{step.icon}</span>
+                       <h3 className="text-lg font-black text-white uppercase">{step.text}</h3>
+                     </div>
+                     <p className="text-slate-400 text-sm">{step.desc}</p>
+                   </div>
+                 </div>
+               ))}
+             </div>
+             <div className="bg-red-500/10 p-4 rounded-lg border border-red-500/30 flex items-center justify-center gap-3">
+               <span className="text-2xl">⚠️</span>
+               <p className="text-red-300 font-bold text-sm">{slide.warning}</p>
+             </div>
+           </div>
         );
 
       case 'ready':
@@ -282,18 +304,22 @@ const BootcampSession = ({ onClose }) => {
           <div className="text-center py-20">
             <div className="mb-6 animate-pulse text-7xl">🎯</div>
             <h2 className="text-4xl font-black text-white mb-4">{slide.title}</h2>
-            <p className="text-xl text-slate-300 mb-8 max-w-md mx-auto">{slide.description}</p>
+            <p className="text-xl text-slate-300 mb-4 max-w-md mx-auto">{slide.description}</p>
 
-            {/* ИНДИКАТОР ЗАГРУЗКИ */}
-            {dataLoading && <p className="text-amber-400 mb-4 animate-pulse">Loading drills from database...</p>}
-            {dataError && <p className="text-red-400 mb-4 bg-red-900/20 p-2 rounded border border-red-500/50">{dataError}</p>}
+            {/* Статус загрузки */}
+            <div className="mb-8 h-6">
+               {dataStatus === 'loading' && <span className="text-amber-400 text-sm animate-pulse">Loading Mission Data...</span>}
+               {dataStatus === 'fallback' && <span className="text-blue-400 text-sm">Offline Mode Ready</span>}
+               {dataStatus === 'success' && <span className="text-green-400 text-sm">System Online</span>}
+            </div>
 
             <button
               onClick={nextSlide}
-              disabled={dataLoading || !!dataError}
-              className="bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:text-slate-500 text-black text-xl font-black py-5 px-16 rounded-full shadow-xl shadow-amber-500/20 transition-transform hover:scale-105 active:scale-95"
+              // Кнопка теперь ВСЕГДА активна, если загрузка не идет прямо сейчас
+              disabled={dataStatus === 'loading'}
+              className="bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black text-xl font-black py-5 px-16 rounded-full shadow-xl shadow-amber-500/20 transition-transform hover:scale-105 active:scale-95"
             >
-              {dataLoading ? 'WAIT...' : slide.buttonText}
+              START DRILLS
             </button>
           </div>
         );
@@ -303,13 +329,12 @@ const BootcampSession = ({ onClose }) => {
     }
   };
 
-  // --- RENDER ---
   return (
-    <div className="fixed inset-0 z-[100] flex justify-center bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex justify-center bg-black/90 backdrop-blur-sm">
       <div className="w-full max-w-md h-full bg-slate-950 flex flex-col shadow-2xl relative overflow-hidden">
 
         {/* HEADER */}
-        <div className="flex justify-between items-center p-4 bg-slate-900 border-b border-white/5 shrink-0 z-20 relative">
+        <div className="flex justify-between items-center p-4 bg-slate-900 border-b border-white/5 shrink-0 z-20">
           <div className="flex items-center gap-3">
             {phase === 'theory' ? (
               <span className="text-slate-400 font-mono text-xs">BRIEFING: {slideIndex + 1}/{THEORY_SLIDES.length}</span>
@@ -341,12 +366,11 @@ const BootcampSession = ({ onClose }) => {
           {phase === 'theory' ? renderTheoryContent() : (
             <div className="flex flex-col items-center justify-center h-full">
               {drillIndex < drillQuestions.length ? (
-                 // --- ВОТ ОН, ДВИЖОК! БОЛЬШЕ НИКАКИХ "DRILL STARTING" ---
                  <VisualDecoder
                     key={drillIndex}
                     data={drillQuestions[drillIndex]}
                     onComplete={() => handleDrillComplete()}
-                    hideContinue={true} // Режим Аркады
+                    hideContinue={true}
                   />
               ) : (
                 <div className="text-center">
@@ -359,7 +383,7 @@ const BootcampSession = ({ onClose }) => {
           )}
         </div>
 
-        {/* FOOTER NAV (Только для теории) */}
+        {/* NAV (Только для теории) */}
         {phase === 'theory' && THEORY_SLIDES[slideIndex].type !== 'ready' && (
           <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent z-30">
             <div className="flex gap-3">
