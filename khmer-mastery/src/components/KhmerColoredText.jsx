@@ -1,6 +1,5 @@
 import React from 'react';
 import { renderColoredKhmerToSvg, khmerGlyphDefaults } from '../lib/khmerGlyphRenderer';
-import { useFontFace } from '../hooks/useFontFace';
 
 const KHMER_PATTERN = /[\u1780-\u17ff]/;
 
@@ -46,7 +45,11 @@ export default function KhmerColoredText({
   onStatus,
 }) {
   const [svgMarkup, setSvgMarkup] = React.useState('');
-  const fallbackFontFamily = useFontFace(fontUrl);
+
+  // --- ВОТ ЗДЕСЬ БЫЛА ОШИБКА. ИСПРАВЛЕНО: ---
+  const [fallbackFontFamily, setFallbackFontFamily] = React.useState('');
+  // ------------------------------------------
+
   const cacheRef = React.useRef(new Map());
 
   React.useEffect(() => {
@@ -61,6 +64,7 @@ export default function KhmerColoredText({
 
     const family = getFontFamilyName(fontUrl);
     const cached = fontFaceCache.get(fontUrl);
+
     const loadPromise = cached?.promise ?? (() => {
       const fontFace = new FontFace(family, `url("${fontUrl}")`);
       const promise = fontFace.load().then((loadedFace) => {
@@ -74,7 +78,7 @@ export default function KhmerColoredText({
     loadPromise
       .then(() => {
         if (!active) return;
-        setFallbackFontFamily(family);
+        setFallbackFontFamily(family); // Теперь эта функция существует и работает!
       })
       .catch(() => {
         if (!active) return;
