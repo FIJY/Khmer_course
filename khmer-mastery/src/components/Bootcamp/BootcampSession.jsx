@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCourseMap } from '../../hooks/useCourseMap';
-import VisualDecoder from '../LessonSlides/VisualDecoder'; // Используем ТВОЙ готовый компонент!
+import VisualDecoder from '../VisualDecoder'; // Используем ТВОЙ готовый компонент!
 import { X } from 'lucide-react';
 
 const BootcampSession = ({ onClose }) => {
