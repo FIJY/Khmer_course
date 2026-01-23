@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useCourseMap } from '../../hooks/useCourseMap';
+import useCourseMap from '../../hooks/useCourseMap';
 import VisualDecoder from '../VisualDecoder'; // Используем ТВОЙ готовый компонент!
 import { X } from 'lucide-react';
 
