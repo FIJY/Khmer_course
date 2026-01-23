@@ -3,6 +3,7 @@ import KhmerColoredText from '../KhmerColoredText';
 import VisualDecoder from '../VisualDecoder';
 import useCourseMap from '../../hooks/useCourseMap';
 import { X, Zap, ArrowRight, ArrowLeft, MousePointerClick, Volume2 } from 'lucide-react';
+import { THEORY_SLIDES } from './BootcampSession.slides';
 
 /**
  * BOOTCAMP SESSION (Unit R1)
@@ -397,6 +398,16 @@ const BootcampSession = ({ onClose }) => {
   const requiresUnlock = currentSlide?.type === 'no-spaces' || currentSlide?.type === 'meet-teams';
   const isUnlocked = unlockedSlides[slideIndex] || !requiresUnlock;
   const nextDisabled = !isUnlocked;
+  const headerStatus = phase === 'theory' ? (
+    <span className="text-slate-400 font-mono text-sm">
+      BRIEFING: {slideIndex + 1}/{THEORY_SLIDES.length}
+    </span>
+  ) : (
+    <div className="flex items-center gap-2 text-amber-400 font-black text-xl">
+      <Zap size={20} fill="currentColor" />
+      SCORE: {score}
+    </div>
+  );
 
   // ---------- LOAD PRACTICE DATA ----------
   useEffect(() => {
@@ -670,7 +681,7 @@ const BootcampSession = ({ onClose }) => {
               <div className="text-slate-400 text-xs mt-2">Tip: Smooth = Sun, Spiky = Moon. Don’t overthink in the beginning.</div>
               <div className="mt-4">
                 <MiniCommanderDrill
-                onComplete={() => setUnlockedSlides(u => ({ ...u, [slideIndex]: true }))}
+                  onComplete={() => setUnlockedSlides((u) => ({ ...u, [slideIndex]: true }))}
                   text={slide.microDrillText}
                   requiredCount={slide.microDrillCount}
                   audioMap={slide.consonantAudioMap}
@@ -680,7 +691,7 @@ const BootcampSession = ({ onClose }) => {
           </div>
         );
 
-case 'rule':
+      case 'rule':
         return (
           <div className="w-full max-w-2xl text-center">
             <h2 className="text-4xl font-black text-white mb-4">{slide.title}</h2>
@@ -730,6 +741,61 @@ case 'rule':
         return <div className="text-white">Slide type not supported</div>;
     }
   };
+
+  const bodyContent = phase === 'theory' ? (
+    <>
+      {renderTheoryContent()}
+
+      {/* Nav buttons (hide on "ready") */}
+      {THEORY_SLIDES[slideIndex]?.type !== 'ready' && (
+        <div className="flex gap-3 mt-10 w-full max-w-md">
+          <button
+            onClick={prevSlide}
+            disabled={slideIndex === 0}
+            className="flex-1 py-3 rounded-lg bg-slate-800 text-slate-300 font-bold disabled:opacity-30 hover:bg-slate-700 flex items-center justify-center gap-2"
+            type="button"
+          >
+            <ArrowLeft size={18} />
+            Back
+          </button>
+          <button
+            onClick={nextSlide}
+            disabled={nextDisabled}
+            className="flex-1 py-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:bg-blue-600"
+            type="button"
+          >
+            {nextDisabled ? 'Tap all consonants' : 'Next'}
+            <ArrowRight size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* Audio hint row on no-spaces */}
+      {THEORY_SLIDES[slideIndex]?.type === 'no-spaces' && (
+        <div className="mt-6 text-slate-400 text-sm flex items-center gap-2">
+          <Volume2 size={16} />
+          If you added audio files, consonant clicks will play pronunciation.
+        </div>
+      )}
+    </>
+  ) : (
+    <>
+      {usingFallbackPractice && (
+        <div className="mb-4 max-w-xl text-center text-slate-300 text-sm bg-slate-800/70 border border-white/10 rounded-xl p-4">
+          <div className="font-bold text-white mb-1">Using built-in practice</div>
+          I couldn’t find VisualDecoder drills in the course map for this unit, so I loaded a minimal fallback set.
+          When your course JSON is wired in, this banner will disappear.
+        </div>
+      )}
+
+      <VisualDecoder
+        key={drillIndex}
+        data={((drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]?.data) ?? (drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]}
+        onComplete={handleDrillComplete}
+        hideContinue={true}
+      />
+    </>
+  );
 
   // ---------- MAIN RETURN ----------
   if (loading) {
