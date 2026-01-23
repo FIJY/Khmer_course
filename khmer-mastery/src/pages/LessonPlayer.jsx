@@ -149,7 +149,7 @@ export default function LessonPlayer() {
           <InventorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
-        {type === 'visual_decoder' && <VisualDecoder data={current} onComplete={() => setCanAdvance(true)} hideDefaultButton={true} />}
+        {type === 'visual_decoder' && <VisualDecoder key={step} data={current} onComplete={() => setCanAdvance(true)} hideDefaultButton={true} />}
 
         {type === 'vocab_card' && (
           <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
