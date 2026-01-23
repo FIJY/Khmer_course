@@ -1,16 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight
+  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight, Zap
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import EmptyState from '../components/UI/EmptyState';
 import useCourseMap from '../hooks/useCourseMap';
+import BootcampSession from '../components/Bootcamp/BootcampSession'; // Убедись, что путь правильный
 import { t } from '../i18n';
 
+// МЫ ОСТАВИЛИ ТОЛЬКО ОДИН БЛОК, ЧТОБЫ БЫЛО КРАСИВО И НЕ ПУСТО
 const COURSE_LEVELS = [
-  // --- SURVIVAL & BASIC UNDERSTANDING ---
+  // --- СКРЫТЫЕ ПУСТЫЕ УРОВНИ ---
+  /*
   {
     title: "CONTACT & REACTIONS",
     description: "I don't get lost, I'm polite, and I am understood.",
@@ -19,16 +22,20 @@ const COURSE_LEVELS = [
     bg: "from-cyan-500/10 to-transparent",
     border: "border-cyan-500/20"
   },
-  // --- SPECIAL MODULE (ALPHABET) ---
-  // Вставлен сюда по твоей просьбе (после 38 урока)
+  */
+
+  // --- 🔥 ТВОЙ ГЛАВНЫЙ БЛОК (R1 и далее) ---
   {
     title: "VISUAL DECODER: READING & WRITING",
     description: "Crack the code. Learn the Khmer script from scratch.",
-    range: [10000, 12000], // <--- ВАЖНО: Проверь эти ID в своей базе!
-    color: "text-amber-400", // Сделал желтым/золотым, чтобы выделялся
+    range: [10000, 12000],
+    color: "text-amber-400",
     bg: "from-amber-500/10 to-transparent",
     border: "border-amber-500/20"
   },
+
+  // --- СКРЫТЫЕ ПУСТЫЕ УРОВНИ ---
+  /*
   {
     title: "DAILY LIFE",
     description: "I live, buy, get medical help, and move around.",
@@ -45,8 +52,6 @@ const COURSE_LEVELS = [
     bg: "from-sky-500/10 to-transparent",
     border: "border-sky-500/20"
   },
-
-  // --- SYSTEMIC UNDERSTANDING ---
   {
     title: "GRAMMAR AS A TOOL",
     description: "Understanding structure: Causes, conditions, and frequency.",
@@ -71,10 +76,6 @@ const COURSE_LEVELS = [
     bg: "from-purple-500/10 to-transparent",
     border: "border-purple-500/20"
   },
-
-
-
-  // --- DEEP UNDERSTANDING (B1-B2) ---
   {
     title: "LANGUAGE AS THOUGHT",
     description: "Abstract concepts, idioms, and native speed.",
@@ -91,9 +92,12 @@ const COURSE_LEVELS = [
     bg: "from-rose-500/10 to-transparent",
     border: "border-rose-500/20"
   }
+  */
 ];
 
 export default function CourseMap() {
+  const [showBootcamp, setShowBootcamp] = useState(false); // Состояние для открытия Буткемпа
+
   const {
     loading,
     completedLessons,
@@ -117,10 +121,25 @@ export default function CourseMap() {
 
   return (
     <MobileLayout withNav={true}>
-      {/* Sticky header to stay visible while scrolling */}
+
+      {/* --- МОДУЛЬ БУТКЕМПА (Всплывает поверх всего) --- */}
+      {showBootcamp && (
+        <BootcampSession onClose={() => setShowBootcamp(false)} />
+      )}
+
+      {/* --- КНОПКА ЗАПУСКА БУТКЕМПА (Плавающая) --- */}
+      <button
+        onClick={() => setShowBootcamp(true)}
+        className="fixed bottom-24 right-6 z-50 bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest py-3 px-6 rounded-full shadow-lg border-4 border-amber-600 animate-pulse flex items-center gap-2 active:scale-95 transition-transform"
+      >
+        <Zap size={24} fill="black" />
+        BOOTCAMP
+      </button>
+
+      {/* Sticky header */}
       <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-40">
         <h1 className="text-2xl font-black tracking-tighter uppercase italic text-white">
-          Khmer <span className="text-cyan-400">Mastery</span>
+          Khmer <span className="text-amber-400">Mastery</span>
         </h1>
         <div className="bg-gray-900 px-4 py-2 rounded-full flex items-center gap-2 border border-white/10">
           <Gem size={16} className="text-emerald-500 fill-emerald-500/20" />
@@ -128,7 +147,7 @@ export default function CourseMap() {
         </div>
       </div>
 
-      <div className="space-y-12 mt-6 pb-10">
+      <div className="space-y-12 mt-6 pb-24"> {/* Увеличил паддинг снизу, чтобы кнопка не перекрывала контент */}
         {Object.keys(chapters).length === 0 ? (
           <EmptyState
             title={t('empty.lessons')}
@@ -174,7 +193,7 @@ export default function CourseMap() {
                         <div className="flex justify-between items-start mb-6">
                           <div className="max-w-[70%] text-white">
                             <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1 block">
-                              Chapter {chapter.displayId ?? chapter.id}
+                              Unit {chapter.displayId ?? chapter.id}
                             </span>
                             <h3 className={`text-xl font-black uppercase tracking-tight leading-none mb-2 ${isChapterFullDone ? 'text-emerald-400' : 'text-white'}`}>
                               {chapter.title}
