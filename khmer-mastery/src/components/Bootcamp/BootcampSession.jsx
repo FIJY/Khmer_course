@@ -13,7 +13,7 @@ const BootcampSession = ({ onClose }) => {
   // 1. ЗАГРУЖАЕМ ДАННЫЕ ИЗ R1 (ID: 10000)
   useEffect(() => {
     const initBootcamp = async () => {
-      const data = await loadUnitData('10000'); // Грузим Unit R1
+      const data = await loadUnitData('10100'); // Грузим Unit R1
       if (data && data.content) {
         // 2. ГЕНЕРИРУЕМ АРКАДУ
         // Берем все слайды типа 'visual_decoder' (Sun/Moon)
