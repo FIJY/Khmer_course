@@ -667,7 +667,7 @@ case 'rule':
             <span className="text-slate-400 font-mono text-sm">
               BRIEFING: {slideIndex + 1}/{THEORY_SLIDES.length}
             </span>
-          ) : (
+          ] (
             <div className="flex items-center gap-2 text-amber-400 font-black text-xl">
               <Zap size={20} fill="currentColor" />
               SCORE: {score}
@@ -718,7 +718,7 @@ case 'rule':
               </div>
             )}
           </>
-        ) : (
+        ] (
           <>
             {usingFallbackPractice && (
               <div className="mb-4 max-w-xl text-center text-slate-300 text-sm bg-slate-800/70 border border-white/10 rounded-xl p-4">
