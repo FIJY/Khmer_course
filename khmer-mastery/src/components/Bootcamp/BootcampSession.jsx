@@ -719,7 +719,7 @@ const BootcampSession = ({ onClose }) => {
               </div>
             )}
           </>
-        ) : (
+        ] (
           <>
             {usingFallbackPractice && (
               <div className="mb-4 max-w-xl text-center text-slate-300 text-sm bg-slate-800/70 border border-white/10 rounded-xl p-4">
