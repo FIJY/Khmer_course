@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import KhmerColoredText from '../KhmerColoredText';
 import VisualDecoder from '../VisualDecoder';
 import useCourseMap from '../../hooks/useCourseMap';
-import { X, Volume2, Zap, ArrowRight, ArrowLeft, MousePointerClick, RefreshCw } from 'lucide-react';
+import { X, Zap, ArrowRight, ArrowLeft, MousePointerClick, Volume2 } from 'lucide-react';
 
 // --- ДАННЫЕ СЛАЙДОВ ---
 const THEORY_SLIDES = [
   {
     type: 'title',
-    title: 'BOOTCAMP: RELOADED 5.0',
+    title: 'BOOTCAMP: RELOADED 6.0',
     subtitle: 'THE CODEBREAKER PROTOCOL',
     description: 'Forget logic. Trust your eyes. We start from zero.',
     icon: '🚀'
@@ -16,35 +16,32 @@ const THEORY_SLIDES = [
   {
     type: 'no-spaces',
     title: 'THE CHAOS',
-    subtitle: 'Khmer has NO spaces. Can you find the COMMANDERS?',
+    subtitle: 'Khmer words stick together. Find the COMMANDERS (Consonants).',
     englishAnalogy: 'ImagineIfEnglishWasWrittenLikeThis.',
-    // Сегментация фразы: ភាសាខ្មែរមិនដកឃ្លាទេ
-    // Разбиваем так, чтобы пользователь искал большие буквы
+    // Разбиваем фразу. Важно: isConsonant - это правда КОМАНДИР?
     segments: [
-      { text: 'ភា', type: 'consonant', sound: 'letter_pho.mp3' },
-      { text: 'សា', type: 'consonant', sound: 'letter_sa.mp3' },
-      { text: 'ខ្មែ', type: 'consonant', sound: 'letter_khmo.mp3' }, // Тут сложное сочетание
-      { text: 'រ', type: 'consonant', sound: 'letter_ro.mp3' },
-      { text: 'មិ', type: 'consonant', sound: 'letter_mo.mp3' },
-      { text: 'ន', type: 'consonant', sound: 'letter_no.mp3' },
-      { text: 'ដ', type: 'consonant', sound: 'letter_da.mp3' },
-      { text: 'ក', type: 'consonant', sound: 'letter_ka.mp3' },
-      { text: 'ឃ្លា', type: 'consonant', sound: 'letter_kho.mp3' },
-      { text: 'ទេ', type: 'consonant', sound: 'letter_to.mp3' }
+      { text: 'ភា', isConsonant: true, audio: 'letter_pho.mp3' },
+      { text: 'សា', isConsonant: true, audio: 'letter_sa.mp3' },
+      { text: 'ខ្មែ', isConsonant: true, audio: 'letter_khmo.mp3' },
+      { text: 'រ', isConsonant: true, audio: 'letter_ro.mp3' },
+      { text: 'មិ', isConsonant: true, audio: 'letter_mo.mp3' },
+      { text: 'ន', isConsonant: true, audio: 'letter_no.mp3' },
+      { text: 'ដ', isConsonant: true, audio: 'letter_da.mp3' },
+      { text: 'ក', isConsonant: true, audio: 'letter_ka.mp3' },
+      { text: 'ឃ្លា', isConsonant: true, audio: 'letter_kho.mp3' },
+      { text: 'ទេ', isConsonant: true, audio: 'letter_to.mp3' }
     ],
-    hint: "Tap the BIG letters (Consonants)."
+    hint: "Tap the letters. Watch the COMMANDER light up, while passengers fade."
   },
-  // --- НОВЫЙ ДИЗАЙН: ВЕРТИКАЛЬНЫЕ СТОЛБЦЫ (ПАРЫ) ---
   {
     type: 'meet-teams-vertical',
     title: 'MEET THE PAIRS',
-    subtitle: 'See how they match? Left is Light, Right is Deep.',
-    // Пары букв: [SunChar, MoonChar, EnglishName]
+    subtitle: 'Left = Light Voice (A). Right = Deep Voice (O).',
     pairs: [
-      { sun: 'ក', moon: 'គ', name: 'K-Sound', sunSound: 'letter_ka.mp3', moonSound: 'letter_ko.mp3' },
-      { sun: 'ខ', moon: 'ឃ', name: 'KH-Sound', sunSound: 'letter_kha.mp3', moonSound: 'letter_kho.mp3' },
-      { sun: 'ច', moon: 'ជ', name: 'CH-Sound', sunSound: 'letter_cha.mp3', moonSound: 'letter_cho.mp3' },
-      { sun: 'ឆ', moon: 'ឈ', name: 'CHH-Sound', sunSound: 'letter_chha.mp3', moonSound: 'letter_chho.mp3' },
+      { sun: 'ក', sunEng: 'KA', moon: 'គ', moonEng: 'KO', sunSound: 'letter_ka.mp3', moonSound: 'letter_ko.mp3' },
+      { sun: 'ខ', sunEng: 'KHA', moon: 'ឃ', moonEng: 'KHO', sunSound: 'letter_kha.mp3', moonSound: 'letter_kho.mp3' },
+      { sun: 'ច', sunEng: 'CHA', moon: 'ជ', moonEng: 'CHO', sunSound: 'letter_cha.mp3', moonSound: 'letter_cho.mp3' },
+      { sun: 'ឆ', sunEng: 'CHHA', moon: 'ឈ', moonEng: 'CHHO', sunSound: 'letter_chha.mp3', moonSound: 'letter_chho.mp3' },
     ]
   },
   {
@@ -67,16 +64,15 @@ const THEORY_SLIDES = [
   }
 ];
 
-// --- ИСПРАВЛЕННЫЕ ЗАПАСНЫЕ ДАННЫЕ ---
+// --- ДАННЫЕ ДЛЯ АРКАДЫ (ПОЛНАЯ ЗАЩИТА ОТ ПУСТОТЫ) ---
 const FALLBACK_DRILLS = [
-  // ВАЖНО: term - это буква, которая показывается.
-  // correct: 0 (Sun), 1 (Moon)
-  { term: 'ក', options: ['SUN ☀️', 'MOON 🌑'], correct: 0, title: 'Face Control' },
-  { term: 'គ', options: ['SUN ☀️', 'MOON 🌑'], correct: 1, title: 'Face Control' },
-  { term: 'ខ', options: ['SUN ☀️', 'MOON 🌑'], correct: 0, title: 'Hair Check' },
-  { term: 'ឃ', options: ['SUN ☀️', 'MOON 🌑'], correct: 1, title: 'Hair Check' },
-  { term: 'ច', options: ['SUN ☀️', 'MOON 🌑'], correct: 0, title: 'Face Control' },
-  { term: 'ជ', options: ['SUN ☀️', 'MOON 🌑'], correct: 1, title: 'Face Control' },
+  // Заполняем ВСЕ возможные поля, чтобы VisualDecoder точно нашел что показать
+  { question: 'ក', term: 'ក', char: 'ក', text: 'ក', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control' },
+  { question: 'គ', term: 'គ', char: 'គ', text: 'គ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control' },
+  { question: 'ខ', term: 'ខ', char: 'ខ', text: 'ខ', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Hair Check' },
+  { question: 'ឃ', term: 'ឃ', char: 'ឃ', text: 'ឃ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Hair Check' },
+  { question: 'ច', term: 'ច', char: 'ច', text: 'ច', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control' },
+  { question: 'ជ', term: 'ជ', char: 'ជ', text: 'ជ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control' },
 ];
 
 const BootcampSession = ({ onClose }) => {
@@ -91,14 +87,12 @@ const BootcampSession = ({ onClose }) => {
   const [dataStatus, setDataStatus] = useState('loading');
 
   // State для интерактива
-  const [clickedSegments, setClickedSegments] = useState({}); // { 0: 'correct', 1: 'error' }
+  const [clickedSegments, setClickedSegments] = useState({});
 
-  // --- ЗАГРУЗКА ---
   useEffect(() => {
     const initBootcamp = async () => {
       try {
         let drills = [];
-        // 1. Пробуем базу
         if (courseMapSafe && courseMapSafe.loadUnitData) {
             try {
                 const data = await courseMapSafe.loadUnitData('10100');
@@ -108,7 +102,6 @@ const BootcampSession = ({ onClose }) => {
             } catch(e) { console.warn("DB fetch error"); }
         }
 
-        // 2. Если пусто — FALLBACK
         if (!drills || drills.length === 0) {
           drills = FALLBACK_DRILLS;
           setDataStatus('fallback');
@@ -132,7 +125,7 @@ const BootcampSession = ({ onClose }) => {
   const nextSlide = () => {
     if (slideIndex < THEORY_SLIDES.length - 1) {
       setSlideIndex(p => p + 1);
-      setClickedSegments({}); // Сброс
+      setClickedSegments({});
     } else {
       setPhase('practice');
     }
@@ -150,8 +143,6 @@ const BootcampSession = ({ onClose }) => {
     setTimeout(() => setDrillIndex(p => p + 1), 400);
   };
 
-  // --- RENDERERS ---
-
   const renderTheoryContent = () => {
     const slide = THEORY_SLIDES[slideIndex];
 
@@ -166,27 +157,42 @@ const BootcampSession = ({ onClose }) => {
         );
     }
 
-    // === ИСПРАВЛЕННЫЙ ХАОС (ТЕКСТ СПЛОШНОЙ СТРОКОЙ) ===
+    // === "ХАОС": ТЕПЕРЬ С УМНОЙ ПОДСВЕТКОЙ ===
     if (slide.type === 'no-spaces') {
        return (
           <div className="w-full text-center py-4">
              <h2 className="text-2xl font-black text-white mb-2">{slide.title}</h2>
              <p className="text-lg text-amber-400 mb-6">{slide.subtitle}</p>
 
-             {/* English Analogy */}
              <div className="bg-slate-800/50 p-4 rounded-xl mb-8 border border-slate-700">
                <p className="text-sm text-slate-400 mb-2 uppercase tracking-widest">English Analogy</p>
                <p className="text-lg text-white font-mono bg-black/50 p-3 rounded">{slide.englishAnalogy}</p>
              </div>
 
-             {/* ИНТЕРАКТИВНОЕ ПРЕДЛОЖЕНИЕ (БЕЗ GAP!) */}
              <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700 shadow-2xl mb-6">
                 <p className="text-slate-400 text-xs mb-4 uppercase tracking-widest text-center">{slide.hint}</p>
 
-                {/* Flex container но БЕЗ gap, чтобы буквы сливались визуально */}
+                {/* КОНТЕЙНЕР БЕЗ ОТСТУПОВ (Слитный текст) */}
                 <div className="flex flex-wrap justify-center items-end leading-none select-none">
                     {slide.segments.map((seg, idx) => {
-                        const status = clickedSegments[idx]; // 'correct' | 'error' | undefined
+                        const status = clickedSegments[idx];
+                        const isRevealed = status === 'correct';
+
+                        // ЦВЕТОВАЯ ЛОГИКА:
+                        // Если нажали: Согласные (Командиры) -> ЗЕЛЕНЫЙ. Остальное (Гласные) -> ТЕМНО-СЕРЫЙ.
+                        // Если не нажали: Всё БЕЛОЕ.
+                        const dynamicColors = isRevealed
+                            ? {
+                                CONSONANT_A: '#4ade80', // Ярко-зеленый
+                                CONSONANT_O: '#4ade80',
+                                OTHER: '#334155'        // Темно-серый (гасим гласные)
+                              }
+                            : {
+                                CONSONANT_A: '#ffffff',
+                                CONSONANT_O: '#ffffff',
+                                OTHER: '#ffffff'
+                              };
+
                         return (
                             <button
                                 key={idx}
@@ -194,76 +200,65 @@ const BootcampSession = ({ onClose }) => {
                                     setClickedSegments(prev => ({...prev, [idx]: 'correct'}));
                                     playAudio(seg.sound);
                                 }}
-                                className={`
-                                    relative px-0.5 py-1 rounded transition-all duration-200
-                                    ${status === 'correct' ? 'bg-green-500/20 text-green-400' : 'text-white hover:text-amber-300'}
-                                    text-4xl md:text-5xl font-serif
-                                `}
+                                // Убираем фон, оставляем только текст
+                                className="px-0 py-1 transition-all duration-300 transform active:scale-110"
                             >
                                 <KhmerColoredText
                                     text={seg.text}
                                     fontSize={48}
-                                    // Если кликнули - красим в зеленый (или обычный цвет компонента), если нет - белый
-                                    colors={status === 'correct' ? undefined : { OTHER: '#ffffff', CONSONANT_A: '#ffffff', CONSONANT_O: '#ffffff' }}
+                                    colors={dynamicColors}
                                 />
-                                {/* Индикатор успеха */}
-                                {status === 'correct' && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-green-500 animate-bounce">
-                                        <Volume2 size={16} />
-                                    </div>
-                                )}
                             </button>
                         );
                     })}
                 </div>
              </div>
-
-             <p className="text-green-400 text-sm font-bold px-4">{slide.solution}</p>
           </div>
        );
     }
 
-    // === ВЕРТИКАЛЬНЫЕ СТОЛБЦЫ (ПАРЫ) ===
+    // === "ПАРЫ": ВЕРТИКАЛЬНО + АНГЛИЙСКИЙ ===
     if (slide.type === 'meet-teams-vertical') {
         return (
           <div className="w-full py-2">
             <h2 className="text-2xl font-black text-white mb-2 text-center">{slide.title}</h2>
             <p className="text-slate-400 text-center mb-6 text-sm">{slide.subtitle}</p>
 
-            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto h-[400px]">
-                {/* SUN COLUMN */}
+            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto h-[450px]">
+                {/* SUN */}
                 <div className="bg-slate-900/50 border border-amber-500/20 rounded-xl p-2 flex flex-col items-center">
-                    <div className="text-amber-400 font-black uppercase tracking-widest mb-4 border-b border-amber-500/30 w-full text-center pb-2">SUN ☀️</div>
-                    <div className="flex flex-col gap-4 w-full flex-1 overflow-y-auto">
+                    <div className="text-amber-400 font-black uppercase mb-4 border-b border-amber-500/30 w-full text-center pb-2">SUN ☀️</div>
+                    <div className="flex flex-col gap-4 w-full overflow-y-auto">
                         {slide.pairs.map((pair, idx) => (
                              <button
                                 key={idx}
                                 onClick={() => playAudio(pair.sunSound)}
-                                className="bg-black/40 border border-amber-500/10 rounded-lg p-2 hover:bg-amber-900/20 transition-colors flex items-center justify-center h-20"
+                                className="bg-black/40 border border-amber-500/10 rounded-lg p-3 hover:bg-amber-900/20 transition-colors flex flex-col items-center justify-center h-24"
                              >
                                 <KhmerColoredText text={pair.sun} fontSize={36} colors={{ OTHER: '#ffb020', CONSONANT_A: '#ffb020' }} />
+                                <span className="text-amber-200/50 text-xs font-bold mt-1 tracking-widest">{pair.sunEng}</span>
                              </button>
                         ))}
                     </div>
                 </div>
 
-                {/* MOON COLUMN */}
+                {/* MOON */}
                 <div className="bg-slate-900/50 border border-indigo-500/20 rounded-xl p-2 flex flex-col items-center">
-                    <div className="text-indigo-400 font-black uppercase tracking-widest mb-4 border-b border-indigo-500/30 w-full text-center pb-2">MOON 🌑</div>
-                    <div className="flex flex-col gap-4 w-full flex-1 overflow-y-auto">
+                    <div className="text-indigo-400 font-black uppercase mb-4 border-b border-indigo-500/30 w-full text-center pb-2">MOON 🌑</div>
+                    <div className="flex flex-col gap-4 w-full overflow-y-auto">
                         {slide.pairs.map((pair, idx) => (
                              <button
                                 key={idx}
                                 onClick={() => playAudio(pair.moonSound)}
-                                className="bg-black/40 border border-indigo-500/10 rounded-lg p-2 hover:bg-indigo-900/20 transition-colors flex items-center justify-center h-20"
+                                className="bg-black/40 border border-indigo-500/10 rounded-lg p-3 hover:bg-indigo-900/20 transition-colors flex flex-col items-center justify-center h-24"
                              >
                                 <KhmerColoredText text={pair.moon} fontSize={36} colors={{ OTHER: '#6b5cff', CONSONANT_O: '#6b5cff' }} />
+                                <span className="text-indigo-200/50 text-xs font-bold mt-1 tracking-widest">{pair.moonEng}</span>
                              </button>
                         ))}
                     </div>
                 </div>
             </div>
-            <div className="text-center text-slate-500 text-xs mt-4">Tap to compare voices</div>
           </div>
         );
     }
