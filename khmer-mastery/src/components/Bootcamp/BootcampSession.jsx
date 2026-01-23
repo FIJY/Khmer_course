@@ -58,7 +58,9 @@ const CONSONANT_AUDIO = {
 const playAudio = (audioFile) => {
   if (!audioFile) return;
   try {
-    const a = new Audio(`/audio/${audioFile}`);
+    // audioFile should be relative to /public (e.g. "khmer/consonants/ka.mp3")
+    const url = audioFile.startsWith('/') ? audioFile : `/${audioFile}`;
+    const a = new Audio(url);
     a.play().catch(() => {});
   } catch {
     // noop
@@ -277,6 +279,25 @@ const MiniCommanderDrill = ({
 };
 
 // ---------- THEORY SLIDES ----------
+const UNIT_R1_FULL_TEXT = `📋 БЫСТРАЯ СПРАВКА
+Неделя 1: R1–R2 — Sun vs Moon, базовые буквы (55 слов) — 5 дней × 20 мин
+Неделя 2: R3–R4 — Гласные слева/вокруг, исключения (+95 слов, 150 всего) — 5 дней × 25 мин
+Неделя 3: R5–R6 — Гласные снизу, стек, модификаторы (+120 слов, 270 всего) — 5 дней × 30 мин
+Неделя 4: Consonant Clusters — Сочетания согласных (+60 слов, 330 всего) — 5 дней × 35 мин
+Результат: Беглое чтение 85–95% текстов за 28 дней.
+
+UNIT R1: THE FOUNDATION (БАЗА)
+LEARNING OBJECTIVES:
+• Различу ☀️ Sun Team и 🌑 Moon Team по визуальным признакам
+• Отличу гладкие головы букв от зубчатых
+• Прочитаю слово «Кофе» (កាហ្វេ) и 20+ других слов
+• Научусь произносить K-группу правильно
+
+Главная идея:
+Буква‑командир решает, как звучит гласная ПОСЛЕ неё.
+Две команды = две фонетические системы.
+`;
+
 const THEORY_SLIDES = [
   {
     type: 'title',
@@ -287,24 +308,23 @@ const THEORY_SLIDES = [
   },
   {
     type: 'no-spaces',
-    title: 'THE CHAOS',
-    subtitle: 'Khmer is written like a stream. Your job: find the COMMANDERS (Consonants).',
+    title: 'SHOCKING TRUTH: NO SPACES',
+    subtitle: 'Khmer text is a continuous stream. First you hunt the COMMANDERS (consonants).',
     englishAnalogy: 'ImagineIfEnglishWasWrittenLikeThis.',
-    khmerText: 'ភាសាខ្មែរមិនដកឃ្លាទេ',
-    // Optional per-letter audio (consonants only). If a key is missing, we just skip audio.
+    khmerText: 'ភាសាខ្មែរមិនដកឃ្លាទេវាជាស្ទ្រីមតែមួយ',
+    fullText: UNIT_R1_FULL_TEXT,
+    rule: 'Spaces are not word separators. They are used like commas / for breathing.',
+    solution: 'Step 1: Ignore vowels. Click ONLY consonants (COMMANDERS) first.',
     consonantAudioMap: {
-      'ភ': 'letter_pho.mp3',
-      'ស': 'letter_sa.mp3',
-      'ខ': 'letter_kho.mp3',
-      'ម': 'letter_mo.mp3',
-      'រ': 'letter_ro.mp3',
-      'ន': 'letter_no.mp3',
-      'ដ': 'letter_do.mp3',
-      'ក': 'letter_ka.mp3',
-      'ឃ': 'letter_kho_moon.mp3',
-      'ល': 'letter_lo.mp3',
-      'ទ': 'letter_to.mp3'
-    },
+      // Put your real files in /public and keep these as relative URLs.
+      // Example: public/khmer/consonants/ka.mp3  ->  "khmer/consonants/ka.mp3"
+      'ក': 'khmer/consonants/ka.mp3',
+      'ខ': 'khmer/consonants/kha.mp3',
+      'គ': 'khmer/consonants/ko.mp3',
+      'ឃ': 'khmer/consonants/kho.mp3',
+      'ង': 'khmer/consonants/ngo.mp3'
+    }
+  },
     rule: 'Spaces are not word separators. Spaces are used like commas / for breathing.',
     solution: 'Step 1: Ignore vowels. Click consonants (COMMANDERS) first.'
   },
@@ -325,9 +345,34 @@ const THEORY_SLIDES = [
     leftTeam: {
       name: 'SUN TEAM (A-Series)',
       voice: 'Light, natural voice',
-      visual: 'Smooth/simple heads',
-      examples: ['ក', 'ខ', 'ច', 'ត']
+      visual: 'Smooth/simple heads'
     },
+    rightTeam: {
+      name: 'MOON TEAM (O-Series)',
+      voice: 'Deep, bass voice',
+      visual: 'Spiky/complex heads'
+    },
+    vowel: 'ា',
+    pairs: [
+      { sun: 'ក', moon: 'គ', vowel: 'ា', sunRead: 'Kaa', moonRead: 'Kea' },
+      { sun: 'ខ', moon: 'ឃ', vowel: 'ា', sunRead: 'Khaa', moonRead: 'Khea' }
+    ],
+    microDrillText: 'ភាសាខ្មែរមិនដកឃ្លាទេវាជាស្ទ្រីមតែមួយ',
+    microDrillCount: 6,
+    consonantAudioMap: {
+      'ក': 'khmer/consonants/ka.mp3',
+      'ខ': 'khmer/consonants/kha.mp3',
+      'គ': 'khmer/consonants/ko.mp3',
+      'ឃ': 'khmer/consonants/kho.mp3',
+      'ង': 'khmer/consonants/ngo.mp3',
+      'ភ': 'khmer/consonants/pho.mp3',
+      'ស': 'khmer/consonants/sa.mp3',
+      'ម': 'khmer/consonants/mo.mp3',
+      'រ': 'khmer/consonants/ro.mp3',
+      'ទ': 'khmer/consonants/to.mp3',
+      'ជ': 'khmer/consonants/jo.mp3'
+    }
+  },
     rightTeam: {
       name: 'MOON TEAM (O-Series)',
       voice: 'Deep, bass voice',
@@ -357,6 +402,7 @@ const BootcampSession = ({ onClose }) => {
 
   const [phase, setPhase] = useState('theory'); // 'theory' | 'practice'
   const [slideIndex, setSlideIndex] = useState(0);
+  const [unlockedSlides, setUnlockedSlides] = useState({});
 
   // NO-SPACES slide: reveal state (by char index in the stream)
   const [revealedConsonants, setRevealedConsonants] = useState(() => new Set());
@@ -370,7 +416,9 @@ const BootcampSession = ({ onClose }) => {
 
   const currentSlide = THEORY_SLIDES[slideIndex];
   const noSpacesTotal = currentSlide?.type === 'no-spaces' ? getConsonantIndices(currentSlide.khmerText).length : 0;
-  const nextDisabled = currentSlide?.type === 'no-spaces' && revealedConsonants.size < noSpacesTotal;
+  const requiresUnlock = currentSlide?.type === 'no-spaces' || currentSlide?.type === 'meet-teams';
+  const isUnlocked = unlockedSlides[slideIndex] || !requiresUnlock;
+  const nextDisabled = !isUnlocked;
 
   // ---------- LOAD PRACTICE DATA ----------
   useEffect(() => {
@@ -380,7 +428,7 @@ const BootcampSession = ({ onClose }) => {
       try {
         // Prefer 10101 (R1). Fallback to 10100 if your data uses old id.
         // If your map uses different ids, add them here.
-        const candidateIds = ['10101', '10100', '101'];
+        const candidateIds = ['10000','10101','10100','101'];
         let data = null;
         for (const id of candidateIds) {
           // eslint-disable-next-line no-await-in-loop
@@ -568,6 +616,19 @@ const BootcampSession = ({ onClose }) => {
                 </div>
               ))}
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
+                <div className="text-xs text-slate-400 uppercase tracking-widest mb-2">Example (Sun)</div>
+                <div className="text-4xl text-white font-khmer mb-2">កា</div>
+                <div className="text-slate-300 text-sm"><span className="text-amber-300 font-bold">Commander:</span> ក → Sun → vowel stays pure → <span className="font-bold">Kaa</span></div>
+              </div>
+              <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
+                <div className="text-xs text-slate-400 uppercase tracking-widest mb-2">Example (Moon)</div>
+                <div className="text-4xl text-white font-khmer mb-2">គា</div>
+                <div className="text-slate-300 text-sm"><span className="text-amber-300 font-bold">Commander:</span> គ → Moon → vowel transforms → <span className="font-bold">Kea</span></div>
+              </div>
+            </div>
+
             <div className="bg-red-500/20 p-4 rounded-lg border border-red-500/50 flex items-center gap-3">
               <div className="text-2xl">⚠️</div>
               <p className="text-white text-sm font-semibold">{slide.warning}</p>
@@ -580,60 +641,87 @@ const BootcampSession = ({ onClose }) => {
           <div className="w-full max-w-4xl">
             <h2 className="text-3xl font-black text-white mb-8 text-center">{slide.title}</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* SUN */}
-              <div className="bg-gradient-to-b from-amber-400 to-amber-600 rounded-xl p-6 text-black shadow-lg shadow-amber-500/20">
-                <h3 className="text-2xl font-black mb-4 flex items-center gap-2">☀️ {slide.leftTeam.name}</h3>
-                <div className="space-y-2 text-sm font-semibold opacity-90">
-                  <p>🗣 {slide.leftTeam.voice}</p>
-                  <p>👁 {slide.leftTeam.visual}</p>
-                  <div className="mt-4 flex items-center gap-3">
-                    {slide.leftTeam.examples.map((ch) => (
-                      <div key={ch} className="bg-black/10 rounded-xl px-4 py-2">
-                        <KhmerColoredText text={ch} colors={COLORS_REVEALED} className="w-10 h-10" />
-                      </div>
-                    ))}
+            {/* Pair grid: makes the Sun/Moon linkage obvious */}
+            <div className="space-y-4">
+              {slide.pairs.map((pair, i) => (
+                <div key={i} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gradient-to-b from-amber-400 to-amber-600 rounded-xl p-6 text-black shadow-lg shadow-amber-500/20">
+                    <h3 className="text-xl font-black mb-2 flex items-center gap-2">☀️ {slide.leftTeam.name}</h3>
+                    <div className="text-sm font-semibold opacity-90 mb-4">
+                      <p>🗣 {slide.leftTeam.voice}</p>
+                      <p>👁 {slide.leftTeam.visual}</p>
+                    </div>
+                    <button
+                      onClick={() => playAudio(slide.consonantAudioMap?.[pair.sun])}
+                      className="w-full bg-black/20 hover:bg-black/30 transition-colors rounded-xl p-6 flex items-center justify-center text-7xl font-khmer shadow-inner"
+                      title="Tap to hear"
+                      type="button"
+                    >
+                      {pair.sun}
+                    </button>
+                    <div className="mt-3 text-xs font-bold opacity-80">
+                      Example: {pair.sun}{pair.vowel} = {pair.sunRead}
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* MOON */}
-              <div className="bg-gradient-to-b from-indigo-500 to-purple-700 rounded-xl p-6 text-white shadow-lg shadow-indigo-500/20">
-                <h3 className="text-2xl font-black mb-4 flex items-center gap-2">🌑 {slide.rightTeam.name}</h3>
-                <div className="space-y-2 text-sm font-medium opacity-90">
-                  <p>🗣 {slide.rightTeam.voice}</p>
-                  <p>👁 {slide.rightTeam.visual}</p>
-                  <div className="mt-4 flex items-center gap-3">
-                    {slide.rightTeam.examples.map((ch) => (
-                      <div key={ch} className="bg-black/20 rounded-xl px-4 py-2 border border-white/10">
-                        <KhmerColoredText text={ch} colors={COLORS_REVEALED} className="w-10 h-10" />
-                      </div>
-                    ))}
+                  <div className="bg-gradient-to-b from-indigo-500 to-purple-700 rounded-xl p-6 text-white shadow-lg shadow-indigo-500/20">
+                    <h3 className="text-xl font-black mb-2 flex items-center gap-2">🌑 {slide.rightTeam.name}</h3>
+                    <div className="text-sm font-medium opacity-90 mb-4">
+                      <p>🗣 {slide.rightTeam.voice}</p>
+                      <p>👁 {slide.rightTeam.visual}</p>
+                    </div>
+                    <button
+                      onClick={() => playAudio(slide.consonantAudioMap?.[pair.moon])}
+                      className="w-full bg-black/25 hover:bg-black/35 transition-colors rounded-xl p-6 flex items-center justify-center text-7xl font-khmer border border-white/10 shadow-inner"
+                      title="Tap to hear"
+                      type="button"
+                    >
+                      {pair.moon}
+                    </button>
+                    <div className="mt-3 text-xs font-bold opacity-90">
+                      Example: {pair.moon}{pair.vowel} = {pair.moonRead}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
 
-            <div className="mt-6 text-slate-300 text-sm bg-slate-800/60 border border-white/5 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Zap size={18} className="text-amber-400" />
-                <span className="font-bold text-white">Micro-drill:</span>
-                <span>Click a commander in the stream. (Only consonants are clickable.)</span>
-              </div>
-              <div className="opacity-90">
-                Tip: Smooth = Sun, Spiky = Moon. Don’t overthink in the beginning.
+            <div className="mt-6 bg-slate-800/70 rounded-xl p-4 border border-white/5">
+              <div className="text-amber-300 font-black mb-1">⚡ Micro-drill:</div>
+              <div className="text-slate-300 text-sm">Click a commander in the stream (only consonants are clickable). Keep clicking until all commanders are found.</div>
+              <div className="text-slate-400 text-xs mt-2">Tip: Smooth = Sun, Spiky = Moon. Don’t overthink in the beginning.</div>
+              <div className="mt-4">
+                <MiniCommanderDrill
+                onComplete={() => setUnlockedSlides(u => ({ ...u, [slideIndex]: true }))}
+                  text={slide.microDrillText}
+                  requiredCount={slide.microDrillCount}
+                  audioMap={slide.consonantAudioMap}
+                />
               </div>
             </div>
           </div>
         );
 
-      case 'rule':
+case 'rule':
         return (
           <div className="w-full max-w-2xl text-center">
             <h2 className="text-4xl font-black text-white mb-4">{slide.title}</h2>
 
             <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 rounded-2xl mb-6 shadow-xl">
               <p className="text-2xl font-bold text-white">{slide.rule80}</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
+                <div className="text-xs text-slate-400 uppercase tracking-widest mb-2">Spiky → Moon</div>
+                <div className="text-5xl text-white font-khmer mb-2">គា</div>
+                <div className="text-slate-300 text-sm">Looks spiky → Moon → read as <span className="font-bold">Kea</span></div>
+              </div>
+              <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
+                <div className="text-xs text-slate-400 uppercase tracking-widest mb-2">Smooth → Sun</div>
+                <div className="text-5xl text-white font-khmer mb-2">កា</div>
+                <div className="text-slate-300 text-sm">Looks smooth → Sun → read as <span className="font-bold">Kaa</span></div>
+              </div>
             </div>
 
             <p className="text-slate-400 mb-6">{slide.rule20}</p>
@@ -758,7 +846,7 @@ const BootcampSession = ({ onClose }) => {
 
             <VisualDecoder
               key={drillIndex}
-              data={(drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]}
+              data={((drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]?.data) ?? (drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]}
               onComplete={handleDrillComplete}
               hideContinue={true}
             />
