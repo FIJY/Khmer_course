@@ -325,9 +325,6 @@ const THEORY_SLIDES = [
       'ង': 'khmer/consonants/ngo.mp3'
     }
   },
-    rule: 'Spaces are not word separators. Spaces are used like commas / for breathing.',
-    solution: 'Step 1: Ignore vowels. Click consonants (COMMANDERS) first.'
-  },
   {
     type: 'reading-algorithm',
     title: 'THE DECODING ALGORITHM',
