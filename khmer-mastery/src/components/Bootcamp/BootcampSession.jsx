@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import KhmerColoredText from '../KhmerColoredText';
 import VisualDecoder from '../VisualDecoder';
 import useCourseMap from '../../hooks/useCourseMap';
@@ -21,7 +21,7 @@ const THEORY_SLIDES = [
     khmerAnalogy: 'ភាសាខ្មែរមិនដកឃ្លាទេ',
     solution: 'Don\'t panic. Find the COMMANDERS (Consonants).'
   },
-  // --- НОВЫЙ ЭКРАН: ИНТЕРАКТИВНЫЙ ВЫБОР ---
+  // --- ВОТ ОН, НОВЫЙ ЭКРАН С ТАБЛИЦЕЙ ---
   {
     type: 'interactive-explorer',
     title: 'MEET THE COMMANDERS',
@@ -71,18 +71,17 @@ const THEORY_SLIDES = [
   }
 ];
 
-// ЗАПАСНЫЕ ДАННЫЕ (Если база отвалится)
+// ЗАПАСНЫЕ ДАННЫЕ (ЧТОБЫ ДРИЛЛ НЕ БЫЛ ПУСТЫМ)
 const FALLBACK_DRILLS = [
-  { question: 'ក', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control', sound: 'letter_ka.mp3' },
-  { question: 'គ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control', sound: 'letter_ko.mp3' },
-  { question: 'ខ', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Hair Check', sound: 'letter_kha.mp3' },
-  { question: 'ឃ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Hair Check', sound: 'letter_kho.mp3' },
-  { question: 'ច', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control', sound: 'letter_cha.mp3' },
-  { question: 'ជ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control', sound: 'letter_cho.mp3' },
+  { question: 'ក', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control' },
+  { question: 'គ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control' },
+  { question: 'ខ', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Hair Check' },
+  { question: 'ឃ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Hair Check' },
+  { question: 'ច', correct: 0, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control' },
+  { question: 'ជ', correct: 1, options: ['SUN ☀️', 'MOON 🌑'], title: 'Face Control' },
 ];
 
 const BootcampSession = ({ onClose }) => {
-  // Хук базы данных (может быть undefined, если импорт кривой)
   const courseMap = useCourseMap();
 
   const [phase, setPhase] = useState('theory');
@@ -92,42 +91,44 @@ const BootcampSession = ({ onClose }) => {
   const [drillIndex, setDrillIndex] = useState(0);
   const [score, setScore] = useState(0);
 
-  const [dataStatus, setDataStatus] = useState('loading'); // loading, success, error, fallback
-  const [activeLetter, setActiveLetter] = useState(null); // Для интерактивного слайда
+  const [dataStatus, setDataStatus] = useState('loading');
+  const [activeLetter, setActiveLetter] = useState(null);
 
-  // --- ЗАГРУЗКА ДАННЫХ (УМНАЯ) ---
+  // --- ЗАГРУЗКА ДАННЫХ ---
   useEffect(() => {
     const initBootcamp = async () => {
       try {
         console.log("🚀 Starting Drill Load...");
         let drills = [];
 
-        // 1. Пытаемся загрузить из базы, если хук доступен
+        // 1. Пробуем загрузить из базы
         if (courseMap && courseMap.loadUnitData) {
-          const data = await courseMap.loadUnitData('10100');
-          if (data && data.content) {
-             drills = data.content.flatMap(lesson =>
-               lesson.slides ? lesson.slides.filter(s => s.type === 'visual_decoder') : []
-             );
+          try {
+             const data = await courseMap.loadUnitData('10100');
+             if (data && data.content) {
+                drills = data.content.flatMap(lesson =>
+                  lesson.slides ? lesson.slides.filter(s => s.type === 'visual_decoder') : []
+                );
+             }
+          } catch(e) {
+             console.warn("Database load failed, switching to fallback");
           }
         }
 
-        // 2. Если база пуста или ошибка - берем запасные (Fallback)
+        // 2. Если база не отдала данные — используем FALLBACK (чтобы не было пустого экрана!)
         if (!drills || drills.length === 0) {
-          console.warn("⚠️ Using Fallback Drills (Database empty or failed)");
+          console.log("⚠️ Using Fallback Drills");
           drills = FALLBACK_DRILLS;
           setDataStatus('fallback');
         } else {
           setDataStatus('success');
         }
 
-        // 3. Перемешиваем
         const shuffled = [...drills, ...drills].sort(() => Math.random() - 0.5);
         setDrillQuestions(shuffled);
 
       } catch (err) {
-        console.error("❌ Critical Load Error:", err);
-        // В любой непонятной ситуации - грузим запасные, чтобы пользователь мог играть
+        // В любой непонятной ситуации - запасной вариант
         setDrillQuestions(FALLBACK_DRILLS);
         setDataStatus('fallback');
       }
@@ -135,20 +136,17 @@ const BootcampSession = ({ onClose }) => {
     initBootcamp();
   }, []);
 
-  // --- АУДИО ДВИЖОК ---
   const playAudio = (fileName) => {
     if (!fileName) return;
     const audio = new Audio(`/sounds/${fileName}`);
     audio.play().catch(e => console.warn("Audio file missing:", fileName));
   };
 
-  // --- НАВИГАЦИЯ ---
   const nextSlide = () => {
     if (slideIndex < THEORY_SLIDES.length - 1) {
       setSlideIndex(prev => prev + 1);
-      setActiveLetter(null); // Сброс выделения
+      setActiveLetter(null);
     } else {
-      // Старт практики (всегда разрешаем, так как есть Fallback)
       setPhase('practice');
     }
   };
@@ -165,7 +163,6 @@ const BootcampSession = ({ onClose }) => {
     setTimeout(() => setDrillIndex(prev => prev + 1), 400);
   };
 
-  // --- РЕНДЕР СЛАЙДОВ ---
   const renderTheoryContent = () => {
     const slide = THEORY_SLIDES[slideIndex];
 
@@ -202,7 +199,7 @@ const BootcampSession = ({ onClose }) => {
           </div>
         );
 
-      // --- НОВЫЙ ИНТЕРАКТИВНЫЙ СЛАЙД ---
+      // ИНТЕРАКТИВНЫЙ СЛАЙД
       case 'interactive-explorer':
         return (
           <div className="w-full py-2">
@@ -212,50 +209,24 @@ const BootcampSession = ({ onClose }) => {
             <div className="grid grid-cols-1 gap-6 pb-24">
               {slide.groups.map((group, gIdx) => (
                 <div key={gIdx} className="bg-slate-900 border border-white/10 p-4 rounded-2xl flex flex-col items-center shadow-lg relative overflow-hidden">
-                  {/* Цветная полоска сверху */}
                   <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: group.color }}></div>
-
-                  <h3 className="text-xl font-black mb-1 uppercase tracking-widest" style={{ color: group.color }}>
-                    {group.name}
-                  </h3>
+                  <h3 className="text-xl font-black mb-1 uppercase tracking-widest" style={{ color: group.color }}>{group.name}</h3>
                   <p className="text-xs text-slate-400 mb-4">{group.desc}</p>
-
                   <div className="flex flex-wrap justify-center gap-3">
                     {group.letters.map((letter, lIdx) => {
                       const isActive = activeLetter === letter.id;
                       return (
                         <button
                           key={lIdx}
-                          onClick={() => {
-                            setActiveLetter(letter.id);
-                            playAudio(letter.sound);
-                          }}
-                          className={`
-                            relative flex flex-col items-center justify-center w-20 h-24 rounded-xl border-2 transition-all duration-200
-                            ${isActive
-                               ? `bg-slate-800 border-[${group.color}] shadow-[0_0_15px_${group.color}] scale-110 z-10`
-                               : 'bg-black/40 border-white/5 hover:bg-slate-800 hover:border-white/20'
-                            }
-                          `}
-                          style={{ borderColor: isActive ? group.color : '' }}
+                          onClick={() => { setActiveLetter(letter.id); playAudio(letter.sound); }}
+                          className={`relative flex flex-col items-center justify-center w-20 h-24 rounded-xl border-2 transition-all duration-200 ${isActive ? 'bg-slate-800 scale-110 z-10' : 'bg-black/40 border-white/5'}`}
+                          style={{ borderColor: isActive ? group.color : 'rgba(255,255,255,0.1)', boxShadow: isActive ? `0 0 15px ${group.color}` : 'none' }}
                         >
-                          {/* БУКВА */}
                           <KhmerColoredText
-                            text={letter.char}
-                            fontSize={40}
-                            colors={{
-                              CONSONANT_A: isActive ? '#ffffff' : group.color,
-                              CONSONANT_O: isActive ? '#ffffff' : group.color,
-                              OTHER: group.color
-                            }}
+                            text={letter.char} fontSize={40}
+                            colors={{ CONSONANT_A: isActive ? '#fff' : group.color, CONSONANT_O: isActive ? '#fff' : group.color, OTHER: group.color }}
                           />
-
-                          {/* АНГЛИЙСКОЕ ИМЯ (Показываем только если активно) */}
-                          <div className={`mt-1 text-xs font-bold tracking-wider transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`} style={{ color: group.color }}>
-                             {letter.eng}
-                          </div>
-
-                          {/* Индикатор звука */}
+                          <div className={`mt-1 text-xs font-bold tracking-wider transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`} style={{ color: group.color }}>{letter.eng}</div>
                           {isActive && <Volume2 size={12} className="absolute top-1 right-1 text-white/50" />}
                         </button>
                       );
@@ -264,13 +235,6 @@ const BootcampSession = ({ onClose }) => {
                 </div>
               ))}
             </div>
-
-            {/* Подсказка если ничего не выбрано */}
-            {!activeLetter && (
-              <div className="text-center animate-pulse mt-4 flex justify-center items-center gap-2 text-slate-500 text-sm">
-                <MousePointerClick size={16} /> Tap letters to listen
-              </div>
-            )}
           </div>
         );
 
@@ -305,17 +269,13 @@ const BootcampSession = ({ onClose }) => {
             <div className="mb-6 animate-pulse text-7xl">🎯</div>
             <h2 className="text-4xl font-black text-white mb-4">{slide.title}</h2>
             <p className="text-xl text-slate-300 mb-4 max-w-md mx-auto">{slide.description}</p>
-
-            {/* Статус загрузки */}
             <div className="mb-8 h-6">
                {dataStatus === 'loading' && <span className="text-amber-400 text-sm animate-pulse">Loading Mission Data...</span>}
                {dataStatus === 'fallback' && <span className="text-blue-400 text-sm">Offline Mode Ready</span>}
                {dataStatus === 'success' && <span className="text-green-400 text-sm">System Online</span>}
             </div>
-
             <button
               onClick={nextSlide}
-              // Кнопка теперь ВСЕГДА активна, если загрузка не идет прямо сейчас
               disabled={dataStatus === 'loading'}
               className="bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black text-xl font-black py-5 px-16 rounded-full shadow-xl shadow-amber-500/20 transition-transform hover:scale-105 active:scale-95"
             >
@@ -332,46 +292,24 @@ const BootcampSession = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-[100] flex justify-center bg-black/90 backdrop-blur-sm">
       <div className="w-full max-w-md h-full bg-slate-950 flex flex-col shadow-2xl relative overflow-hidden">
-
-        {/* HEADER */}
         <div className="flex justify-between items-center p-4 bg-slate-900 border-b border-white/5 shrink-0 z-20">
           <div className="flex items-center gap-3">
             {phase === 'theory' ? (
               <span className="text-slate-400 font-mono text-xs">BRIEFING: {slideIndex + 1}/{THEORY_SLIDES.length}</span>
             ) : (
-              <div className="flex items-center gap-2 text-amber-400 font-black text-xl">
-                <Zap size={20} fill="currentColor" />
-                SCORE: {score}
-              </div>
+              <div className="flex items-center gap-2 text-amber-400 font-black text-xl"><Zap size={20} fill="currentColor" /> SCORE: {score}</div>
             )}
           </div>
-          <button onClick={onClose} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors">
-            <X className="text-white w-6 h-6" />
-          </button>
+          <button onClick={onClose} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors"><X className="text-white w-6 h-6" /></button>
         </div>
-
-        {/* PROGRESS */}
         <div className="h-1 bg-slate-900 w-full relative z-20">
-          <div
-            className={`h-full transition-all duration-300 ${phase === 'theory' ? 'bg-blue-500' : 'bg-amber-400'}`}
-            style={{ width: phase === 'theory'
-              ? `${((slideIndex + 1) / THEORY_SLIDES.length) * 100}%`
-              : `${((drillIndex) / drillQuestions.length) * 100}%`
-            }}
-          />
+          <div className={`h-full transition-all duration-300 ${phase === 'theory' ? 'bg-blue-500' : 'bg-amber-400'}`} style={{ width: phase === 'theory' ? `${((slideIndex + 1) / THEORY_SLIDES.length) * 100}%` : `${((drillIndex) / drillQuestions.length) * 100}%` }} />
         </div>
-
-        {/* BODY */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-32">
           {phase === 'theory' ? renderTheoryContent() : (
             <div className="flex flex-col items-center justify-center h-full">
               {drillIndex < drillQuestions.length ? (
-                 <VisualDecoder
-                    key={drillIndex}
-                    data={drillQuestions[drillIndex]}
-                    onComplete={() => handleDrillComplete()}
-                    hideContinue={true}
-                  />
+                 <VisualDecoder key={drillIndex} data={drillQuestions[drillIndex]} onComplete={() => handleDrillComplete()} hideContinue={true} />
               ) : (
                 <div className="text-center">
                   <h1 className="text-4xl font-black text-amber-400 mb-4">DONE!</h1>
@@ -382,24 +320,11 @@ const BootcampSession = ({ onClose }) => {
             </div>
           )}
         </div>
-
-        {/* NAV (Только для теории) */}
         {phase === 'theory' && THEORY_SLIDES[slideIndex].type !== 'ready' && (
           <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent z-30">
             <div className="flex gap-3">
-               <button
-                  onClick={prevSlide}
-                  disabled={slideIndex === 0}
-                  className="flex-1 py-4 rounded-xl bg-slate-800 text-slate-400 font-bold disabled:opacity-0 hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
-                >
-                  <ArrowLeft size={20} /> Back
-                </button>
-                <button
-                  onClick={nextSlide}
-                  className="flex-[2] py-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
-                >
-                  Next Step <ArrowRight size={20} />
-                </button>
+               <button onClick={prevSlide} disabled={slideIndex === 0} className="flex-1 py-4 rounded-xl bg-slate-800 text-slate-400 font-bold disabled:opacity-0 hover:bg-slate-700 transition-all flex items-center justify-center gap-2"><ArrowLeft size={20} /> Back</button>
+               <button onClick={nextSlide} className="flex-[2] py-4 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2">Next Step <ArrowRight size={20} /></button>
             </div>
           </div>
         )}
