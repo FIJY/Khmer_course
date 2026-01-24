@@ -49,9 +49,27 @@ const THEORY_SLIDES = [
     title: 'THE DECODING ALGORITHM',
     subtitle: 'How to read ANY word step-by-step',
     steps: [
-      { id: 1, text: 'SPOT THE COMMANDER', desc: 'Find the consonant (big letter)', icon: '👮‍♂️' },
-      { id: 2, text: 'CHECK THE UNIFORM', desc: 'Sun (Smooth) or Moon (Spiky)?', icon: '☀️🌑' },
-      { id: 3, text: 'APPLY THE VOWEL', desc: 'Sun keeps vowel pure. Moon transforms it.', icon: '🗣️' }
+      {
+        id: 1,
+        text: 'SPOT THE COMMANDER',
+        desc: 'Find the consonant (big letter)',
+        icon: '👮‍♂️',
+        example: 'Example: ក + ា = Kaa'
+      },
+      {
+        id: 2,
+        text: 'CHECK THE UNIFORM',
+        desc: 'Sun (Smooth) or Moon (Spiky)?',
+        icon: '☀️🌑',
+        example: 'Smooth = Sun, Spiky = Moon'
+      },
+      {
+        id: 3,
+        text: 'APPLY THE VOWEL',
+        desc: 'Sun keeps vowel pure. Moon transforms it.',
+        icon: '🗣️',
+        example: 'Moon example: គ + ា = Kea'
+      }
     ],
     warning: 'Never start from the vowel. The consonant controls everything.'
   },
@@ -96,6 +114,12 @@ const THEORY_SLIDES = [
     subtitle: 'Your visual hack',
     rule80: '80% of the time: Spiky head = Moon. Smooth head = Sun.',
     rule20: 'Exceptions exist (like ប and ស). Ignore them for the first week.',
+    examples: [
+      { letter: 'ក', team: 'Sun' },
+      { letter: 'គ', team: 'Moon' },
+      { letter: 'ខ', team: 'Sun' },
+      { letter: 'ឃ', team: 'Moon' }
+    ],
     tip: 'Trust your eyes first. Speed > perfection.'
   },
   {

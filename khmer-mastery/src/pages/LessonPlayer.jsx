@@ -6,7 +6,6 @@ import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
-import BootcampSession from '../components/Bootcamp/BootcampSession';
 import { t } from '../i18n';
 import SessionCompletion from '../components/Session/SessionCompletion';
 import SessionFrame from '../components/Session/SessionFrame';
@@ -45,13 +44,6 @@ export default function LessonPlayer() {
   } = useLessonPlayer();
 
   const safeItems = Array.isArray(items) ? items : [];
-  const bootcampLessonIds = React.useMemo(() => new Set([10000, 10100, 10101]), []);
-  const bootcampLessonId = Number(lessonInfo?.lesson_id ?? lessonInfo?.id ?? id);
-  const bootcampTitle = lessonInfo?.title?.toLowerCase() ?? '';
-  const isBootcampLesson = bootcampLessonIds.has(bootcampLessonId)
-    || bootcampTitle.includes('bootcamp')
-    || bootcampTitle.includes('unit r1')
-    || bootcampTitle.includes('the foundation');
 
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
@@ -90,7 +82,6 @@ export default function LessonPlayer() {
     );
   }
 
-  if (isBootcampLesson) return <BootcampSession onClose={() => navigate('/map')} practiceItems={safeItems} title={lessonInfo?.title} />;
   if (!safeItems.length || !safeItems[step]) return <ErrorState title={t('errors.lessonEmpty')} message={t('empty.lessonContent')} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
 
   const current = safeItems[step]?.data;
@@ -158,11 +149,20 @@ export default function LessonPlayer() {
               </div>
               <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
                 <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
-                <KhmerColoredText text={khmerText} fontUrl={DEFAULT_KHMER_FONT_URL} fontSize={72} className="text-4xl font-black mb-2" />
-                <p className="text-base text-cyan-100 font-semibold tracking-wide mb-4">
-                  <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
-                  {current.pronunciation || '—'}
-                </p>
+                <div className="flex flex-col items-center gap-3 w-full">
+                  <div className="min-h-[4.5rem] flex items-center justify-center">
+                    <KhmerColoredText
+                      text={khmerText}
+                      fontUrl={DEFAULT_KHMER_FONT_URL}
+                      fontSize={72}
+                      className="text-4xl font-black leading-[1.2]"
+                    />
+                  </div>
+                  <p className="text-base text-cyan-100 font-semibold tracking-wide">
+                    <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
+                    {current.pronunciation || '—'}
+                  </p>
+                </div>
                 {current.audio ? (
                   <div onClick={(e) => { e.stopPropagation(); playLocalAudio(current.audio); }} className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg">
                     <Volume2 size={28} />
