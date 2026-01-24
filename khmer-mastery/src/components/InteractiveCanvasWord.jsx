@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import opentype from 'opentype.js';
 
+// Путь к шрифту. Убедись, что файл лежит в public/fonts/
 const DEFAULT_FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
-// Цвета (можно вынести в конфиг)
 const COLORS = {
   CONSONANT: '#ffb020', // Оранжевый
   VOWEL: '#ff4081',     // Розовый
@@ -12,19 +12,17 @@ const COLORS = {
 };
 
 function getCharColor(charPart) {
-  // Берем первый символ части для определения типа
   const code = charPart.codePointAt(0);
   if (code >= 0x1780 && code <= 0x17a2) return COLORS.CONSONANT;
   if (code >= 0x17a3 && code <= 0x17b5) return COLORS.VOWEL;
   if (code >= 0x17b6 && code <= 0x17c5) return COLORS.VOWEL;
-  // Если часть длинная (например ្ + ម) или это знак подписки
   if (charPart.length > 1 || code === 0x17d2) return COLORS.SUBSCRIPT;
   return COLORS.OTHER;
 }
 
 export default function InteractiveVectorWord({
   word,
-  parts, // ["ក", "ា", "ហ", "្វ", "េ"]
+  parts,
   onPartClick,
   fontSize = 120
 }) {
@@ -50,69 +48,55 @@ export default function InteractiveVectorWord({
 
     const paths = [];
     let currentX = 0;
-    // Базовая линия для кхмерского шрифта (подбирается визуально или из метрик)
+    // Базовая линия для кхмерского шрифта
     const baseline = fontSize * 1.2;
 
     parts.forEach((part, index) => {
-      // Превращаем часть текста в векторный путь
+      // Превращаем часть текста в кривые
       const path = font.getPath(part, currentX, baseline, fontSize);
 
-      // Вычисляем цвет
-      const color = getCharColor(part);
-
       paths.push({
-        d: path.toPathData(2), // Получаем данные d="M..."
+        d: path.toPathData(2),
         char: part,
         index: index,
-        color: color,
-        // Для сложной подсветки: запоминаем исходный X
-        startX: currentX
+        color: getCharColor(part)
       });
 
-      // Сдвигаем курсор для следующей части.
-      // getAdvanceWidth дает точную ширину с учетом кернинга.
+      // Сдвигаем курсор на ширину этой части
       currentX += font.getAdvanceWidth(part, fontSize);
     });
 
-    // Вычисляем общую ширину и высоту для viewBox
     const totalWidth = currentX;
-    const totalHeight = fontSize * 1.8; // Запас высоты для верхних/нижних индексов
+    const totalHeight = fontSize * 1.8;
     setViewBox(`0 0 ${totalWidth} ${totalHeight}`);
     setSvgPaths(paths);
 
-  }, [font, parts, fontSize, word]);
+  }, [font, parts, fontSize]);
 
   if (!font) {
     return <div className="text-cyan-400 animate-pulse">Loading Vector Engine...</div>;
   }
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative inline-block">
       <svg
         viewBox={viewBox}
-        // Устанавливаем реальные размеры, чтобы не растягивалось
         width={viewBox.split(' ')[2]}
         height={viewBox.split(' ')[3]}
         className="overflow-visible drop-shadow-2xl select-none touch-none"
+        style={{ maxWidth: '100%', height: 'auto' }}
       >
         {svgPaths.map((p, i) => (
-           // Каждая часть - это отдельный <path>
-           // Он имеет точную форму буквы, а не прямоугольник.
           <path
             key={i}
             d={p.d}
             onClick={() => onPartClick(p.char, p.index)}
-
-            // Стилизация
-            fill="white" // Базовый цвет
-            className="transition-all duration-200 cursor-pointer origin-center hover:scale-[1.02]"
-
-            // CSS Hover (самый надежный и быстрый способ)
+            fill="white"
+            className="transition-all duration-200 cursor-pointer hover:scale-[1.02]"
             onMouseEnter={(e) => {
               e.currentTarget.style.fill = p.color;
-              // Добавляем свечение
-              e.currentTarget.style.filter = `drop-shadow(0 0 10px ${p.color})`;
-              // Поднимаем наверх, чтобы перекрыть соседей при наведении
+              e.currentTarget.style.filter = `drop-shadow(0 0 15px ${p.color})`;
+              // Поднимаем слой наверх
               e.currentTarget.parentElement.appendChild(e.currentTarget);
             }}
             onMouseLeave={(e) => {

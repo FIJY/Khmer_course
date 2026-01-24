@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Sun, Moon, Volume2 } from 'lucide-react';
 import InteractiveVectorWord from './InteractiveVectorWord'; // <--- НОВЫЙ ИМПОРТ
 
+
 export default function VisualDecoder({ data, onComplete }) {
   const {
     word, target_char, hint, english_translation,
