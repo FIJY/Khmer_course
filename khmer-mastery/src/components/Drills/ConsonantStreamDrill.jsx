@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
-import { MousePointerClick, Volume2 } from 'lucide-react';
+import { MousePointerClick } from 'lucide-react';
 
 const isKhmerConsonant = (ch) => {
   if (!ch) return false;
   const cp = ch.codePointAt(0);
-  // Khmer consonants range
   return cp >= 0x1780 && cp <= 0x17A2;
 };
 
@@ -19,30 +18,30 @@ export default function ConsonantStreamDrill({
 
   return (
     <div className="w-full flex flex-col items-center">
-      {/* Подсказка сверху */}
-      <div className="mb-6 flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-widest bg-cyan-950/30 px-4 py-2 rounded-full border border-cyan-500/20">
+      {/* Заголовок задания */}
+      <div className="mb-8 flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-widest bg-cyan-950/30 px-4 py-2 rounded-full border border-cyan-500/20">
         <MousePointerClick size={16} />
-        <span>Click the Consonants</span>
+        <span>Tap Consonants</span>
       </div>
 
-      {/* Текстовый блок - теперь выглядит как текст, а не как кнопки */}
-      <div className="bg-gray-900 border border-white/10 p-8 rounded-[2rem] shadow-2xl w-full">
-        <div className="flex flex-wrap justify-center gap-[2px] leading-[2.5] text-4xl md:text-5xl font-khmer select-none">
+      {/* Текст как поток */}
+      <div className="w-full px-4 text-center">
+        <div className="inline-block leading-[2.2] text-4xl md:text-5xl font-khmer select-none break-words">
           {chars.map((ch, i) => {
             const isC = isKhmerConsonant(ch);
             const revealed = isC && revealedSet.has(i);
 
-            // Стиль для СОГЛАСНОЙ (Интерактивная)
+            // Интерактивная буква (Согласная)
             if (isC) {
               return (
                 <span
                   key={i}
                   onClick={() => onConsonantClick(i, ch)}
                   className={`
-                    transition-all duration-300 cursor-pointer px-1 rounded-lg
+                    transition-all duration-300 cursor-pointer inline-block px-[1px]
                     ${revealed
-                      ? 'text-emerald-400 font-bold drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]' // Найдена
-                      : 'text-white hover:text-cyan-200 hover:bg-white/5' // Ждет клика
+                      ? 'text-emerald-400 font-bold scale-110 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]'
+                      : 'text-white hover:text-cyan-300 active:scale-95'
                     }
                   `}
                 >
@@ -51,13 +50,13 @@ export default function ConsonantStreamDrill({
               );
             }
 
-            // Стиль для ОСТАЛЬНЫХ (Гласные/Пробелы)
+            // Неактивная буква (Гласная)
             return (
               <span
                 key={i}
                 onClick={() => onNonConsonantClick && onNonConsonantClick(ch)}
                 className={`
-                  cursor-pointer px-0.5 transition-colors duration-500
+                  transition-colors duration-500 inline-block px-[1px] cursor-pointer
                   ${anyRevealed ? 'text-gray-600' : 'text-gray-300'}
                   hover:text-red-400
                 `}

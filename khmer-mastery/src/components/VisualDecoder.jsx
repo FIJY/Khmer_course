@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { ArrowRight, Sun, Moon, Volume2 } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
+import KhmerColoredText from './KhmerColoredText'; // <--- ИМПОРТ
+
+// Дефолтный шрифт (на всякий случай)
+const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
+  ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 export default function VisualDecoder({ data, onComplete, hideDefaultButton = false }) {
   const {
@@ -10,13 +15,12 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
     letter_series,
     word_audio,
     char_audio_map,
-    char_split // Используем подготовленный массив из JSON
+    char_split
   } = data;
 
   const [status, setStatus] = useState('searching');
   const [selectedCharIndex, setSelectedCharIndex] = useState(null);
 
-  // ПРИОРИТЕТ: сначала берем char_split из JSON, если его нет — режем строку (fallback)
   const chars = char_split && char_split.length > 0
     ? char_split
     : (word ? word.split('') : []);
@@ -36,7 +40,9 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
 
   const playAudio = (file) => {
     if (!file) return;
-    const audio = new Audio(`/sounds/${file}`);
+    // Исправленный путь: ищем прямо в /sounds/
+    const audioPath = file.startsWith('/') ? file : `/sounds/${file}`;
+    const audio = new Audio(audioPath);
     audio.play().catch(e => console.error("Audio error:", e));
   };
 
@@ -44,44 +50,60 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
     if (status === 'success') return;
     setSelectedCharIndex(index);
     const charSound = char_audio_map?.[char];
-    const fallbackSound = charSound || char_audio_map?.[target_char];
+    // Если звука буквы нет, пробуем звук целевой буквы
+    const soundToPlay = charSound || char_audio_map?.[target_char];
 
     if (char === target_char) {
       setStatus('success');
       playAudio('success.mp3');
-      if (charSound) setTimeout(() => playAudio(charSound), 1000);
-      if (word_audio) setTimeout(() => playAudio(word_audio), 2200);
+      if (soundToPlay) setTimeout(() => playAudio(soundToPlay), 800);
+      if (word_audio) setTimeout(() => playAudio(word_audio), 1800);
       onComplete();
     } else {
       setStatus('error');
       playAudio('error.mp3');
-      if (fallbackSound) setTimeout(() => playAudio(fallbackSound), 900);
+      if (soundToPlay) setTimeout(() => playAudio(soundToPlay), 900);
       setTimeout(() => { setStatus('searching'); setSelectedCharIndex(null); }, 1500);
     }
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-between min-h-[40vh] py-4">
-      {/* ЗАГОЛОВОК: Если hint пустой, показываем target_char */}
-      <div className="text-center space-y-3 mb-6">
+    <div className="w-full flex flex-col items-center justify-start min-h-[50vh] py-4">
+
+      {/* 1. БЛОК ЦЕЛИКОМ (КРАСИВЫЙ) */}
+      <div className="mb-8 relative group">
+         <div className="absolute inset-0 bg-cyan-500/20 blur-3xl rounded-full opacity-20"></div>
+         <KhmerColoredText
+            text={word}
+            fontUrl={DEFAULT_KHMER_FONT_URL}
+            fontSize={80}
+            className="relative z-10 drop-shadow-2xl"
+         />
+         <div className="text-center mt-2">
+            <p className="text-gray-500 font-black uppercase tracking-[0.2em] text-[10px]">
+              {english_translation}
+            </p>
+         </div>
+      </div>
+
+      {/* 2. ЗАДАНИЕ */}
+      <div className="text-center space-y-3 mb-8">
         <div className="flex flex-col items-center gap-2">
-            <span className="text-white font-black text-2xl uppercase tracking-tighter italic">
-              Find: <span className="text-cyan-400">{hint || target_char}</span>
+            <span className="text-white font-black text-lg uppercase tracking-tight">
+              {hint}
             </span>
             {status === 'success' && <div className="animate-in fade-in zoom-in">{theme.badge}</div>}
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center items-center gap-2 w-full max-w-md px-2">
+      {/* 3. КНОПКИ РАЗБОРА (ИНТЕРАКТИВ) */}
+      <div className="flex flex-wrap justify-center items-center gap-3 w-full max-w-md px-2">
         {chars.map((char, index) => {
           const isTarget = char === target_char;
-          const sizeClass = chars.length > 5
-            ? "w-10 h-16 text-2xl"
-            : "w-14 h-22 text-4xl sm:w-16 sm:h-24";
 
-          let styleClass = "bg-gray-900 border-white/5 text-gray-500";
+          let styleClass = "bg-gray-900 border-white/10 text-gray-400 hover:border-white/30 hover:bg-gray-800";
           if (status === 'success') {
-            styleClass = isTarget ? `${theme.bg} ${theme.text} scale-110 shadow-2xl z-10` : "opacity-20 blur-[2px]";
+            styleClass = isTarget ? `${theme.bg} ${theme.text} scale-110 shadow-xl border-transparent` : "opacity-20 blur-[1px]";
           } else if (status === 'error' && selectedCharIndex === index) {
             styleClass = "bg-red-900/40 border-red-500 text-red-500 animate-shake";
           }
@@ -90,20 +112,12 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
             <button
               key={index}
               onClick={() => handleCharClick(char, index)}
-              className={`flex-shrink-0 rounded-2xl border-2 flex items-center justify-center transition-all duration-500 ${sizeClass} ${styleClass}`}
-              style={{ fontFamily: 'Khmer, serif' }}
+              className={`flex-shrink-0 rounded-2xl border-2 flex items-center justify-center transition-all duration-300 w-16 h-20 text-3xl font-khmer ${styleClass}`}
             >
               {char}
             </button>
           );
         })}
-      </div>
-
-      <div className={`mt-10 text-center transition-all duration-700 ${status === 'success' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-        <h2 className="text-5xl font-black text-white mb-2 tracking-tight">{word}</h2>
-        <p className="text-gray-500 font-black uppercase tracking-[0.2em] text-[10px]">
-          {english_translation}
-        </p>
       </div>
 
       <style>{`
