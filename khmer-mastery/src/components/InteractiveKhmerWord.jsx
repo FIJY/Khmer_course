@@ -1,74 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import { getKhmerGlyphData } from '../lib/khmerGlyphRenderer';
 
-const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
+const DEFAULT_FONT = import.meta.env.VITE_KHMER_FONT_URL
   ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
-export default function InteractiveKhmerWord({
-  word,
-  targetChar,
-  onPartClick,
-  fontSize = 120
-}) {
-  const [vectorData, setVectorData] = useState(null);
+export default function InteractiveKhmerWord({ word, targetChar, onPartClick }) {
+  const [data, setData] = useState(null);
 
   useEffect(() => {
-    let active = true;
-    getKhmerGlyphData({
-      text: word,
-      fontUrl: DEFAULT_KHMER_FONT_URL,
-      fontSize: fontSize
-    }).then(data => {
-      if (active) setVectorData(data);
-    });
-    return () => { active = false; };
-  }, [word, fontSize]);
+    getKhmerGlyphData({ text: word, fontUrl: DEFAULT_FONT, fontSize: 120 })
+      .then(setData);
+  }, [word]);
 
-  if (!vectorData) return <div className="animate-pulse h-32 bg-gray-800/30 rounded-xl w-64 mx-auto"></div>;
+  if (!data) return <div className="text-6xl font-khmer animate-pulse">{word}</div>;
 
   return (
-    <div className="relative inline-block select-none filter drop-shadow-2xl">
-      <svg
-        width={vectorData.width}
-        height={vectorData.height}
-        viewBox={vectorData.viewBox}
-        className="overflow-visible"
-      >
-        {vectorData.paths.map((p, i) => {
-          // Определяем, является ли эта часть целью
-          const isTarget = p.char === targetChar;
+    <svg
+      viewBox={data.viewBox}
+      width={data.width}
+      height={data.height}
+      className="overflow-visible drop-shadow-2xl"
+    >
+      {data.paths.map((p, i) => {
+        // Логика: если это часть целевой буквы (например, нога буквы 'K')
+        const isTarget = p.char === targetChar;
 
-          return (
-            <path
-              key={i}
-              d={p.d}
-              onClick={() => onPartClick(p.char, i)}
-
-              // Стилизация и Ховер
-              className="transition-all duration-300 cursor-pointer"
-              fill="white"
-              style={{
-                fill: 'white', // Базовый цвет
-                opacity: 0.9,
-              }}
-
-              // CSS-события для смены цвета при наведении
-              onMouseEnter={(e) => {
-                e.target.style.fill = "#22d3ee"; // Cyan при наведении
-                e.target.style.filter = "drop-shadow(0 0 10px rgba(34,211,238,0.8))";
-                e.target.style.transform = "scale(1.1) translateY(-5px)";
-                e.target.style.zIndex = "10";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.fill = "white";
-                e.target.style.filter = "none";
-                e.target.style.transform = "none";
-                e.target.style.zIndex = "1";
-              }}
-            />
-          );
-        })}
-      </svg>
-    </div>
+        return (
+          <path
+            key={i}
+            d={p.d}
+            onClick={() => onPartClick(p.char)}
+            fill="white"
+            className="transition-all duration-200 cursor-pointer hover:fill-cyan-400 hover:scale-110 origin-center"
+            style={{
+               fill: 'white',
+               stroke: 'transparent',
+               strokeWidth: 20 // Увеличивает зону клика
+            }}
+          />
+        );
+      })}
+    </svg>
   );
 }
