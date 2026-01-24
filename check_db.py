@@ -82,7 +82,7 @@ async def check_lesson_101():
             print("Если ты не видишь его в браузере — очисти кеш (Ctrl+F5) или перезапусти 'npm run dev'.")
         else:
             print("💀 Visual Decoder НЕТ в базе.")
-            print("Нужно запустить скрипт: python seed_lesson_1.py")
+            print("Нужно запустить скрипт: python content_engine/seed_lesson_json_my.py")
 
     except Exception as e:
         print(f"Ошибка соединения с базой: {e}")
