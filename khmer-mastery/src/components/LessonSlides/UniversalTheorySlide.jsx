@@ -1,10 +1,9 @@
 import React from 'react';
-import { BookOpen, Volume2, Play } from 'lucide-react';
+import { Volume2 } from 'lucide-react';
 
 export default function UniversalTheorySlide({ data, onPlayAudio }) {
 
   switch (data.type) {
-    // ... title и reading-algorithm оставляем как были, они норм ...
     case 'title':
       return (
         <div className="w-full flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-[50vh]">
@@ -18,37 +17,6 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
           <p className="text-lg text-slate-300 max-w-lg mx-auto leading-relaxed">
             {data.description}
           </p>
-        </div>
-      );
-
-    case 'reading-algorithm':
-        // ... (тот же код, что я давала раньше, он был норм)
-        return (
-        <div className="w-full max-w-xl animate-in fade-in zoom-in duration-300">
-          <h2 className="text-2xl md:text-3xl font-black text-white mb-8 text-center italic uppercase">
-            {data.title}
-          </h2>
-          <div className="space-y-4">
-            {data.steps.map((step) => (
-              <div key={step.id} className="flex items-start gap-4 bg-gray-900 border border-white/10 p-5 rounded-[2rem] relative overflow-hidden group hover:border-cyan-500/30 transition-colors">
-                <div className="bg-cyan-600 w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold text-white shrink-0 shadow-[0_0_15px_rgba(8,145,178,0.4)]">
-                  {step.id}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-base font-black text-white uppercase tracking-wide">{step.text}</h3>
-                    <span className="text-xl">{step.icon}</span>
-                  </div>
-                  <p className="text-slate-400 text-sm leading-relaxed">{step.desc}</p>
-                  {step.example && (
-                    <div className="mt-3 inline-block bg-black/40 border border-white/5 px-3 py-1 rounded-lg text-xs font-mono text-emerald-400">
-                      {step.example}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       );
 
@@ -68,9 +36,9 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
                     {data.pairs.map((pair, i) => (
                         <button
                             key={i}
-                            type="button" // ВАЖНО для клика
+                            type="button"
                             onClick={(e) => {
-                                e.stopPropagation(); // Чтобы клик не уходил в никуда
+                                e.stopPropagation();
                                 onPlayAudio(data.consonantAudioMap?.[pair.sun]);
                             }}
                             className="bg-gray-900 border border-white/5 hover:border-amber-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all active:scale-95 cursor-pointer"
@@ -125,7 +93,6 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
             <div className="bg-gradient-to-br from-emerald-600 to-teal-800 p-8 rounded-[3rem] mb-8 shadow-2xl border border-white/10">
                 <p className="text-2xl font-bold text-white leading-snug">{data.rule80}</p>
             </div>
-            {/* Оставляем остальное как было */}
              <div className="flex flex-wrap justify-center gap-3 mb-8">
                 {data.examples?.map((ex, i) => (
                     <div key={i} className="flex items-center gap-3 px-5 py-3 rounded-full bg-gray-900 border border-white/10">
@@ -143,7 +110,6 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
       );
 
     case 'ready':
-        // ИСПРАВЛЕНИЕ: Центровка по вертикали (flex-1 + justify-center)
         return (
             <div className="flex-1 flex flex-col items-center justify-center text-center animate-pulse-slow min-h-[50vh]">
                 <div className="text-8xl mb-6">🏆</div>
