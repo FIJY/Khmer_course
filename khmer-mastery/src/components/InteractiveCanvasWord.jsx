@@ -29,50 +29,48 @@ export default function InteractiveCanvasWord({
   const [zones, setZones] = useState([]);
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [clickedIndex, setClickedIndex] = useState(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
-  // 1. ИЗМЕРЕНИЕ (Спрашиваем у браузера: "Где буквы?")
+  // 1. ИЗМЕРЕНИЕ (Спрашиваем у браузера: "Где именно буквы?")
   useEffect(() => {
     if (!measureRef.current) return;
 
-    // Даем браузеру 50мс на отрисовку шрифта, потом измеряем
+    // Даем браузеру время на отрисовку шрифта
     const timer = setTimeout(() => {
         const container = measureRef.current;
         const textNode = container.firstChild;
-
         if (!textNode) return;
+
+        // Сохраняем размеры контейнера
+        const cRect = container.getBoundingClientRect();
+        setContainerSize({ width: container.offsetWidth, height: container.offsetHeight });
 
         const range = document.createRange();
         const newZones = [];
         let currentIndex = 0;
-        const containerRect = container.getBoundingClientRect();
 
         parts.forEach((part, index) => {
             const len = part.length;
             try {
-                // Выделяем конкретный кусок текста
                 range.setStart(textNode, currentIndex);
                 range.setEnd(textNode, currentIndex + len);
 
-                // Получаем его реальные координаты на экране
                 const rects = range.getClientRects();
 
-                // Если буква сложная (состоит из 2 частей), берем их общий бокс
                 if (rects.length > 0) {
-                    // Объединяем все прямоугольники части (для сложных лигатур)
+                    // Находим общий bounding box для всех частей буквы
                     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
                     for (let i = 0; i < rects.length; i++) {
-                        const r = rects[i];
-                        if (r.left < minX) minX = r.left;
-                        if (r.top < minY) minY = r.top;
-                        if (r.right > maxX) maxX = r.right;
-                        if (r.bottom > maxY) maxY = r.bottom;
+                        minX = Math.min(minX, rects[i].left);
+                        minY = Math.min(minY, rects[i].top);
+                        maxX = Math.max(maxX, rects[i].right);
+                        maxY = Math.max(maxY, rects[i].bottom);
                     }
 
                     // Сохраняем координаты относительно контейнера
                     newZones.push({
-                        x: minX - containerRect.left,
-                        y: minY - containerRect.top,
+                        x: minX - cRect.left,
+                        y: minY - cRect.top,
                         width: maxX - minX,
                         height: maxY - minY,
                         char: part,
@@ -80,28 +78,23 @@ export default function InteractiveCanvasWord({
                         color: getCharColor(part)
                     });
                 }
-            } catch (e) {
-                console.warn("Measurement fail:", part);
-            }
+            } catch (e) { console.warn("Error measuring", part); }
             currentIndex += len;
         });
-
         setZones(newZones);
-    }, 100);
+    }, 150); // Чуть увеличил таймаут для надежности
 
     return () => clearTimeout(timer);
   }, [word, parts, fontSize]);
 
-  // 2. ОТРИСОВКА (Используем координаты от браузера)
+  // 2. ОТРИСОВКА (Используем точные координаты)
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || zones.length === 0) return;
+    if (!canvas || zones.length === 0 || containerSize.width === 0) return;
     const ctx = canvas.getContext('2d');
 
     const dpr = window.devicePixelRatio || 1;
-    // Размеры берем строго по размеру невидимого контейнера
-    const width = measureRef.current.offsetWidth;
-    const height = measureRef.current.offsetHeight;
+    const { width, height } = containerSize;
 
     canvas.width = width * dpr;
     canvas.height = height * dpr;
@@ -110,30 +103,24 @@ export default function InteractiveCanvasWord({
 
     ctx.scale(dpr, dpr);
 
-    // Важно: настройки шрифта должны совпадать с CSS на 100%
+    // Настройки шрифта должны совпадать с CSS
     ctx.font = `${fontSize}px "Noto Sans Khmer", serif`;
-    ctx.textBaseline = 'top'; // Рисуем от верха, как DOM
+    ctx.textBaseline = 'top';
 
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Рисуем базовый белый текст
-      // Нам нужно найти смещение, так как DOM и Canvas рендерят чуть по-разному вертикально
-      // Хитрость: мы рисуем слово в Canvas, используя координату Y первой найденной зоны
-      // Обычно первая зона (К) начинается почти с Y=0 или небольшим отступом.
-
-      // Чтобы не гадать, мы просто нарисуем текст в координатах (0, 0 + padding)
-      // В CSS padding 20px.
+      // Отступ должен совпадать с padding в CSS (20px)
       const padding = 20;
 
-      // СЛОЙ 1: Белый
+      // СЛОЙ 1: Белый текст (База)
       ctx.fillStyle = defaultColor;
-      // Корректируем Y вручную, так как textBaseline top не идеален для кхмерского
-      // Но zones.y уже содержит padding.
-      // Самый надежный способ: рисовать текст там же, где он в DOM.
-      ctx.fillText(word, padding, padding);
+      // Рисуем текст с учетом паддинга.
+      // Небольшая ручная коррекция Y (+ fontSize*0.05) может понадобиться для разных браузеров,
+      // чтобы Canvas текст идеально лег на DOM текст.
+      ctx.fillText(word, padding, padding + (fontSize * 0.05));
 
-      // СЛОЙ 2: Подсветка
+      // СЛОЙ 2: Подсветка (Маска)
       zones.forEach((zone, i) => {
         const isHovered = i === hoveredIndex;
         const isClicked = i === clickedIndex;
@@ -141,20 +128,20 @@ export default function InteractiveCanvasWord({
         if (isHovered || isClicked) {
            ctx.save();
 
-           // Вырезаем маску по координатам, которые дал браузер
+           // ВАЖНЫЙ ФИКС: Используем ТОЧНЫЕ координаты X, Y, Width, Height от браузера.
            ctx.beginPath();
-           // Чуть расширяем (1px), чтобы перекрыть швы
-           ctx.rect(zone.x, 0, zone.width + 1, height);
+           // Добавляем 1px нахлест для мягкости стыков
+           ctx.rect(zone.x - 0.5, zone.y - 0.5, zone.width + 1, zone.height + 1);
            ctx.clip();
 
-           // Рисуем цветной текст поверх
+           // Рисуем цветной текст в ТОЙ ЖЕ позиции
            ctx.fillStyle = zone.color;
-           ctx.fillText(word, padding, padding);
+           ctx.fillText(word, padding, padding + (fontSize * 0.05));
 
            // Свечение
            ctx.shadowColor = zone.color;
            ctx.shadowBlur = 15;
-           ctx.fillText(word, padding, padding);
+           ctx.fillText(word, padding, padding + (fontSize * 0.05));
 
            ctx.restore();
         }
@@ -163,20 +150,19 @@ export default function InteractiveCanvasWord({
 
     draw();
 
-  }, [word, zones, fontSize, hoveredIndex, clickedIndex, defaultColor]);
+  }, [word, zones, containerSize, fontSize, hoveredIndex, clickedIndex, defaultColor]);
 
-  // 3. ОБРАБОТКА МЫШИ (По зонам от браузера)
+  // 3. ОБРАБОТКА МЫШИ (По точным зонам)
   const handleMouseMove = (e) => {
     if (!zones.length) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Проверяем, попала ли мышь в прямоугольник буквы
+    // Проверяем попадание в точный прямоугольник буквы
     const index = zones.findIndex(z =>
-       x >= z.x && x <= z.x + z.width
-       // Y проверку можно отключить, если хотим кликать по всей высоте,
-       // или оставить для точности. Для удобства лучше брать всю высоту.
+       x >= z.x && x <= z.x + z.width &&
+       y >= z.y && y <= z.y + z.height
     );
 
     setHoveredIndex(index !== -1 ? index : null);
@@ -193,15 +179,14 @@ export default function InteractiveCanvasWord({
 
   return (
     <div className="relative inline-block">
-      {/* НЕВИДИМЫЙ ТЕКСТ (ЭТАЛОН) */}
+      {/* НЕВИДИМЫЙ ЭТАЛОН */}
       <div
         ref={measureRef}
-        className="absolute top-0 left-0 opacity-0 pointer-events-none whitespace-nowrap"
+        className="absolute top-0 left-0 opacity-0 pointer-events-none whitespace-nowrap font-khmer"
         style={{
-            fontFamily: '"Noto Sans Khmer", serif',
             fontSize: `${fontSize}px`,
-            padding: '20px', // Отступ, чтобы высокие буквы не резались
-            lineHeight: '1.5' // Фиксируем высоту строки
+            padding: '20px',
+            lineHeight: '1.5' // Важно фиксировать line-height
         }}
       >
         {word}
