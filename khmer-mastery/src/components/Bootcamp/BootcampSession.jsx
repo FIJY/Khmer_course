@@ -71,8 +71,8 @@ const playAudio = (audioFile) => {
   }
 };
 
-const playConsonant = (ch) => {
-  const file = CONSONANT_AUDIO[ch];
+const playConsonant = (ch, overrideFile) => {
+  const file = overrideFile || CONSONANT_AUDIO[ch];
   if (file) playAudio(file);
 };
 
@@ -86,6 +86,8 @@ const KhmerConsonantStream = ({
   text,
   revealedSet,
   onConsonantClick,
+  onNonConsonantClick,
+  dimNonConsonants = true,
   className = ''
 }) => {
   const chars = useMemo(() => Array.from(text || ''), [text]);
@@ -93,7 +95,7 @@ const KhmerConsonantStream = ({
   const anyRevealed = revealedSet.size > 0;
 
   return (
-    <div className={`select-none text-5xl md:text-6xl leading-tight font-semibold tracking-wide ${className}`}>
+    <div className={`select-none text-5xl md:text-6xl leading-[1.35] font-semibold tracking-wide break-words ${className}`}>
       {chars.map((ch, i) => {
         const isC = isKhmerConsonant(ch);
         const revealed = isC && revealedSet.has(i);
@@ -104,14 +106,28 @@ const KhmerConsonantStream = ({
         };
 
         if (!isC) {
+          const nonConsonantStyle = {
+            ...baseStyle,
+            color: dimNonConsonants && anyRevealed ? '#64748b' : '#ffffff' // slate-500 vs white
+          };
+
+          if (onNonConsonantClick) {
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onNonConsonantClick(ch)}
+                className="inline-flex p-0 m-0 bg-transparent border-0 cursor-pointer"
+                style={nonConsonantStyle}
+                title="Vowels/marks are not commanders"
+              >
+                {ch}
+              </button>
+            );
+          }
+
           return (
-            <span
-              key={i}
-              style={{
-                ...baseStyle,
-                color: anyRevealed ? '#64748b' : '#ffffff' // slate-500 vs white
-              }}
-            >
+            <span key={i} style={nonConsonantStyle}>
               {ch}
             </span>
           );
@@ -236,6 +252,7 @@ const MiniCommanderDrill = ({
 }) => {
   const consonantIdx = useMemo(() => getConsonantIndices(text), [text]);
   const [revealed, setRevealed] = useState(() => new Set());
+  const [feedback, setFeedback] = useState('');
 
   const remaining = consonantIdx.filter((i) => !revealed.has(i)).length;
   const done = consonantIdx.length > 0 && remaining === 0;
@@ -244,25 +261,41 @@ const MiniCommanderDrill = ({
     if (done) onComplete?.();
   }, [done, onComplete]);
 
+  useEffect(() => {
+    if (!feedback) return undefined;
+    const timer = setTimeout(() => setFeedback(''), 1400);
+    return () => clearTimeout(timer);
+  }, [feedback]);
+
   const handleClick = (idx, ch) => {
     setRevealed((prev) => {
       const next = new Set(prev);
       next.add(idx);
       return next;
     });
-    playAudio(audioMap[ch]);
+    playConsonant(ch, audioMap[ch]);
+    setFeedback(`✅ ${ch} is a commander`);
+  };
+
+  const handleNonConsonantClick = () => {
+    setFeedback('💡 Vowels are helpers — ignore them for now');
   };
 
   return (
     <div className="w-full">
       {title && <div className="text-slate-400 text-xs uppercase tracking-widest mb-2">{title}</div>}
       <div className="bg-slate-800/60 border border-white/10 rounded-2xl p-4">
+        <div className="text-slate-300 text-xl font-khmer leading-relaxed mb-3">
+          {text}
+        </div>
         <KhmerConsonantStream
           text={text}
           revealedSet={revealed}
           onConsonantClick={handleClick}
+          onNonConsonantClick={handleNonConsonantClick}
+          dimNonConsonants={false}
         />
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <div className="text-slate-300 text-sm">
             {done ? (
               <span className="text-emerald-300 font-bold">✅ All commanders found</span>
@@ -277,6 +310,9 @@ const MiniCommanderDrill = ({
             <span>consonants only</span>
           </div>
         </div>
+        {feedback && (
+          <div className="mt-2 text-xs text-amber-200 font-semibold">{feedback}</div>
+        )}
       </div>
     </div>
   );
@@ -311,7 +347,8 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
   const [loading, setLoading] = useState(true);
   const [usingFallbackPractice, setUsingFallbackPractice] = useState(false);
 
-  const practiceTotal = drillQuestions.length ? drillQuestions.length : FALLBACK_DRILLS.length;
+  const activeDrills = drillQuestions.length ? drillQuestions : FALLBACK_DRILLS;
+  const practiceTotal = activeDrills.length;
   const totalSteps = THEORY_SLIDES.length + practiceTotal;
   const currentStep = phase === 'theory'
     ? slideIndex + 1
@@ -364,9 +401,17 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
   };
 
   // ---------- PRACTICE ----------
+  const advanceDrill = () => {
+    if (drillIndex >= practiceTotal - 1) {
+      setDrillIndex(practiceTotal);
+      return;
+    }
+    setDrillIndex((prev) => prev + 1);
+  };
+
   const handleDrillComplete = () => {
     setScore((s) => s + 10);
-    setTimeout(() => setDrillIndex((prev) => prev + 1), 350);
+    setTimeout(() => advanceDrill(), 350);
   };
 
   // ---------- NO-SPACES CLICK ----------
@@ -420,14 +465,14 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
             <h2 className="text-4xl font-black text-white mb-2">😵 {slide.title}</h2>
             <p className="text-xl text-amber-400 mb-8">{slide.subtitle}</p>
 
-            <div className="bg-gray-900/60 p-6 rounded-[2.5rem] mb-6 border border-white/5">
+            <div className="bg-gray-900/60 p-5 rounded-[2rem] mb-5 border border-white/5">
               <p className="text-slate-400 text-xs mb-2 uppercase tracking-widest">English analogy</p>
               <p className="text-2xl text-white font-mono tracking-tighter bg-black/30 p-4 rounded">
                 {slide.englishAnalogy}
               </p>
             </div>
 
-            <div className="bg-gray-900/60 p-6 rounded-[2.5rem] mb-6 border-2 border-emerald-500/30">
+            <div className="bg-gray-900/60 p-5 rounded-[2rem] mb-5 border-2 border-emerald-500/30">
               <div className="flex items-center justify-between gap-4 mb-4">
                 <div className="flex items-center gap-2 text-emerald-300 font-bold">
                   <MousePointerClick size={18} />
@@ -446,6 +491,7 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
                 text={slide.khmerText}
                 revealedSet={revealedConsonants}
                 onConsonantClick={handleConsonantClick}
+                onNonConsonantClick={() => {}}
               />
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -482,7 +528,7 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
         return (
           <div className="w-full max-w-xl">
             <h2 className="text-3xl font-black text-white mb-8 text-center">{slide.title}</h2>
-            <div className="space-y-4 mb-8">
+            <div className="space-y-3 mb-6">
               {slide.steps.map((step) => (
                 <div key={step.id} className="flex items-center gap-4 bg-gray-900/60 p-4 rounded-[2rem] border border-white/5">
                   <div className="bg-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0 shadow-lg shadow-blue-500/30">
@@ -494,11 +540,14 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
                       <span className="text-2xl">{step.icon}</span>
                     </div>
                     <p className="text-slate-400 text-sm">{step.desc}</p>
+                    {step.example && (
+                      <p className="text-amber-200 text-xs mt-1 font-semibold">{step.example}</p>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="bg-gray-900/60 p-4 rounded-[2rem] border border-white/5">
                 <div className="text-xs text-slate-400 uppercase tracking-widest mb-2">Example (Sun)</div>
                 <div className="text-4xl text-white font-khmer mb-2">កា</div>
@@ -526,49 +575,51 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
             {/* Pair grid: makes the Sun/Moon linkage obvious */}
             <div className="space-y-4">
               {slide.pairs.map((pair, i) => (
-                <div key={i} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gradient-to-b from-amber-400 to-amber-600 rounded-[2rem] p-6 text-black shadow-lg shadow-amber-500/20">
-                    <h3 className="text-xl font-black mb-2 flex items-center gap-2">☀️ {slide.leftTeam.name}</h3>
-                    <div className="text-sm font-semibold opacity-90 mb-4">
-                      <p>🗣 {slide.leftTeam.voice}</p>
-                      <p>👁 {slide.leftTeam.visual}</p>
+                <div key={i} className="rounded-[2.5rem] border border-white/5 bg-black/20 p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-gradient-to-b from-amber-400 to-amber-600 rounded-[2rem] p-5 text-black shadow-lg shadow-amber-500/20">
+                      <h3 className="text-xl font-black mb-2 flex items-center gap-2">☀️ {slide.leftTeam.name}</h3>
+                      <div className="text-sm font-semibold opacity-90 mb-4">
+                        <p>🗣 {slide.leftTeam.voice}</p>
+                        <p>👁 {slide.leftTeam.visual}</p>
+                      </div>
+                      <button
+                        onClick={() => playAudio(slide.consonantAudioMap?.[pair.sun])}
+                        className="w-full bg-black/20 hover:bg-black/30 transition-colors rounded-[2rem] p-5 flex items-center justify-center text-7xl font-khmer shadow-inner"
+                        title="Tap to hear"
+                        type="button"
+                      >
+                        {pair.sun}
+                      </button>
+                      <div className="mt-3 text-xs font-bold opacity-80">
+                        Example: {pair.sun}{pair.vowel} = {pair.sunRead}
+                      </div>
                     </div>
-                    <button
-                      onClick={() => playAudio(slide.consonantAudioMap?.[pair.sun])}
-                      className="w-full bg-black/20 hover:bg-black/30 transition-colors rounded-[2rem] p-6 flex items-center justify-center text-7xl font-khmer shadow-inner"
-                      title="Tap to hear"
-                      type="button"
-                    >
-                      {pair.sun}
-                    </button>
-                    <div className="mt-3 text-xs font-bold opacity-80">
-                      Example: {pair.sun}{pair.vowel} = {pair.sunRead}
-                    </div>
-                  </div>
 
-                  <div className="bg-gradient-to-b from-indigo-500 to-purple-700 rounded-[2rem] p-6 text-white shadow-lg shadow-indigo-500/20">
-                    <h3 className="text-xl font-black mb-2 flex items-center gap-2">🌑 {slide.rightTeam.name}</h3>
-                    <div className="text-sm font-medium opacity-90 mb-4">
-                      <p>🗣 {slide.rightTeam.voice}</p>
-                      <p>👁 {slide.rightTeam.visual}</p>
-                    </div>
-                    <button
-                      onClick={() => playAudio(slide.consonantAudioMap?.[pair.moon])}
-                      className="w-full bg-black/25 hover:bg-black/35 transition-colors rounded-[2rem] p-6 flex items-center justify-center text-7xl font-khmer border border-white/10 shadow-inner"
-                      title="Tap to hear"
-                      type="button"
-                    >
-                      {pair.moon}
-                    </button>
-                    <div className="mt-3 text-xs font-bold opacity-90">
-                      Example: {pair.moon}{pair.vowel} = {pair.moonRead}
+                    <div className="bg-gradient-to-b from-indigo-500 to-purple-700 rounded-[2rem] p-5 text-white shadow-lg shadow-indigo-500/20">
+                      <h3 className="text-xl font-black mb-2 flex items-center gap-2">🌑 {slide.rightTeam.name}</h3>
+                      <div className="text-sm font-medium opacity-90 mb-4">
+                        <p>🗣 {slide.rightTeam.voice}</p>
+                        <p>👁 {slide.rightTeam.visual}</p>
+                      </div>
+                      <button
+                        onClick={() => playAudio(slide.consonantAudioMap?.[pair.moon])}
+                        className="w-full bg-black/25 hover:bg-black/35 transition-colors rounded-[2rem] p-5 flex items-center justify-center text-7xl font-khmer border border-white/10 shadow-inner"
+                        title="Tap to hear"
+                        type="button"
+                      >
+                        {pair.moon}
+                      </button>
+                      <div className="mt-3 text-xs font-bold opacity-90">
+                        Example: {pair.moon}{pair.vowel} = {pair.moonRead}
+                      </div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-6 bg-gray-900/60 rounded-[2rem] p-4 border border-white/5">
+            <div className="mt-5 bg-gray-900/60 rounded-[2rem] p-5 border border-white/5">
               <div className="text-amber-300 font-black mb-1">⚡ Micro-drill:</div>
               <div className="text-slate-300 text-sm">Click a commander in the stream (only consonants are clickable). Keep clicking until all commanders are found.</div>
               <div className="text-slate-400 text-xs mt-2">Tip: Smooth = Sun, Spiky = Moon. Don’t overthink in the beginning.</div>
@@ -589,11 +640,11 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
           <div className="w-full max-w-xl text-center">
             <h2 className="text-4xl font-black text-white mb-4">{slide.title}</h2>
 
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 rounded-[2.5rem] mb-6 shadow-xl">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-7 rounded-[2.5rem] mb-5 shadow-xl">
               <p className="text-2xl font-bold text-white">{slide.rule80}</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
               <div className="bg-gray-900/60 p-4 rounded-[2rem] border border-white/5">
                 <div className="text-xs text-slate-400 uppercase tracking-widest mb-2">Spiky → Moon</div>
                 <div className="text-5xl text-white font-khmer mb-2">គា</div>
@@ -606,7 +657,18 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
               </div>
             </div>
 
-            <p className="text-slate-400 mb-6">{slide.rule20}</p>
+            {slide.examples?.length ? (
+              <div className="flex flex-wrap justify-center gap-3 mb-4">
+                {slide.examples.map((example) => (
+                  <div key={example.letter} className="px-4 py-2 rounded-full border border-white/10 bg-black/40 text-sm text-slate-200">
+                    <span className="font-khmer text-lg mr-2">{example.letter}</span>
+                    <span className="text-amber-300 font-semibold">{example.team}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <p className="text-slate-400 mb-5">{slide.rule20}</p>
 
             <div className="inline-block bg-amber-500/20 text-amber-300 px-6 py-2 rounded-full border border-amber-500/50">
               💡 Tip: {slide.tip}
@@ -655,12 +717,18 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
         </div>
       )}
 
-      <VisualDecoder
-        key={drillIndex}
-        data={((drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]?.data) ?? (drillQuestions.length ? drillQuestions : FALLBACK_DRILLS)[drillIndex]}
-        onComplete={handleDrillComplete}
-        hideContinue={true}
-      />
+      {activeDrills.length ? (
+        <VisualDecoder
+          key={drillIndex}
+          data={(activeDrills[drillIndex]?.data) ?? activeDrills[drillIndex]}
+          onComplete={handleDrillComplete}
+          hideDefaultButton={true}
+        />
+      ) : (
+        <div className="text-center text-slate-300">
+          No drills available right now. Tap continue to move on.
+        </div>
+      )}
     </>
   );
 
@@ -669,7 +737,7 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
     return <LoadingState label={t('loading.lesson')} />;
   }
 
-  if (phase === 'practice' && drillQuestions.length > 0 && drillIndex >= drillQuestions.length) {
+  if (phase === 'practice' && practiceTotal > 0 && drillIndex >= practiceTotal) {
     return (
       <SessionCompletion
         title={t('lesson.complete')}
@@ -710,6 +778,12 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
               {t('lesson.hintContinue')}
             </p>
           )}
+        </footer>
+      ) : phase === 'practice' ? (
+        <footer className="p-6 border-t border-white/5 bg-black/80">
+          <Button onClick={advanceDrill} className="w-full">
+            {drillIndex >= practiceTotal - 1 ? t('actions.finish') : t('actions.continue')} <ArrowRight size={20} />
+          </Button>
         </footer>
       ) : null}
     >

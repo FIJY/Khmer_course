@@ -13,6 +13,7 @@ const SessionCompletion = ({
   onAction
 }) => {
   const isSuccess = variant === 'success';
+  const isFailure = !isSuccess;
   const icon = isSuccess ? (
     <Trophy size={80} className="text-emerald-400 mb-8 animate-bounce" />
   ) : (
@@ -20,8 +21,8 @@ const SessionCompletion = ({
   );
 
   return (
-    <MobileLayout withNav={true}>
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+    <MobileLayout withNav={!isFailure}>
+      <div className={`${isFailure ? 'fixed inset-0' : 'flex-1'} flex flex-col items-center justify-center p-8 text-center`}>
         {icon}
         <h1 className={`text-4xl font-black italic uppercase mb-2 ${isSuccess ? 'text-white' : 'text-white'}`}>{title}</h1>
         {typeof score === 'number' && typeof total === 'number' && (

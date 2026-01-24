@@ -22,6 +22,17 @@ export default function useLessonPlayer() {
   const [lessonId, setLessonId] = useState(id);
   const audioRef = useRef(null);
   const audioTimeoutRef = useRef(null);
+  const fallbackLesson = useRef({
+    id: 10000,
+    lesson_id: 10000,
+    title: 'Bootcamp: Unit R1'
+  });
+
+  const resolveLessonIdentifier = useCallback((rawId) => {
+    if (rawId === 'sandbox') return fallbackLesson.current.lesson_id;
+    const numericId = Number(rawId);
+    return Number.isFinite(numericId) ? numericId : null;
+  }, []);
 
   const shuffleArray = (array) => {
     const arr = [...array];
@@ -51,14 +62,25 @@ export default function useLessonPlayer() {
       setLoading(true);
       setError(null);
 
+      const resolvedIdentifier = resolveLessonIdentifier(id);
+
       // 1. Загружаем сам урок
-      const lesson = await fetchLessonById(id);
+      let lesson = null;
+      if (resolvedIdentifier !== null) {
+        lesson = await fetchLessonById(resolvedIdentifier);
+      }
+
+      if (!lesson && id === 'sandbox') {
+        lesson = fallbackLesson.current;
+      }
+
       if (!lesson) {
         setError('Lesson not found.');
         return;
       }
+
       setLessonInfo(lesson);
-      const resolvedLessonId = lesson?.lesson_id ?? lesson?.id ?? id;
+      const resolvedLessonId = lesson?.lesson_id ?? lesson?.id ?? resolvedIdentifier ?? id;
       setLessonId(resolvedLessonId);
 
       // 2. Пробуем загрузить элементы из таблицы lesson_items
@@ -104,8 +126,18 @@ export default function useLessonPlayer() {
         };
       });
 
-      setItems(normalizedItems);
-      setQuizCount(normalizedItems.filter(i => i.type === 'quiz').length || 0);
+      const fallbackItems = id === 'sandbox' && normalizedItems.length === 0
+        ? [{
+            type: 'theory',
+            data: {
+              title: 'Sandbox Lesson',
+              text: "This lesson doesn't have content yet. Check back soon."
+            }
+          }]
+        : normalizedItems;
+
+      setItems(fallbackItems);
+      setQuizCount(fallbackItems.filter(i => i.type === 'quiz').length || 0);
     } catch (err) {
       console.error(err);
       setError('Unable to load this lesson.');

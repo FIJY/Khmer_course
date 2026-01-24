@@ -17,17 +17,19 @@ export default function InventorySlide({ data, onPlayAudio }) {
       {/* Главная карточка слова */}
       <div className="bg-gray-900 border border-white/10 rounded-[2.5rem] p-8 w-full text-center relative overflow-hidden">
 
-        <div className="flex justify-center mb-6">
-          <KhmerColoredText
-             text={data.word}
-             fontUrl={DEFAULT_KHMER_FONT_URL}
-             fontSize={64}
-          />
-        </div>
-
-        <div className="space-y-1">
-          <h2 className="text-2xl font-black text-white">{data.pronunciation}</h2>
-          <p className="text-cyan-400 text-lg italic font-medium">{data.translation}</p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="min-h-[4rem] flex items-center justify-center">
+            <KhmerColoredText
+              text={data.word}
+              fontUrl={DEFAULT_KHMER_FONT_URL}
+              fontSize={64}
+              className="leading-[1.2]"
+            />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-2xl font-black text-white">{data.pronunciation}</h2>
+            <p className="text-cyan-400 text-lg italic font-medium">{data.translation}</p>
+          </div>
         </div>
 
          {data.audio && (
