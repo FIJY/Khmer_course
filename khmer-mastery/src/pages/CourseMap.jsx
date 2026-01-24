@@ -109,6 +109,13 @@ export default function CourseMap() {
   const [openBootcampBlockId, setOpenBootcampBlockId] = useState(bootcampBlockIds[0]);
   const [openChapterId, setOpenChapterId] = useState(null);
   const [openLevels, setOpenLevels] = useState(() => COURSE_LEVELS.map(() => true));
+  const [hasScrolledToLast, setHasScrolledToLast] = useState(false);
+  const [hasRestoredState, setHasRestoredState] = useState(false);
+
+  const mapStorageKey = useMemo(
+    () => (userId ? `courseMapState:${userId}` : 'courseMapState'),
+    [userId]
+  );
 
   const bootcampBlocks = useMemo(
     () => bootcampBlockIds.map((blockId) => {
@@ -179,6 +186,45 @@ export default function CourseMap() {
     }
   }, [lastOpenedBlockId]);
 
+  useEffect(() => {
+    if (!userId || hasRestoredState) return;
+    const savedState = localStorage.getItem(mapStorageKey);
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        if (Array.isArray(parsed.openLevels) && parsed.openLevels.length === COURSE_LEVELS.length) {
+          setOpenLevels(parsed.openLevels);
+        }
+        if (parsed.openBootcampBlockId) {
+          setOpenBootcampBlockId(parsed.openBootcampBlockId);
+        }
+        if (parsed.openChapterId) {
+          setOpenChapterId(parsed.openChapterId);
+        }
+      } catch (parseError) {
+        console.warn('Failed to restore course map state', parseError);
+      }
+    }
+    setHasRestoredState(true);
+  }, [hasRestoredState, mapStorageKey, userId]);
+
+  useEffect(() => {
+    if (!userId || !hasRestoredState) return;
+    const snapshot = {
+      openLevels,
+      openBootcampBlockId,
+      openChapterId
+    };
+    localStorage.setItem(mapStorageKey, JSON.stringify(snapshot));
+  }, [
+    hasRestoredState,
+    mapStorageKey,
+    openBootcampBlockId,
+    openChapterId,
+    openLevels,
+    userId
+  ]);
+
   const fallbackChapterId = useMemo(() => {
     const chapterIds = Object.values(chapters)
       .map((chapter) => chapter.id)
@@ -196,6 +242,37 @@ export default function CourseMap() {
       setOpenChapterId(fallbackChapterId);
     }
   }, [fallbackChapterId, lastOpenedBlockId, openChapterId]);
+
+  useEffect(() => {
+    if (!lastOpenedBlockId) return;
+    const levelIndex = COURSE_LEVELS.findIndex(
+      (level) => lastOpenedBlockId >= level.range[0] && lastOpenedBlockId <= level.range[1]
+    );
+    if (levelIndex >= 0) {
+      setOpenLevels((prev) => prev.map((isOpen, idx) => (idx === levelIndex ? true : isOpen)));
+    }
+  }, [lastOpenedBlockId]);
+
+  useEffect(() => {
+    if (loading || hasScrolledToLast) return;
+    const targetId = lastOpenedLessonId ?? lastOpenedBlockId;
+    if (!targetId) return;
+    const element = document.getElementById(`lesson-${targetId}`);
+    if (element) {
+      requestAnimationFrame(() => {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setHasScrolledToLast(true);
+      });
+    }
+  }, [
+    hasScrolledToLast,
+    lastOpenedBlockId,
+    lastOpenedLessonId,
+    loading,
+    openBootcampBlockId,
+    openChapterId,
+    openLevels
+  ]);
 
   if (loading) return <LoadingState label={t('loading.worldMap')} className="gap-4" />;
 
@@ -272,7 +349,7 @@ export default function CourseMap() {
                   const lessonCount = chapter.subLessons.length;
 
                   return (
-                    <div key={chapter.id} className="relative pl-4 border-l-2 border-white/5">
+                    <div key={chapter.id} id={`lesson-${chapter.id}`} className="relative pl-4 border-l-2 border-white/5">
                       <div className={`absolute -left-[9px] top-10 w-4 h-4 rounded-full border-4 bg-black transition-colors ${isChapterFullDone ? 'border-emerald-500' : 'border-gray-800'}`} />
 
                       <div className={`bg-gray-900/40 border rounded-[2.5rem] p-6 transition-all duration-500
@@ -281,7 +358,7 @@ export default function CourseMap() {
                         <div className="flex justify-between items-start mb-6">
                           <div className="max-w-[70%] text-white">
                             <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1 block">
-                              Bootcamp {chapter.displayId}
+                              Unit {chapter.displayId ?? chapter.id}
                             </span>
                             <h3 className={`text-xl font-black uppercase tracking-tight leading-none mb-2 ${isChapterFullDone ? 'text-emerald-400' : 'text-white'}`}>
                               {chapter.title}
@@ -322,6 +399,7 @@ export default function CourseMap() {
                                 return (
                                   <button
                                     key={sub.id}
+                                    id={`lesson-${sub.id}`}
                                     onClick={() => handleBootcampNavigate(chapter.id, Number(sub.id), `/lesson/${sub.id}`)}
                                     className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border text-left group
                                       ${isDone
@@ -357,9 +435,10 @@ export default function CourseMap() {
                   const isChapterFullDone = subLessonIds.length > 0
                     && subLessonIds.every(id => completedLessons.includes(id));
                   const isOpen = openChapterId === chapter.id;
+                  const lessonCount = chapter.subLessons.length;
 
                   return (
-                    <div key={chapter.id} className="relative pl-4 border-l-2 border-white/5">
+                    <div key={chapter.id} id={`lesson-${chapter.id}`} className="relative pl-4 border-l-2 border-white/5">
                       <div className={`absolute -left-[9px] top-10 w-4 h-4 rounded-full border-4 bg-black transition-colors ${isChapterFullDone ? 'border-emerald-500' : 'border-gray-800'}`} />
 
                       <div className={`bg-gray-900/40 border rounded-[2.5rem] p-6 transition-all duration-500
@@ -374,6 +453,11 @@ export default function CourseMap() {
                               {chapter.title}
                             </h3>
                             <p className="text-gray-500 text-xs italic leading-tight">{chapter.description}</p>
+                            {lessonCount > 0 && (
+                              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mt-2">
+                                {lessonCount} lessons
+                              </p>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-2">
@@ -403,6 +487,7 @@ export default function CourseMap() {
                                 return (
                                   <button
                                     key={sub.id}
+                                    id={`lesson-${sub.id}`}
                                     onClick={() => handleChapterNavigate(chapter.id, Number(sub.id), `/lesson/${sub.id}`)}
                                     className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border text-left group
                                       ${isDone

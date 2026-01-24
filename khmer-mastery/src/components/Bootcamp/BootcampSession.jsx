@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import VisualDecoder from '../VisualDecoder';
 import { X, Zap, ArrowRight, ArrowLeft, MousePointerClick, Volume2 } from 'lucide-react';
 import { THEORY_SLIDES } from './BootcampSession.slides';
+import Button from '../UI/Button';
 
 /**
  * BOOTCAMP SESSION (Unit R1)
@@ -387,6 +388,14 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
 
   const resetNoSpaces = () => setRevealedConsonants(new Set());
 
+  useEffect(() => {
+    if (currentSlide?.type !== 'no-spaces') return;
+    const total = getConsonantIndices(currentSlide.khmerText).length;
+    if (total > 0 && revealedConsonants.size >= total) {
+      setUnlockedSlides((prev) => ({ ...prev, [slideIndex]: true }));
+    }
+  }, [currentSlide, revealedConsonants, slideIndex]);
+
   // ---------- RENDERERS ----------
   const renderTheoryContent = () => {
     const slide = THEORY_SLIDES[slideIndex];
@@ -407,18 +416,18 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
         const found = revealedConsonants.size;
         const remaining = Math.max(0, total - found);
         return (
-          <div className="w-full max-w-3xl">
+          <div className="w-full max-w-xl">
             <h2 className="text-4xl font-black text-white mb-2">😵 {slide.title}</h2>
             <p className="text-xl text-amber-400 mb-8">{slide.subtitle}</p>
 
-            <div className="bg-slate-800 p-6 rounded-xl mb-6 border border-white/5">
+            <div className="bg-gray-900/60 p-6 rounded-[2.5rem] mb-6 border border-white/5">
               <p className="text-slate-400 text-xs mb-2 uppercase tracking-widest">English analogy</p>
               <p className="text-2xl text-white font-mono tracking-tighter bg-black/30 p-4 rounded">
                 {slide.englishAnalogy}
               </p>
             </div>
 
-            <div className="bg-slate-800 p-6 rounded-xl mb-6 border-2 border-emerald-500/30">
+            <div className="bg-gray-900/60 p-6 rounded-[2.5rem] mb-6 border-2 border-emerald-500/30">
               <div className="flex items-center justify-between gap-4 mb-4">
                 <div className="flex items-center gap-2 text-emerald-300 font-bold">
                   <MousePointerClick size={18} />
@@ -426,7 +435,7 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
                 </div>
                 <button
                   onClick={resetNoSpaces}
-                  className="text-xs font-bold px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white"
+                  className="text-xs font-bold px-3 py-2 rounded-xl bg-gray-900 border border-white/10 text-white hover:border-white/30 transition-colors"
                   type="button"
                 >
                   Reset
@@ -456,7 +465,7 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
               </div>
             </div>
 
-            <div className="bg-green-600/15 p-5 rounded-xl border-l-4 border-green-500 flex items-start gap-3">
+            <div className="bg-green-600/15 p-5 rounded-[2rem] border border-green-500/30 flex items-start gap-3">
               <div className="text-2xl">✅</div>
               <div>
                 <p className="text-white font-bold mb-1">Your win:</p>
@@ -471,11 +480,11 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
 
       case 'reading-algorithm':
         return (
-          <div className="w-full max-w-2xl">
+          <div className="w-full max-w-xl">
             <h2 className="text-3xl font-black text-white mb-8 text-center">{slide.title}</h2>
             <div className="space-y-4 mb-8">
               {slide.steps.map((step) => (
-                <div key={step.id} className="flex items-center gap-4 bg-slate-800 p-4 rounded-xl border border-white/5">
+                <div key={step.id} className="flex items-center gap-4 bg-gray-900/60 p-4 rounded-[2rem] border border-white/5">
                   <div className="bg-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0 shadow-lg shadow-blue-500/30">
                     {step.id}
                   </div>
@@ -490,19 +499,19 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
               ))}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-              <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
+              <div className="bg-gray-900/60 p-4 rounded-[2rem] border border-white/5">
                 <div className="text-xs text-slate-400 uppercase tracking-widest mb-2">Example (Sun)</div>
                 <div className="text-4xl text-white font-khmer mb-2">កា</div>
                 <div className="text-slate-300 text-sm"><span className="text-amber-300 font-bold">Commander:</span> ក → Sun → vowel stays pure → <span className="font-bold">Kaa</span></div>
               </div>
-              <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
+              <div className="bg-gray-900/60 p-4 rounded-[2rem] border border-white/5">
                 <div className="text-xs text-slate-400 uppercase tracking-widest mb-2">Example (Moon)</div>
                 <div className="text-4xl text-white font-khmer mb-2">គា</div>
                 <div className="text-slate-300 text-sm"><span className="text-amber-300 font-bold">Commander:</span> គ → Moon → vowel transforms → <span className="font-bold">Kea</span></div>
               </div>
             </div>
 
-            <div className="bg-red-500/20 p-4 rounded-lg border border-red-500/50 flex items-center gap-3">
+            <div className="bg-red-500/20 p-4 rounded-[2rem] border border-red-500/50 flex items-center gap-3">
               <div className="text-2xl">⚠️</div>
               <p className="text-white text-sm font-semibold">{slide.warning}</p>
             </div>
@@ -511,14 +520,14 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
 
       case 'meet-teams':
         return (
-          <div className="w-full max-w-4xl">
+          <div className="w-full max-w-3xl">
             <h2 className="text-3xl font-black text-white mb-8 text-center">{slide.title}</h2>
 
             {/* Pair grid: makes the Sun/Moon linkage obvious */}
             <div className="space-y-4">
               {slide.pairs.map((pair, i) => (
                 <div key={i} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gradient-to-b from-amber-400 to-amber-600 rounded-xl p-6 text-black shadow-lg shadow-amber-500/20">
+                  <div className="bg-gradient-to-b from-amber-400 to-amber-600 rounded-[2rem] p-6 text-black shadow-lg shadow-amber-500/20">
                     <h3 className="text-xl font-black mb-2 flex items-center gap-2">☀️ {slide.leftTeam.name}</h3>
                     <div className="text-sm font-semibold opacity-90 mb-4">
                       <p>🗣 {slide.leftTeam.voice}</p>
@@ -526,7 +535,7 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
                     </div>
                     <button
                       onClick={() => playAudio(slide.consonantAudioMap?.[pair.sun])}
-                      className="w-full bg-black/20 hover:bg-black/30 transition-colors rounded-xl p-6 flex items-center justify-center text-7xl font-khmer shadow-inner"
+                      className="w-full bg-black/20 hover:bg-black/30 transition-colors rounded-[2rem] p-6 flex items-center justify-center text-7xl font-khmer shadow-inner"
                       title="Tap to hear"
                       type="button"
                     >
@@ -537,7 +546,7 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-b from-indigo-500 to-purple-700 rounded-xl p-6 text-white shadow-lg shadow-indigo-500/20">
+                  <div className="bg-gradient-to-b from-indigo-500 to-purple-700 rounded-[2rem] p-6 text-white shadow-lg shadow-indigo-500/20">
                     <h3 className="text-xl font-black mb-2 flex items-center gap-2">🌑 {slide.rightTeam.name}</h3>
                     <div className="text-sm font-medium opacity-90 mb-4">
                       <p>🗣 {slide.rightTeam.voice}</p>
@@ -545,7 +554,7 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
                     </div>
                     <button
                       onClick={() => playAudio(slide.consonantAudioMap?.[pair.moon])}
-                      className="w-full bg-black/25 hover:bg-black/35 transition-colors rounded-xl p-6 flex items-center justify-center text-7xl font-khmer border border-white/10 shadow-inner"
+                      className="w-full bg-black/25 hover:bg-black/35 transition-colors rounded-[2rem] p-6 flex items-center justify-center text-7xl font-khmer border border-white/10 shadow-inner"
                       title="Tap to hear"
                       type="button"
                     >
@@ -559,7 +568,7 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
               ))}
             </div>
 
-            <div className="mt-6 bg-slate-800/70 rounded-xl p-4 border border-white/5">
+            <div className="mt-6 bg-gray-900/60 rounded-[2rem] p-4 border border-white/5">
               <div className="text-amber-300 font-black mb-1">⚡ Micro-drill:</div>
               <div className="text-slate-300 text-sm">Click a commander in the stream (only consonants are clickable). Keep clicking until all commanders are found.</div>
               <div className="text-slate-400 text-xs mt-2">Tip: Smooth = Sun, Spiky = Moon. Don’t overthink in the beginning.</div>
@@ -577,20 +586,20 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
 
       case 'rule':
         return (
-          <div className="w-full max-w-2xl text-center">
+          <div className="w-full max-w-xl text-center">
             <h2 className="text-4xl font-black text-white mb-4">{slide.title}</h2>
 
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 rounded-2xl mb-6 shadow-xl">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 rounded-[2.5rem] mb-6 shadow-xl">
               <p className="text-2xl font-bold text-white">{slide.rule80}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
+              <div className="bg-gray-900/60 p-4 rounded-[2rem] border border-white/5">
                 <div className="text-xs text-slate-400 uppercase tracking-widest mb-2">Spiky → Moon</div>
                 <div className="text-5xl text-white font-khmer mb-2">គា</div>
                 <div className="text-slate-300 text-sm">Looks spiky → Moon → read as <span className="font-bold">Kea</span></div>
               </div>
-              <div className="bg-slate-800 p-4 rounded-xl border border-white/5">
+              <div className="bg-gray-900/60 p-4 rounded-[2rem] border border-white/5">
                 <div className="text-xs text-slate-400 uppercase tracking-widest mb-2">Smooth → Sun</div>
                 <div className="text-5xl text-white font-khmer mb-2">កា</div>
                 <div className="text-slate-300 text-sm">Looks smooth → Sun → read as <span className="font-bold">Kaa</span></div>
@@ -611,13 +620,11 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
             <div className="mb-8 animate-bounce text-6xl">🔥</div>
             <h2 className="text-4xl font-black text-white mb-4">{slide.title}</h2>
             <p className="text-xl text-slate-300 mb-8">{slide.description}</p>
-            <button
-              onClick={nextSlide}
-              className="bg-red-600 hover:bg-red-500 text-white text-xl font-black py-4 px-12 rounded-full shadow-lg shadow-red-600/40 transition-transform hover:scale-105 active:scale-95"
-              type="button"
-            >
-              {slide.buttonText}
-            </button>
+            <div className="w-full max-w-xs mx-auto">
+              <Button onClick={nextSlide} className="text-base">
+                {slide.buttonText}
+              </Button>
+            </div>
           </div>
         );
 
@@ -636,21 +643,15 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
           <button
             onClick={prevSlide}
             disabled={slideIndex === 0}
-            className="flex-1 py-3 rounded-lg bg-slate-800 text-slate-300 font-bold disabled:opacity-30 hover:bg-slate-700 flex items-center justify-center gap-2"
+            className={`p-5 rounded-2xl border transition-all ${slideIndex === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`}
             type="button"
           >
-            <ArrowLeft size={18} />
-            Back
+            <ArrowLeft size={24} />
           </button>
-          <button
-            onClick={nextSlide}
-            disabled={nextDisabled}
-            className="flex-1 py-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:bg-blue-600"
-            type="button"
-          >
+          <Button onClick={nextSlide} disabled={nextDisabled} className="flex-1 text-sm">
             {nextDisabled ? 'Tap all consonants' : 'Next'}
-            <ArrowRight size={18} />
-          </button>
+            <ArrowRight size={20} />
+          </Button>
         </div>
       )}
 
