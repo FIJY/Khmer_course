@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import KhmerColoredText from '../KhmerColoredText';
 import VisualDecoder from '../VisualDecoder';
-import useCourseMap from '../../hooks/useCourseMap';
 import { X, Zap, ArrowRight, ArrowLeft, MousePointerClick, Volume2 } from 'lucide-react';
 import { THEORY_SLIDES } from './BootcampSession.slides';
 
@@ -281,8 +279,18 @@ const MiniCommanderDrill = ({
 
 // ---------- THEORY SLIDES ----------
 
-const BootcampSession = ({ onClose }) => {
-  const { loadUnitData } = useCourseMap();
+const extractVisualDecoderDrills = (items = []) => items
+  .map((item) => {
+    if (!item) return null;
+    if (item.type === 'visual_decoder') return item;
+    if (item.data?.type === 'visual_decoder') {
+      return { type: item.data.type, data: item.data };
+    }
+    return null;
+  })
+  .filter(Boolean);
+
+const BootcampSession = ({ onClose, practiceItems = [] }) => {
 
   const [phase, setPhase] = useState('theory'); // 'theory' | 'practice'
   const [slideIndex, setSlideIndex] = useState(0);
@@ -316,58 +324,30 @@ const BootcampSession = ({ onClose }) => {
   // ---------- LOAD PRACTICE DATA ----------
   useEffect(() => {
     let isMounted = true;
+    const drills = extractVisualDecoderDrills(practiceItems);
 
-    const initBootcamp = async () => {
-      try {
-        // Prefer 10101 (R1). Fallback to 10100 if your data uses old id.
-        // If your map uses different ids, add them here.
-        const candidateIds = ['10000','10101','10100','101'];
-        let data = null;
-        for (const id of candidateIds) {
-          // eslint-disable-next-line no-await-in-loop
-          data = await loadUnitData(id);
-          if (data) break;
-        }
-
-        // Try a few known shapes:
-        const lessons = data?.lessons || data?.content || [];
-        const slides = Array.isArray(lessons)
-          ? lessons.flatMap((l) => l?.slides || l?.content || [])
-          : [];
-
-        const drills = slides.filter((s) => s?.type === 'visual_decoder');
-
-        if (!drills.length) {
-          // Never hard-fail: use built-in fallback drills so the bootcamp is playable.
-          const shuffledFallback = [...FALLBACK_DRILLS, ...FALLBACK_DRILLS].sort(() => Math.random() - 0.5);
-          if (isMounted) {
-            setUsingFallbackPractice(true);
-            setDrillQuestions(shuffledFallback);
-          }
-          return;
-        }
-
-        const shuffled = [...drills, ...drills].sort(() => Math.random() - 0.5);
-        if (isMounted) {
-          setUsingFallbackPractice(false);
-          setDrillQuestions(shuffled);
-        }
-      } catch (e) {
-        // If practice fails, still allow a playable fallback.
-        if (isMounted) {
-          setUsingFallbackPractice(true);
-          setDrillQuestions([...FALLBACK_DRILLS, ...FALLBACK_DRILLS].sort(() => Math.random() - 0.5));
-        }
-      } finally {
-        if (isMounted) setLoading(false);
+    if (!drills.length) {
+      const shuffledFallback = [...FALLBACK_DRILLS, ...FALLBACK_DRILLS].sort(() => Math.random() - 0.5);
+      if (isMounted) {
+        setUsingFallbackPractice(true);
+        setDrillQuestions(shuffledFallback);
+        setLoading(false);
       }
-    };
+      return () => {
+        isMounted = false;
+      };
+    }
 
-    initBootcamp();
+    const shuffled = [...drills, ...drills].sort(() => Math.random() - 0.5);
+    if (isMounted) {
+      setUsingFallbackPractice(false);
+      setDrillQuestions(shuffled);
+      setLoading(false);
+    }
     return () => {
       isMounted = false;
     };
-  }, [loadUnitData]);
+  }, [practiceItems]);
 
   // ---------- THEORY NAV ----------
   const nextSlide = () => {
