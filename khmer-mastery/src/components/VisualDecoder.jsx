@@ -1,10 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sun, Moon, Volume2, Loader2 } from 'lucide-react';
-// Импортируем "Неоновый" компонент
-import InteractiveNativeWord from './InteractiveNativeWord';
-import InteractiveSkiaWord from './InteractiveSkiaWord';
+// ВАЖНО: Импортируем именно Overlay компонент
 import InteractiveOverlayWord from './InteractiveOverlayWord';
-
 
 const DEFAULT_KHMER_FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
@@ -47,7 +44,6 @@ export default function VisualDecoder({ data, onComplete }) {
 
   const handlePartClick = (part) => {
     if (status === 'success') return;
-
     const sound = char_audio_map?.[part] || char_audio_map?.[target_char];
     if (sound) playAudio(sound);
 
@@ -62,15 +58,21 @@ export default function VisualDecoder({ data, onComplete }) {
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4">
+    <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4 relative">
+
+      {/* ДЕБАГ-МАРКЕР: Если видишь это, значит код обновился */}
+      <div className="absolute top-0 left-0 text-[10px] text-red-500 opacity-50 font-mono border border-red-500 p-1">
+        VERSION: OVERLAY (CSS)
+      </div>
 
       <div className={`mb-12 relative transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
          {status === 'success' && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl animate-pulse rounded-full"/>}
 
-         {!fontLoaded && <div className="text-cyan-400 animate-pulse">Loading...</div>}
+         {!fontLoaded && <div className="text-cyan-400 animate-pulse">Loading Font...</div>}
 
          {fontLoaded && (
-            <InteractiveNativeWord
+            // Здесь используется компонент БЕЗ Skia
+            <InteractiveOverlayWord
                 word={word}
                 parts={parts}
                 onPartClick={handlePartClick}
