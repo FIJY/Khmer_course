@@ -1,26 +1,20 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-// Цветовая палитра (как в твоем Анализаторе)
+// Цвета для типов букв
 const COLORS = {
   CONSONANT: '#ffb020', // Оранжевый
   VOWEL: '#ff4081',     // Розовый
-  SUBSCRIPT: '#6b5cff', // Синий/Индиго
-  OTHER: '#34d399'      // Зеленый (дефолт)
+  SUBSCRIPT: '#6b5cff', // Синий
+  OTHER: '#34d399'      // Зеленый
 };
 
-// Хелпер: Определяем тип буквы для цвета
 function getCharColor(char) {
   const code = char.codePointAt(0);
-  // Согласные (K-A2)
   if (code >= 0x1780 && code <= 0x17a2) return COLORS.CONSONANT;
-  // Независимые гласные (A3-B5)
   if (code >= 0x17a3 && code <= 0x17b5) return COLORS.VOWEL;
-  // Зависимые гласные (B6-C5)
   if (code >= 0x17b6 && code <= 0x17c5) return COLORS.VOWEL;
-  // Подписные (обычно начинаются с 17D2, но мы проверяем проще)
-  // В разбивке подписная часто идет как "្" + буква.
+  // Если строка длиннее 1 символа (например, ្ + ម) или это знак подписки
   if (char.length > 1 || code === 0x17d2) return COLORS.SUBSCRIPT;
-
   return COLORS.OTHER;
 }
 
@@ -45,7 +39,7 @@ export default function InteractiveCanvasWord({
     const fontStr = `${fontSize}px "Noto Sans Khmer", serif`;
     ctx.font = fontStr;
 
-    // 1. РАСЧЕТ ЗОН (Слайсы)
+    // 1. РАСЧЕТ ЗОН
     const zones = [];
     let currentX = 0;
     let accumStr = "";
@@ -61,18 +55,18 @@ export default function InteractiveCanvasWord({
         x: prevW,
         width: partW,
         index: i,
-        color: getCharColor(part) // Вычисляем цвет сразу
+        color: getCharColor(part)
       });
       currentX = currW;
     });
     setClickZones(zones);
 
-    // 2. НАСТРОЙКА CANVAS
+    // 2. НАСТРОЙКА РАЗМЕРОВ
     const dpr = window.devicePixelRatio || 1;
-    // Добавляем padding по краям, чтобы широкие буквы не резались
-    const paddingX = 20;
+    // Больше отступов, чтобы высокие буквы не резались
+    const paddingX = 40;
     const width = currentX + (paddingX * 2);
-    const height = fontSize * 1.8;
+    const height = fontSize * 2.2; // Увеличили высоту для подписных
 
     canvas.width = width * dpr;
     canvas.height = height * dpr;
@@ -86,16 +80,15 @@ export default function InteractiveCanvasWord({
     // 3. ОТРИСОВКА
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
-      const y = height / 2 + (fontSize * 0.1);
+      // Смещаем центр чуть ниже, так как кхмерский шрифт "высокий"
+      const y = height / 2 + (fontSize * 0.15);
       const startX = paddingX;
 
-      // СЛОЙ А: Базовый текст (Белый)
-      // Рисуем всё слово целиком. Это база.
+      // СЛОЙ 1: Белый текст (Основа)
       ctx.fillStyle = defaultColor;
       ctx.fillText(word, startX, y);
 
-      // СЛОЙ Б: Подсветка частей
-      // Мы проходимся по зонам. Если мышь на зоне - рисуем её цветной.
+      // СЛОЙ 2: Цветные части
       zones.forEach((zone, i) => {
         const isHovered = i === hoveredIndex;
         const isClicked = i === clickedIndex;
@@ -103,20 +96,27 @@ export default function InteractiveCanvasWord({
         if (isHovered || isClicked) {
            ctx.save();
 
-           // Магия: Создаем "окно" (clip) только для этой буквы
+           // МАГИЯ НАХЛЕСТА (Overlap)
+           // Мы расширяем зону обрезки (Clip) на 2px влево и вправо,
+           // чтобы захватить стыки букв и не оставлять белых щелей.
+           const overlap = 2;
+
            ctx.beginPath();
-           // Расширяем зону на 1px, чтобы перекрыть стыки
-           ctx.rect(startX + zone.x - 0.5, 0, zone.width + 1, height);
+           ctx.rect(
+             startX + zone.x - overlap,
+             0,
+             zone.width + (overlap * 2),
+             height
+           );
            ctx.clip();
 
-           // Рисуем ВСЁ слово нужным цветом.
-           // Из-за clip мы увидим только нужный кусочек.
+           // Рисуем слово ЦВЕТОМ
            ctx.fillStyle = zone.color;
            ctx.fillText(word, startX, y);
 
-           // Добавляем свечение того же цвета
+           // Свечение
            ctx.shadowColor = zone.color;
-           ctx.shadowBlur = 20;
+           ctx.shadowBlur = 25;
            ctx.fillText(word, startX, y);
 
            ctx.restore();
@@ -128,13 +128,14 @@ export default function InteractiveCanvasWord({
 
   }, [word, parts, fontSize, hoveredIndex, clickedIndex, defaultColor]);
 
-  // ОБРАБОТЧИКИ
   const handleMouseMove = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
-    const paddingX = 20; // Тот же padding, что при рисовании
-    const x = e.clientX - rect.left - paddingX;
+    const paddingX = 40;
+    // Корректируем X с учетом масштаба Canvas (если он сжат CSS)
+    const scaleX = canvasRef.current.width / (canvasRef.current.clientWidth * (window.devicePixelRatio || 1));
+    const x = (e.clientX - rect.left) * scaleX - paddingX;
 
-    // Ищем зону
+    // Ищем зону с небольшим допуском
     const index = clickZones.findIndex(z => x >= z.x && x <= z.x + z.width);
     setHoveredIndex(index !== -1 ? index : null);
     canvasRef.current.style.cursor = index !== -1 ? 'pointer' : 'default';
@@ -154,7 +155,7 @@ export default function InteractiveCanvasWord({
       onMouseMove={handleMouseMove}
       onClick={handleClick}
       onMouseLeave={() => setHoveredIndex(null)}
-      className="touch-none select-none transition-transform active:scale-95"
+      className="touch-none select-none transition-transform active:scale-95 max-w-full h-auto"
     />
   );
 }
