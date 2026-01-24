@@ -107,6 +107,7 @@ export default function CourseMap() {
     []
   );
   const [openBootcampBlockId, setOpenBootcampBlockId] = useState(bootcampBlockIds[0]);
+  const [openChapterId, setOpenChapterId] = useState(null);
 
   const bootcampBlocks = useMemo(
     () => bootcampBlockIds.map((blockId) => {
@@ -146,11 +147,50 @@ export default function CourseMap() {
     navigate(target);
   };
 
+  const handleChapterToggle = async (blockId) => {
+    setOpenChapterId((prev) => (prev === blockId ? null : blockId));
+    if (!userId) return;
+    try {
+      await updateLastOpenedProgress(userId, blockId, blockId);
+    } catch (err) {
+      console.error('Failed to update last opened chapter block', err);
+    }
+  };
+
+  const handleChapterNavigate = async (blockId, lessonId, target) => {
+    if (userId) {
+      try {
+        await updateLastOpenedProgress(userId, blockId, lessonId);
+      } catch (err) {
+        console.error('Failed to update last opened chapter lesson', err);
+      }
+    }
+    navigate(target);
+  };
+
   useEffect(() => {
     if (lastOpenedBlockId && lastOpenedBlockId >= 10000) {
       setOpenBootcampBlockId(lastOpenedBlockId);
     }
   }, [lastOpenedBlockId]);
+
+  const fallbackChapterId = useMemo(() => {
+    const chapterIds = Object.values(chapters)
+      .map((chapter) => chapter.id)
+      .filter((id) => id < 10000)
+      .sort((a, b) => a - b);
+    return chapterIds[0] ?? null;
+  }, [chapters]);
+
+  useEffect(() => {
+    if (lastOpenedBlockId && lastOpenedBlockId < 10000) {
+      setOpenChapterId(lastOpenedBlockId);
+      return;
+    }
+    if (!lastOpenedBlockId && openChapterId === null && fallbackChapterId) {
+      setOpenChapterId(fallbackChapterId);
+    }
+  }, [fallbackChapterId, lastOpenedBlockId, openChapterId]);
 
   if (loading) return <LoadingState label={t('loading.worldMap')} className="gap-4" />;
 
@@ -300,6 +340,7 @@ export default function CourseMap() {
                   const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
                   const isChapterFullDone = subLessonIds.length > 0
                     && subLessonIds.every(id => completedLessons.includes(id));
+                  const isOpen = openChapterId === chapter.id;
 
                   return (
                     <div key={chapter.id} className="relative pl-4 border-l-2 border-white/5">
@@ -319,42 +360,59 @@ export default function CourseMap() {
                             <p className="text-gray-500 text-xs italic leading-tight">{chapter.description}</p>
                           </div>
 
-                          <button
-                            onClick={() => navigate(`/lesson/${chapter.id}/preview`)}
-                            className={`p-3 rounded-2xl border transition-all active:scale-90
-                              ${isChapterFullDone ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-500/30'}`}
-                          >
-                            <BookOpen size={20} />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleChapterNavigate(chapter.id, chapter.id, `/lesson/${chapter.id}/preview`)}
+                              className={`p-3 rounded-2xl border transition-all active:scale-90
+                                ${isChapterFullDone ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-500/30'}`}
+                              type="button"
+                            >
+                              <BookOpen size={20} />
+                            </button>
+                            <button
+                              onClick={() => handleChapterToggle(chapter.id)}
+                              className="p-3 rounded-2xl border bg-black border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                              type="button"
+                            >
+                              {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                            </button>
+                          </div>
                         </div>
 
-                        {chapter.subLessons.length > 0 && (
-                          <div className="space-y-2">
-                            {chapter.subLessons.map((sub) => {
-                              const isDone = completedLessons.includes(Number(sub.id));
-                              return (
-                                <button
-                                  key={sub.id}
-                                  onClick={() => navigate(`/lesson/${sub.id}`)}
-                                  className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border text-left group
-                                    ${isDone
-                                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                                      : 'bg-black/20 border-white/5 text-gray-400 hover:bg-white/5'}`}
-                                >
-                                  <div className="flex items-center gap-3 overflow-hidden">
-                                    <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border
-                                      ${isDone ? 'border-emerald-500 bg-emerald-500 text-black' : 'border-white/10 bg-black text-transparent'}`}>
-                                      <Check size={10} strokeWidth={4} />
+                        {isOpen && (
+                          chapter.subLessons.length > 0 ? (
+                            <div className="space-y-2">
+                              {chapter.subLessons.map((sub) => {
+                                const isDone = completedLessons.includes(Number(sub.id));
+                                return (
+                                  <button
+                                    key={sub.id}
+                                    onClick={() => handleChapterNavigate(chapter.id, Number(sub.id), `/lesson/${sub.id}`)}
+                                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border text-left group
+                                      ${isDone
+                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                        : 'bg-black/20 border-white/5 text-gray-400 hover:bg-white/5'}`}
+                                    type="button"
+                                  >
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                      <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border
+                                        ${isDone ? 'border-emerald-500 bg-emerald-500 text-black' : 'border-white/10 bg-black text-transparent'}`}>
+                                        <Check size={10} strokeWidth={4} />
+                                      </div>
+                                      <span className="text-xs font-bold uppercase tracking-wider truncate group-hover:text-white transition-colors">
+                                        {sub.title}
+                                      </span>
                                     </div>
-                                    <span className="text-xs font-bold uppercase tracking-wider truncate group-hover:text-white transition-colors">
-                                      {sub.title}
-                                    </span>
-                                  </div>
-                                  <ChevronRight size={14} className={isDone ? 'text-emerald-500' : 'text-gray-700'} />
-                                </button>
-                              );
-                            })}
-                          </div>
+                                    <ChevronRight size={14} className={isDone ? 'text-emerald-500' : 'text-gray-700'} />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-gray-500 uppercase tracking-widest font-semibold">
+                              Lessons coming soon
+                            </div>
+                          )
                         )}
                       </div>
                     </div>
