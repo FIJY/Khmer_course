@@ -6,7 +6,23 @@ export const fetchLessonById = async (id) => {
     .select('*')
     .eq('id', id)
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
+  return data;
+};
+
+export const fetchLessonByLessonId = async (lessonId) => {
+  const { data, error } = await supabase
+    .from('lessons')
+    .select('*')
+    .eq('lesson_id', lessonId)
+    .single();
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
   return data;
 };
 
