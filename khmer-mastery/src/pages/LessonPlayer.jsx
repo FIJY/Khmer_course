@@ -7,6 +7,7 @@ import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
+import BootcampSession from '../components/Bootcamp/BootcampSession';
 import { t } from '../i18n';
 
 // --- ИМПОРТИРУЕМ НОВЫЕ СЛАЙДЫ ---
@@ -19,6 +20,7 @@ const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
 
 export default function LessonPlayer() {
   const {
+    id,
     navigate,
     lessonInfo,
     items,
@@ -42,6 +44,13 @@ export default function LessonPlayer() {
   } = useLessonPlayer();
 
   const safeItems = Array.isArray(items) ? items : [];
+  const bootcampLessonIds = React.useMemo(() => new Set([10000, 10100, 10101]), []);
+  const bootcampLessonId = Number(lessonInfo?.id ?? id);
+  const bootcampTitle = lessonInfo?.title?.toLowerCase() ?? '';
+  const isBootcampLesson = bootcampLessonIds.has(bootcampLessonId)
+    || bootcampTitle.includes('bootcamp')
+    || bootcampTitle.includes('unit r1')
+    || bootcampTitle.includes('the foundation');
 
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
@@ -83,6 +92,7 @@ export default function LessonPlayer() {
     );
   }
 
+  if (isBootcampLesson) return <BootcampSession onClose={() => navigate('/map')} practiceItems={safeItems} />;
   if (!safeItems.length || !safeItems[step]) return <ErrorState title={t('errors.lessonEmpty')} message={t('empty.lessonContent')} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
 
   const current = safeItems[step]?.data;

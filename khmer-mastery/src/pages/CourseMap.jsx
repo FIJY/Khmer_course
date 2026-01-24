@@ -1,20 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight, Zap, ChevronDown, ChevronUp
+  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight, ChevronDown, ChevronUp
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import EmptyState from '../components/UI/EmptyState';
 import useCourseMap from '../hooks/useCourseMap';
-import BootcampSession from '../components/Bootcamp/BootcampSession'; // Убедись, что путь правильный
 import { t } from '../i18n';
 import { updateLastOpenedProgress } from '../data/progress';
 
 // МЫ ОСТАВИЛИ ТОЛЬКО ОДИН БЛОК, ЧТОБЫ БЫЛО КРАСИВО И НЕ ПУСТО
 const COURSE_LEVELS = [
-  // --- СКРЫТЫЕ ПУСТЫЕ УРОВНИ ---
-  /*
   {
     title: "CONTACT & REACTIONS",
     description: "I don't get lost, I'm polite, and I am understood.",
@@ -23,7 +20,6 @@ const COURSE_LEVELS = [
     bg: "from-cyan-500/10 to-transparent",
     border: "border-cyan-500/20"
   },
-  */
 
   // --- 🔥 ТВОЙ ГЛАВНЫЙ БЛОК (R1 и далее) ---
   {
@@ -36,8 +32,6 @@ const COURSE_LEVELS = [
     isBootcamp: true
   },
 
-  // --- СКРЫТЫЕ ПУСТЫЕ УРОВНИ ---
-  /*
   {
     title: "DAILY LIFE",
     description: "I live, buy, get medical help, and move around.",
@@ -94,12 +88,9 @@ const COURSE_LEVELS = [
     bg: "from-rose-500/10 to-transparent",
     border: "border-rose-500/20"
   }
-  */
 ];
 
 export default function CourseMap() {
-  const [showBootcamp, setShowBootcamp] = useState(false); // Состояние для открытия Буткемпа
-
   const {
     userId,
     loading,
@@ -176,20 +167,6 @@ export default function CourseMap() {
   return (
     <MobileLayout withNav={true}>
 
-      {/* --- МОДУЛЬ БУТКЕМПА (Всплывает поверх всего) --- */}
-      {showBootcamp && (
-        <BootcampSession onClose={() => setShowBootcamp(false)} />
-      )}
-
-      {/* --- КНОПКА ЗАПУСКА БУТКЕМПА (Плавающая) --- */}
-      <button
-        onClick={() => setShowBootcamp(true)}
-        className="fixed bottom-24 right-6 z-50 bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest py-3 px-6 rounded-full shadow-lg border-4 border-amber-600 animate-pulse flex items-center gap-2 active:scale-95 transition-transform"
-      >
-        <Zap size={24} fill="black" />
-        BOOTCAMP
-      </button>
-
       {/* Sticky header */}
       <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-40">
         <h1 className="text-2xl font-black tracking-tighter uppercase italic text-white">
@@ -212,8 +189,6 @@ export default function CourseMap() {
           const levelChapters = Object.values(chapters).filter(ch =>
             ch.id >= level.range[0] && ch.id <= level.range[1]
           );
-
-          if (!level.isBootcamp && levelChapters.length === 0) return null;
 
           return (
             <div key={levelIndex} className="relative">
@@ -321,7 +296,7 @@ export default function CourseMap() {
                       </div>
                     </div>
                   );
-                }) : levelChapters.map((chapter) => {
+                }) : (levelChapters.length > 0 ? levelChapters.map((chapter) => {
                   const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
                   const isChapterFullDone = subLessonIds.length > 0
                     && subLessonIds.every(id => completedLessons.includes(id));
@@ -384,7 +359,11 @@ export default function CourseMap() {
                       </div>
                     </div>
                   );
-                })}
+                }) : (
+                  <div className="rounded-[2.5rem] border border-white/5 bg-gray-900/40 p-6 text-center text-xs uppercase tracking-widest text-gray-500">
+                    Lessons coming soon
+                  </div>
+                ))}
               </div>
             </div>
           );
