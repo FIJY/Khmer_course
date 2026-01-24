@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import opentype from "opentype.js";
 import hbjs from "harfbuzzjs";
 
-// ИСПРАВЛЕННАЯ ССЫЛКА (добавили /subset/)
-const WASM_URL = 'https://unpkg.com/harfbuzzjs@0.3.3/subset/hb-subset.wasm';
+// === ИСПРАВЛЕННАЯ ССЫЛКА ===
+// Используем jsDelivr - он самый стабильный и не дает CORS ошибок
+const WASM_URL = 'https://cdn.jsdelivr.net/npm/harfbuzzjs@0.3.3/hb-subset.wasm';
 const DEFAULT_FONT = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 function toPathData(path) {
@@ -26,19 +27,20 @@ export default function KhmerRenderEngine({
 
     (async () => {
       setStatus("loading");
-      setDebugMsg("Initializing Engine v5.0...");
+      setDebugMsg("Initializing Engine v6.0 (Final)...");
       setGlyphs([]);
 
       try {
-        // 1. СКАЧИВАЕМ WASM (Теперь по правильному адресу)
-        setDebugMsg(`Downloading WASM...`);
+        // 1. СКАЧИВАЕМ WASM
+        setDebugMsg(`Downloading WASM from CDN...`);
         const wasmRes = await fetch(WASM_URL);
 
-        // Проверка на ошибку 404 или HTML вместо файла
-        if (!wasmRes.ok) throw new Error(`WASM Fetch Failed: ${wasmRes.status}`);
+        if (!wasmRes.ok) throw new Error(`WASM 404 Error: ${wasmRes.status}`);
+
+        // Проверка MIME типа (на всякий случай)
         const contentType = wasmRes.headers.get("content-type");
         if (contentType && contentType.includes("text/html")) {
-             throw new Error("WASM URL returned HTML instead of binary! Check URL.");
+             throw new Error("CDN returned HTML instead of Binary. URL is wrong.");
         }
 
         const wasmBuffer = await wasmRes.arrayBuffer();
@@ -51,7 +53,7 @@ export default function KhmerRenderEngine({
         // 3. СКАЧИВАЕМ ШРИФТ
         setDebugMsg("Loading Font...");
         const fontRes = await fetch(fontUrl);
-        if (!fontRes.ok) throw new Error(`Font Fetch Failed: ${fontRes.status}`);
+        if (!fontRes.ok) throw new Error(`Font 404 Error: ${fontRes.status}`);
         const fontBuffer = await fontRes.arrayBuffer();
 
         // 4. ШЕЙПИНГ
@@ -108,7 +110,6 @@ export default function KhmerRenderEngine({
     return () => { cancelled = true; };
   }, [text, fontUrl, fontSize]);
 
-  // ViewBox Calc
   const viewBox = useMemo(() => {
     if (!glyphs.length) return `0 0 800 300`;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -127,15 +128,16 @@ export default function KhmerRenderEngine({
 
   if (status === "error") return (
     <div className="p-4 bg-red-900/80 border border-red-500 text-white font-mono text-xs rounded m-4 max-w-md">
-      <p className="font-bold mb-1">❌ FATAL ERROR:</p>
+      <p className="font-bold mb-1">❌ ERROR:</p>
       <p>{debugMsg}</p>
     </div>
   );
 
   return (
     <div className="w-full flex flex-col items-center">
+      {/* ИНДИКАТОР ВЕРСИИ v6.0 */}
       {status !== 'success' && (
-          <div className="text-[10px] text-yellow-500 font-mono mb-2 animate-pulse">
+          <div className="text-[10px] text-green-400 font-mono mb-2 animate-pulse">
             [{status}] {debugMsg}
           </div>
       )}
