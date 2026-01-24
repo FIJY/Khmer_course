@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import opentype from "opentype.js";
 import hbjs from "harfbuzzjs";
 
-// ✅ ЕДИНСТВЕННО ВЕРНАЯ ССЫЛКА (с папкой /subset/)
-const WASM_URL = 'https://cdn.jsdelivr.net/npm/harfbuzzjs@0.3.3/subset/hb-subset.wasm';
+// === ЛОКАЛЬНЫЙ ПУТЬ ===
+// Файл лежит в папке /public, поэтому доступен от корня /
+const WASM_URL = '/vendor/harfbuzzjs.wasm';
 const DEFAULT_FONT = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 function toPathData(path) {
@@ -26,26 +27,27 @@ export default function KhmerEngineFinal({
 
     (async () => {
       setStatus("loading");
-      setDebugMsg("Initializing v7.0 (Correct URL)..."); // <-- Метка версии
+      setDebugMsg("Initializing Local Engine...");
       setGlyphs([]);
 
       try {
-        // 1. СКАЧИВАЕМ WASM
-        setDebugMsg(`Fetching WASM...`);
+        // 1. СКАЧИВАЕМ ЛОКАЛЬНО
+        setDebugMsg(`Fetching local WASM: ${WASM_URL}`);
         const wasmRes = await fetch(WASM_URL);
 
-        if (!wasmRes.ok) throw new Error(`WASM 404: ${wasmRes.status}`);
-
-        // Проверка: это точно бинарник?
+        // ПРОВЕРКА НА HTML (Та самая ошибка Magic Word)
+        if (!wasmRes.ok) throw new Error(`WASM 404: File not found locally`);
         const contentType = wasmRes.headers.get("content-type");
+
+        // Если сервер вернул HTML, значит файл не найден и Vercel отдал index.html
         if (contentType && contentType.includes("text/html")) {
-             throw new Error("CRITICAL: CDN returned HTML! URL is wrong.");
+             throw new Error("SERVER ERROR: Vercel returned HTML instead of WASM. Check public folder.");
         }
 
         const wasmBuffer = await wasmRes.arrayBuffer();
 
         // 2. ЗАПУСКАЕМ
-        setDebugMsg("Starting Engine...");
+        setDebugMsg("Instantiating Module...");
         const { instance } = await WebAssembly.instantiate(wasmBuffer);
         const hb = hbjs(instance);
 
@@ -55,7 +57,7 @@ export default function KhmerEngineFinal({
         if (!fontRes.ok) throw new Error(`Font 404: ${fontRes.status}`);
         const fontBuffer = await fontRes.arrayBuffer();
 
-        // 4. РИСУЕМ
+        // 4. ШЕЙПИНГ
         const otFont = opentype.parse(fontBuffer);
         const hbBlob = hb.createBlob(fontBuffer);
         const hbFace = hb.createFace(hbBlob, 0);
@@ -127,7 +129,7 @@ export default function KhmerEngineFinal({
 
   if (status === "error") return (
     <div className="p-4 bg-red-900/90 border border-red-500 text-white font-mono text-xs rounded m-4 max-w-md">
-      <p className="font-bold text-lg mb-2">🛑 STOP</p>
+      <p className="font-bold text-lg mb-2">🛑 LOCAL LOAD ERROR</p>
       <p>{debugMsg}</p>
     </div>
   );
@@ -135,7 +137,7 @@ export default function KhmerEngineFinal({
   return (
     <div className="w-full flex flex-col items-center">
       {status !== 'success' && (
-          <div className="text-[10px] text-yellow-400 font-mono mb-2 animate-pulse">
+          <div className="text-[10px] text-blue-400 font-mono mb-2 animate-pulse">
             [{status}] {debugMsg}
           </div>
       )}
