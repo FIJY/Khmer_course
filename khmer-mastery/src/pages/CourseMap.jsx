@@ -108,6 +108,7 @@ export default function CourseMap() {
   );
   const [openBootcampBlockId, setOpenBootcampBlockId] = useState(bootcampBlockIds[0]);
   const [openChapterId, setOpenChapterId] = useState(null);
+  const [openLevels, setOpenLevels] = useState(() => COURSE_LEVELS.map(() => true));
 
   const bootcampBlocks = useMemo(
     () => bootcampBlockIds.map((blockId) => {
@@ -130,7 +131,7 @@ export default function CourseMap() {
     setOpenBootcampBlockId((prev) => (prev === blockId ? null : blockId));
     if (!userId) return;
     try {
-      await updateLastOpenedProgress(userId, blockId, blockId);
+      await updateLastOpenedProgress(userId, blockId, lastOpenedLessonId ?? blockId);
     } catch (err) {
       console.error('Failed to update last opened bootcamp block', err);
     }
@@ -151,10 +152,14 @@ export default function CourseMap() {
     setOpenChapterId((prev) => (prev === blockId ? null : blockId));
     if (!userId) return;
     try {
-      await updateLastOpenedProgress(userId, blockId, blockId);
+      await updateLastOpenedProgress(userId, blockId, lastOpenedLessonId ?? blockId);
     } catch (err) {
       console.error('Failed to update last opened chapter block', err);
     }
+  };
+
+  const handleLevelToggle = (levelIndex) => {
+    setOpenLevels((prev) => prev.map((isOpen, idx) => (idx === levelIndex ? !isOpen : isOpen)));
   };
 
   const handleChapterNavigate = async (blockId, lessonId, target) => {
@@ -229,25 +234,37 @@ export default function CourseMap() {
           const levelChapters = Object.values(chapters).filter(ch =>
             ch.id >= level.range[0] && ch.id <= level.range[1]
           );
+          const isLevelOpen = openLevels[levelIndex];
 
           return (
             <div key={levelIndex} className="relative">
               <div className={`sticky top-[73px] z-30 py-4 px-6 backdrop-blur-xl border-b border-t ${level.border} bg-gradient-to-r ${level.bg} bg-black/60`}>
-                <div className="flex items-center gap-3">
-                  <Layers size={20} className={level.color} />
-                  <div>
-                    <h2 className={`text-sm font-black uppercase tracking-[0.2em] ${level.color}`}>
-                      {level.title}
-                    </h2>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase opacity-70">
-                      {level.description}
-                    </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Layers size={20} className={level.color} />
+                    <div>
+                      <h2 className={`text-sm font-black uppercase tracking-[0.2em] ${level.color}`}>
+                        {level.title}
+                      </h2>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase opacity-70">
+                        {level.description}
+                      </p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => handleLevelToggle(levelIndex)}
+                    className="p-2 rounded-xl border bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                    type="button"
+                    aria-label={isLevelOpen ? 'Collapse section' : 'Expand section'}
+                  >
+                    {isLevelOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
                 </div>
               </div>
 
-              <div className="p-6 space-y-8">
-                {level.isBootcamp ? bootcampBlocks.map((chapter) => {
+              {isLevelOpen && (
+                <div className="p-6 space-y-8">
+                  {level.isBootcamp ? bootcampBlocks.map((chapter) => {
                   const isOpen = openBootcampBlockId === chapter.id;
                   const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
                   const isChapterFullDone = subLessonIds.length > 0
@@ -336,7 +353,7 @@ export default function CourseMap() {
                       </div>
                     </div>
                   );
-                }) : (levelChapters.length > 0 ? levelChapters.map((chapter) => {
+                  }) : (levelChapters.length > 0 ? levelChapters.map((chapter) => {
                   const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
                   const isChapterFullDone = subLessonIds.length > 0
                     && subLessonIds.every(id => completedLessons.includes(id));
@@ -417,12 +434,13 @@ export default function CourseMap() {
                       </div>
                     </div>
                   );
-                }) : (
+                  }) : (
                   <div className="rounded-[2.5rem] border border-white/5 bg-gray-900/40 p-6 text-center text-xs uppercase tracking-widest text-gray-500">
                     Lessons coming soon
                   </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
