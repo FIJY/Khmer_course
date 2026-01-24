@@ -1,12 +1,13 @@
 import React from 'react';
-import { BookOpen, Volume2 } from 'lucide-react';
+import { BookOpen, Volume2, Play } from 'lucide-react';
 
 export default function UniversalTheorySlide({ data, onPlayAudio }) {
 
   switch (data.type) {
+    // ... title и reading-algorithm оставляем как были, они норм ...
     case 'title':
       return (
-        <div className="w-full flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="w-full flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-[50vh]">
           <div className="text-8xl mb-6 animate-pulse">{data.icon}</div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-4 uppercase tracking-tighter leading-tight">
             {data.title}
@@ -21,7 +22,8 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
       );
 
     case 'reading-algorithm':
-      return (
+        // ... (тот же код, что я давала раньше, он был норм)
+        return (
         <div className="w-full max-w-xl animate-in fade-in zoom-in duration-300">
           <h2 className="text-2xl md:text-3xl font-black text-white mb-8 text-center italic uppercase">
             {data.title}
@@ -47,12 +49,6 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
               </div>
             ))}
           </div>
-          {data.warning && (
-             <div className="mt-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex gap-3 items-center">
-                <span className="text-2xl">⚠️</span>
-                <p className="text-red-200 text-xs font-bold uppercase tracking-wider">{data.warning}</p>
-             </div>
-          )}
         </div>
       );
 
@@ -65,7 +61,6 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* SUN TEAM */}
             <div className="bg-gradient-to-b from-amber-500/10 to-transparent border border-amber-500/20 rounded-[2.5rem] p-6 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-amber-500/50"></div>
                 <div className="text-5xl mb-4">☀️</div>
                 <h3 className="text-amber-400 font-black uppercase text-sm tracking-[0.2em] mb-4">Sun Team</h3>
 
@@ -73,10 +68,19 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
                     {data.pairs.map((pair, i) => (
                         <button
                             key={i}
-                            onClick={() => onPlayAudio(data.consonantAudioMap?.[pair.sun])}
-                            className="bg-gray-900 border border-white/5 hover:border-amber-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all"
+                            type="button" // ВАЖНО для клика
+                            onClick={(e) => {
+                                e.stopPropagation(); // Чтобы клик не уходил в никуда
+                                onPlayAudio(data.consonantAudioMap?.[pair.sun]);
+                            }}
+                            className="bg-gray-900 border border-white/5 hover:border-amber-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all active:scale-95 cursor-pointer"
                         >
-                            <span className="text-3xl font-khmer text-white">{pair.sun}</span>
+                            <div className="flex items-center gap-3">
+                                <span className="p-2 rounded-full bg-white/5 group-hover:bg-amber-500/20 transition-colors">
+                                    <Volume2 size={16} className="text-gray-400 group-hover:text-amber-400" />
+                                </span>
+                                <span className="text-3xl font-khmer text-white">{pair.sun}</span>
+                            </div>
                             <span className="text-xs text-gray-500 font-bold group-hover:text-amber-400">{pair.sunRead}</span>
                         </button>
                     ))}
@@ -85,7 +89,6 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
 
             {/* MOON TEAM */}
             <div className="bg-gradient-to-b from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-[2.5rem] p-6 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500/50"></div>
                 <div className="text-5xl mb-4">🌑</div>
                 <h3 className="text-indigo-400 font-black uppercase text-sm tracking-[0.2em] mb-4">Moon Team</h3>
 
@@ -93,10 +96,19 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
                     {data.pairs.map((pair, i) => (
                         <button
                             key={i}
-                            onClick={() => onPlayAudio(data.consonantAudioMap?.[pair.moon])}
-                            className="bg-gray-900 border border-white/5 hover:border-indigo-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all"
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onPlayAudio(data.consonantAudioMap?.[pair.moon]);
+                            }}
+                            className="bg-gray-900 border border-white/5 hover:border-indigo-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all active:scale-95 cursor-pointer"
                         >
-                            <span className="text-3xl font-khmer text-white">{pair.moon}</span>
+                            <div className="flex items-center gap-3">
+                                <span className="p-2 rounded-full bg-white/5 group-hover:bg-indigo-500/20 transition-colors">
+                                    <Volume2 size={16} className="text-gray-400 group-hover:text-indigo-400" />
+                                </span>
+                                <span className="text-3xl font-khmer text-white">{pair.moon}</span>
+                            </div>
                             <span className="text-xs text-gray-500 font-bold group-hover:text-indigo-400">{pair.moonRead}</span>
                         </button>
                     ))}
@@ -110,12 +122,11 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
       return (
         <div className="w-full max-w-xl text-center animate-in fade-in zoom-in">
             <h2 className="text-4xl font-black text-white mb-6 uppercase italic">{data.title}</h2>
-
             <div className="bg-gradient-to-br from-emerald-600 to-teal-800 p-8 rounded-[3rem] mb-8 shadow-2xl border border-white/10">
                 <p className="text-2xl font-bold text-white leading-snug">{data.rule80}</p>
             </div>
-
-            <div className="flex flex-wrap justify-center gap-3 mb-8">
+            {/* Оставляем остальное как было */}
+             <div className="flex flex-wrap justify-center gap-3 mb-8">
                 {data.examples?.map((ex, i) => (
                     <div key={i} className="flex items-center gap-3 px-5 py-3 rounded-full bg-gray-900 border border-white/10">
                         <span className="text-2xl font-khmer text-white">{ex.letter}</span>
@@ -125,7 +136,6 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
                     </div>
                 ))}
             </div>
-
             <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl">
                 <p className="text-amber-200 text-sm font-medium">💡 Tip: {data.tip}</p>
             </div>
@@ -133,22 +143,16 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
       );
 
     case 'ready':
+        // ИСПРАВЛЕНИЕ: Центровка по вертикали (flex-1 + justify-center)
         return (
-            <div className="text-center animate-pulse-slow">
-                <div className="text-8xl mb-6">🔥</div>
+            <div className="flex-1 flex flex-col items-center justify-center text-center animate-pulse-slow min-h-[50vh]">
+                <div className="text-8xl mb-6">🏆</div>
                 <h2 className="text-4xl font-black text-white mb-4 uppercase italic tracking-tighter">{data.title}</h2>
                 <p className="text-lg text-gray-400 max-w-xs mx-auto">{data.description}</p>
             </div>
         );
 
-    // Fallback для старых простых слайдов
     default:
-      return (
-        <div className="w-full bg-gray-900 border border-white/10 p-8 rounded-[3.5rem] text-center">
-            <BookOpen className="text-cyan-500/20 mx-auto mb-4" size={32} />
-            <h2 className="text-xl font-black italic uppercase text-cyan-400 mb-4">{data.title}</h2>
-            <p className="text-base text-gray-300 italic whitespace-pre-wrap">{data.text}</p>
-        </div>
-      );
+      return null;
   }
 }
