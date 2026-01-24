@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@shopify/react-native-skia": "^2.4.14",
     "opentype.js": "^1.3.4"
   }
 }
