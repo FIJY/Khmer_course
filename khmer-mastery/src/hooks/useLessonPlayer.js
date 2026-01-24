@@ -148,22 +148,38 @@ export default function useLessonPlayer() {
 
   useEffect(() => { fetchLessonData(); }, [fetchLessonData]);
 
+  // ✅ НОВОЕ (вставь в src/hooks/useLessonPlayer.js)
   useEffect(() => {
-    setCanAdvance(false);
-    setSelectedOption(null);
-    setIsFlipped(false);
-    if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
+      // 1. Сбрасываем состояние при входе на слайд
+      setCanAdvance(false);
+      setSelectedOption(null);
+      setIsFlipped(false);
+      if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
 
-    // Авто-разблокировка для теории и новых слайдов
-    const currentType = items[step]?.type;
-    if (currentType === 'theory' || currentType === 'learn_char' || currentType === 'word_breakdown') {
-        setCanAdvance(true);
-    }
+      const currentType = items[step]?.type;
 
-    if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-    }
+      // 2. Список слайдов, где кнопка "Далее" должна быть активна СРАЗУ
+      // (потому что там нечего "решать", нужно просто прочитать)
+      const autoUnlockTypes = [
+        'theory',
+        'learn_char',
+        'word_breakdown',
+        // 👇 Добавили новые типы из Буткемпа:
+        'title',
+        'meet-teams',
+        'rule',
+        'reading-algorithm',
+        'ready'
+      ];
+
+      if (autoUnlockTypes.includes(currentType)) {
+          setCanAdvance(true);
+      }
+
+      if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+      }
   }, [step, items]);
 
   useEffect(() => {
