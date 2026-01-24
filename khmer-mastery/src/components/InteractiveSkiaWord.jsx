@@ -1,194 +1,212 @@
 import React, { useEffect, useRef, useState } from 'react';
 import CanvasKitInit from 'canvaskit-wasm';
 
+const WASM_URL = '/canvaskit.wasm';
 const FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
-const WASM_URL = '/canvaskit.wasm'; // Мы положили его в public
 
 export default function InteractiveSkiaWord({
   word = "កាហ្វេ",
   fontSize = 150
 }) {
   const canvasRef = useRef(null);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState('Loading engine...');
 
-  // Храним инстансы CanvasKit, чтобы не пересоздавать
-  const ckInstance = useRef(null);
-  const fontMgr = useRef(null);
-  const typeface = useRef(null);
+  // Храним объекты Skia, чтобы они жили между рендерами
+  const skiaRef = useRef({
+    CK: null,
+    fontMgr: null,
+    typeface: null,
+    fontProvider: null,
+    paragraph: null // Храним готовый параграф, чтобы не пересобирать каждый кадр
+  });
 
-  // Состояние наведения
-  const hoveredGlyph = useRef(null); // { index, path, x, y }
+  const [hoveredIndex, setHoveredIndex] = useState(null);
 
+  // 1. ИНИЦИАЛИЗАЦИЯ (Один раз)
   useEffect(() => {
     async function init() {
-      // 1. Инициализация CanvasKit
-      const CanvasKit = await CanvasKitInit({
-        locateFile: () => WASM_URL,
-      });
+      try {
+        // А. Загружаем WASM
+        const CK = await CanvasKitInit({ locateFile: () => WASM_URL });
 
-      // 2. Загрузка шрифта
-      const fontData = await fetch(FONT_URL).then((r) => r.arrayBuffer());
+        // Б. Загружаем Шрифт (ArrayBuffer)
+        const fontBuffer = await fetch(FONT_URL).then(r => r.arrayBuffer());
 
-      ckInstance.current = CanvasKit;
-      fontMgr.current = CanvasKit.FontMgr.FromData(fontData);
-      typeface.current = fontMgr.current.MakeTypefaceFromData(fontData);
+        // В. Создаем Typeface (Шрифт)
+        const typeface = CK.Typeface.MakeFreeTypeFaceFromData(fontBuffer);
+        if (!typeface) {
+            console.error("Не удалось создать Typeface из данных!");
+            return;
+        }
 
-      setLoading(false);
+        // Г. Создаем Провайдер Шрифтов и регистрируем наш шрифт
+        // Это ключевой момент: мы говорим Skia "Вот шрифт Noto Sans Khmer"
+        const fontProvider = CK.TypefaceFontProvider.Make();
+        fontProvider.registerFont(fontBuffer, 'Noto Sans Khmer');
 
-      // Запускаем цикл отрисовки
-      requestAnimationFrame(() => draw(CanvasKit));
+        skiaRef.current = { CK, typeface, fontProvider };
+        setStatus(''); // Готово
+
+        // Запускаем отрисовку
+        requestAnimationFrame(drawFrame);
+
+      } catch (e) {
+        console.error("Skia crash:", e);
+        setStatus('Error loading Skia');
+      }
     }
-
     init();
+
+    // Очистка памяти при уходе со страницы
+    return () => {
+        const { fontProvider, typeface, paragraph } = skiaRef.current;
+        if (paragraph) paragraph.delete();
+        if (fontProvider) fontProvider.delete();
+        if (typeface) typeface.delete();
+    };
   }, []);
 
-  // Хендлер движения мыши
-  const handleMouseMove = (e) => {
-    if (!canvasRef.current || !ckInstance.current) return;
+  // 2. ОТРИСОВКА И ЛОГИКА
+  const drawFrame = () => {
+    if (!canvasRef.current || !skiaRef.current.CK) return;
+    const { CK, fontProvider } = skiaRef.current;
 
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    // Передаем координаты в функцию отрисовки для хит-теста
-    // (В реальном проекте хит-тест лучше вынести из draw, но для демо ок)
-    draw(ckInstance.current, x, y);
-  };
-
-  const draw = (CK, mouseX = -1, mouseY = -1) => {
-    if (!canvasRef.current) return;
     const canvasEl = canvasRef.current;
-
-    // Настраиваем поверхность (Surface)
-    // В продакшене Surface лучше создать один раз, здесь упрощаем
     const surface = CK.MakeCanvasSurface(canvasEl);
     if (!surface) return;
 
     const canvas = surface.getCanvas();
     canvas.clear(CK.Color.Black); // Черный фон
 
-    // --- 3. SHAPING (ParagraphBuilder) ---
+    // --- СТРОИМ PARAGRAPH (Шейпинг) ---
+    // Если параграф уже есть и слово не менялось, можно не пересоздавать.
+    // Но для надежности создадим заново (это быстро).
+
     const paraStyle = new CK.ParagraphStyle({
       textStyle: {
         color: CK.Color.White,
         fontSize: fontSize,
-        fontFamilies: ['Noto Sans Khmer'],
+        fontFamilies: ['Noto Sans Khmer'], // Имя, под которым мы зарегистрировали шрифт
       },
     });
 
-    const builder = CK.ParagraphBuilder.Make(paraStyle, fontMgr.current);
+    // Важно: передаем fontProvider, чтобы билдер нашел наш шрифт
+    const builder = CK.ParagraphBuilder.Make(paraStyle, fontProvider);
     builder.addText(word);
     const paragraph = builder.build();
 
-    // Раскладка (Layout)
+    // Layout (Раскладка) - вычисляем позиции
     paragraph.layout(canvasEl.width); // Ширина контейнера
 
-    // Центрируем текст
-    const textWidth = paragraph.getMaxWidth();
+    // Центрирование
+    const textWidth = paragraph.getMaxWidth(); // Реальная ширина текста
     const textHeight = paragraph.getHeight();
-    const startX = (canvasEl.width - textWidth) / 2; // Примитивное центрирование (для примера)
+    const startX = (canvasEl.width - textWidth) / 2;
     const startY = (canvasEl.height - textHeight) / 2;
 
-    // --- 4. РИСУЕМ БАЗОВЫЙ ТЕКСТ ---
+    // --- РИСУЕМ ПОДСВЕТКУ (Если есть hover) ---
+    // Мы не храним hover в ref для draw, мы берем его из замыкания или ref.
+    // Для анимации лучше использовать ref, но пока возьмем из переменной.
+    // (В реальном коде лучше передавать mouseX/Y в draw).
+
+    // --- РИСУЕМ ТЕКСТ ---
     canvas.drawParagraph(paragraph, startX, startY);
 
-    // --- 5. ХИТ-ТЕСТИНГ (GLYPH PATHS) ---
-    // Нам нужно "достать" внутренности параграфа
-    // CanvasKit в JS не дает getGlyphRuns() так просто, как Flutter.
-    // Но мы можем использовать `paragraph.getRectsForRange` или перебрать LineMetrics.
-
-    // ОДНАКО, самый надежный способ в CanvasKit JS для точных путей -
-    // использовать Font.getGlyphIDs и Font.getPositions, если Paragraph скрывает детали.
-    // Но Paragraph делает шейпинг...
-
-    // В этой версии CanvasKit JS, самый рабочий метод "достать контуры" из Paragraph
-    // требует хака или использования TextBlob напрямую (как мы обсуждали про Skia).
-    // Давай используем TextBlob для получения путей, так как Paragraph инкапсулирован.
-
-    // ШАГ 3 (АЛЬТЕРНАТИВНЫЙ): Шейпинг через Font.getGlyphIDs (проще достать пути)
-    const font = new CK.Font(typeface.current, fontSize);
-    const glyphIds = font.getGlyphIDs(word); // Шейпинг на уровне глифов
-    // Внимание: базовый getGlyphIDs может не дать идеальный кернинг для кхмерского
-    // так хорошо, как Paragraph, но для hit-test путей это база.
-    // Для идеального шейпинга нужен SkShaper, но его нет в минимальной сборке.
-    // Будем использовать позиции, которые дает шрифт.
-
-    // Получаем позиции
-    // getGlyphWidths не дает X/Y смещения.
-    // Используем `font.getGlyphIntercepts` или просто рисуем TextBlob и ищем пути.
-
-    const blob = CK.TextBlob.MakeFromText(word, font);
-    // К сожалению, JS API CanvasKit TextBlob не дает итерироваться по глифам (C++ opaque object).
-
-    // ВОЗВРАЩАЕМСЯ К ПЛАНУ A:
-    // Единственный способ получить Path для хит-теста в JS CanvasKit -
-    // это `font.getPath(glyphID)`. Нам нужно знать ID и позицию.
-
-    // Получаем ID глифов и их ширины
-    const ids = font.getGlyphIDs(word);
-    const widths = font.getGlyphWidths(ids);
-
-    let currentX = 20; // Отступ
-    const baseline = 200; // Y позиция
-
-    // Рисуем текст через TextBlob для визуализации (он отшейплен)
-    // canvas.drawTextBlob(blob, 20, 200, paint); <--- Так рисуем текст
-
-    // А теперь ПОВЕРХ считаем хит-тест
-    let hitFound = false;
-
-    for (let i = 0; i < ids.length; i++) {
-        const glyphId = ids[i];
-        const w = widths[i];
-
-        // Получаем путь глифа
-        const path = font.getPath(glyphId, currentX, baseline, fontSize);
-        // path возвращается уже смещенным или в 0,0?
-        // Обычно path в 0,0, но `font.getPath` может принимать координаты?
-        // Нет, в JS API: font.getPath(glyphID, paint?).
-        // Нужно делать path.transform.
-
-        const rawPath = font.getPath(glyphId);
-        // Смещаем путь в позицию буквы
-        // ВНИМАНИЕ: Простая сумма ширин (currentX) - это упрощение.
-        // Для кхмерского реальные позиции сложнее.
-        // Но пока Paragraph API закрыт в JS, это лучший доступный метод.
-        rawPath.transform([1, 0, currentX, 0, 1, baseline, 0, 0, 1]);
-
-        // Хит-тест
-        if (mouseX >= 0 && rawPath.contains(mouseX, mouseY)) {
-            // РИСУЕМ ПОДСВЕТКУ (Outline)
-            const paint = new CK.Paint();
-            paint.setColor(CK.Color.Cyan);
-            paint.setStyle(CK.Stroke);
-            paint.setStrokeWidth(5);
-            canvas.drawPath(rawPath, paint);
-
-            // Заливка (опционально)
-            const fillPaint = new CK.Paint();
-            fillPaint.setColor(CK.Color.make(0, 255, 255, 0.3));
-            canvas.drawPath(rawPath, fillPaint);
-
-            hitFound = true;
-        }
-
-        currentX += w;
-    }
+    // Сохраняем параграф и координаты для хит-теста
+    skiaRef.current.paragraph = paragraph;
+    skiaRef.current.layout = { startX, startY };
 
     surface.flush();
-    surface.dispose(); // Очистка (важно для WASM памяти, хотя для одного canvas можно переиспользовать)
-    // В реальном коде surface создается 1 раз в useEffect, а flush делается в цикле.
+
+    // Мы не удаляем paragraph здесь, он нужен для хит-теста!
+    // surface.dispose(); // Можно не вызывать каждый кадр, если канвас один
+  };
+
+  // 3. ХИТ-ТЕСТ (По наведению)
+  const handleMouseMove = (e) => {
+    const { CK, paragraph, layout } = skiaRef.current;
+    if (!CK || !paragraph || !layout) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left - layout.startX; // Корректируем на отступ текста
+    const y = e.clientY - rect.top - layout.startY;
+
+    // Ищем, в какую букву попали
+    // Paragraph API дает нам getRectsForRange.
+    // Мы можем пройтись по слову и проверить каждую букву.
+
+    let foundIndex = null;
+    let foundRects = [];
+
+    // Просто перебираем символы
+    // (Для кхмерского это упрощение, так как один глиф может быть из нескольких char,
+    // но RectsForRange вернет правильную коробку для кластера).
+    for (let i = 0; i < word.length; i++) {
+        // Получаем боксы для i-го символа
+        const rects = paragraph.getRectsForRange(i, i + 1, CK.RectHeightStyle.Tight, CK.WidthStyle.Tight);
+
+        for (let r of rects) {
+            // rects возвращает Float32Array [left, top, right, bottom]
+            if (x >= r.rect[0] && x <= r.rect[2] && y >= r.rect[1] && y <= r.rect[3]) {
+                foundIndex = i;
+                foundRects = rects; // Запоминаем для отрисовки подсветки
+                break;
+            }
+        }
+        if (foundIndex !== null) break;
+    }
+
+    if (foundIndex !== hoveredIndex) {
+        setHoveredIndex(foundIndex);
+        // Перерисовываем с подсветкой
+        requestAnimationFrame(() => drawHighlight(foundIndex, foundRects));
+    }
+  };
+
+  // Отдельная функция для отрисовки с подсветкой (чтобы не дублировать логику)
+  const drawHighlight = (index, rects) => {
+      const { CK, paragraph, layout } = skiaRef.current;
+      const canvasEl = canvasRef.current;
+      const surface = CK.MakeCanvasSurface(canvasEl);
+      const canvas = surface.getCanvas();
+
+      canvas.clear(CK.Color.Black);
+
+      // 1. Рисуем подсветку (если есть)
+      if (index !== null && rects) {
+          const paint = new CK.Paint();
+          paint.setColor(CK.Color.make(0, 255, 255, 0.4)); // Cyan 40%
+
+          for (let r of rects) {
+              // Смещаем rect на позицию текста
+              const R = CK.LTRBRect(
+                  r.rect[0] + layout.startX,
+                  r.rect[1] + layout.startY,
+                  r.rect[2] + layout.startX,
+                  r.rect[3] + layout.startY
+              );
+              canvas.drawRect(R, paint);
+          }
+      }
+
+      // 2. Рисуем текст сверху
+      canvas.drawParagraph(paragraph, layout.startX, layout.startY);
+      surface.flush();
   };
 
   return (
-    <div className="flex justify-center items-center p-10 bg-black min-h-[500px]">
-        {loading && <div className="text-white">Loading CanvasKit...</div>}
+    <div className="flex justify-center items-center p-4 bg-gray-900 min-h-[400px]">
+        {status && <div className="absolute text-white">{status}</div>}
         <canvas
             ref={canvasRef}
             width={800}
             height={400}
             onMouseMove={handleMouseMove}
-            style={{ border: '1px solid #333', cursor: 'crosshair' }}
+            onMouseLeave={() => {
+                setHoveredIndex(null);
+                requestAnimationFrame(() => drawHighlight(null, null));
+            }}
+            style={{ cursor: 'pointer' }}
         />
     </div>
   );
