@@ -6,7 +6,6 @@ import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
-import BootcampSession from '../components/Bootcamp/BootcampSession';
 import { t } from '../i18n';
 import SessionCompletion from '../components/Session/SessionCompletion';
 import SessionFrame from '../components/Session/SessionFrame';
@@ -14,8 +13,11 @@ import SessionFrame from '../components/Session/SessionFrame';
 // --- ИМПОРТИРУЕМ НОВЫЕ СЛАЙДЫ ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
 import InventorySlide from '../components/LessonSlides/InventorySlide';
+import UniversalTheorySlide from '../components/LessonSlides/UniversalTheorySlide';
+import ConsonantStreamDrill from '../components/Drills/ConsonantStreamDrill';
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
+const KHMER_CONSONANT = /[\u1780-\u17A2]/;
 const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
   ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
@@ -45,13 +47,7 @@ export default function LessonPlayer() {
   } = useLessonPlayer();
 
   const safeItems = Array.isArray(items) ? items : [];
-  const bootcampLessonIds = React.useMemo(() => new Set([10000, 10100, 10101]), []);
-  const bootcampLessonId = Number(lessonInfo?.lesson_id ?? lessonInfo?.id ?? id);
-  const bootcampTitle = lessonInfo?.title?.toLowerCase() ?? '';
-  const isBootcampLesson = bootcampLessonIds.has(bootcampLessonId)
-    || bootcampTitle.includes('bootcamp')
-    || bootcampTitle.includes('unit r1')
-    || bootcampTitle.includes('the foundation');
+  const [revealedIndices, setRevealedIndices] = React.useState(new Set());
 
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
@@ -90,7 +86,6 @@ export default function LessonPlayer() {
     );
   }
 
-  if (isBootcampLesson) return <BootcampSession onClose={() => navigate('/map')} practiceItems={safeItems} title={lessonInfo?.title} />;
   if (!safeItems.length || !safeItems[step]) return <ErrorState title={t('errors.lessonEmpty')} message={t('empty.lessonContent')} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
 
   const current = safeItems[step]?.data;
@@ -114,6 +109,28 @@ export default function LessonPlayer() {
     }
     const pronunciationMap = current?.option_pronunciations || current?.pronunciations || {};
     return { text: opt, pronunciation: pronunciationMap?.[opt] ?? lessonPronunciations?.[opt] ?? '', audio: null };
+  };
+
+  React.useEffect(() => {
+    setRevealedIndices(new Set());
+    if (type === 'meet-teams') {
+      setCanAdvance(true);
+    }
+  }, [step, type, setCanAdvance]);
+
+  const handleStreamClick = (index, char) => {
+    const totalConsonants = Array.from(current?.khmerText || '').filter((c) => KHMER_CONSONANT.test(c)).length;
+    setRevealedIndices((prev) => {
+      const next = new Set(prev);
+      next.add(index);
+      if (totalConsonants > 0 && next.size >= totalConsonants) {
+        playLocalAudio('success.mp3');
+        setCanAdvance(true);
+      } else if (current?.consonantAudioMap?.[char]) {
+        playLocalAudio(current.consonantAudioMap[char]);
+      }
+      return next;
+    });
   };
 
   return (
@@ -149,6 +166,70 @@ export default function LessonPlayer() {
 
         {type === 'visual_decoder' && <VisualDecoder key={step} data={current} onComplete={() => setCanAdvance(true)} hideDefaultButton={true} />}
 
+        {type === 'no-spaces' && (
+          <div className="w-full flex flex-col items-center">
+            <h2 className="text-3xl font-black text-white mb-2 text-center">{current?.title}</h2>
+            {current?.subtitle && (
+              <p className="text-gray-400 mb-6 text-center">{current.subtitle}</p>
+            )}
+            <ConsonantStreamDrill
+              text={current?.khmerText}
+              revealedSet={revealedIndices}
+              onConsonantClick={handleStreamClick}
+              onNonConsonantClick={() => playLocalAudio('error.mp3')}
+            />
+            {current?.rule && (
+              <div className="mt-4 p-4 bg-gray-800 rounded-xl border border-white/5 text-sm text-gray-300 text-center">
+                💡 <span className="font-bold">Rule:</span> {current.rule}
+              </div>
+            )}
+          </div>
+        )}
+
+        {type === 'meet-teams' && (
+          <div className="w-full space-y-4">
+            <h2 className="text-2xl font-black text-white text-center mb-6">{current?.title}</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gradient-to-b from-amber-500/20 to-transparent border border-amber-500/30 p-4 rounded-3xl text-center">
+                <div className="text-4xl mb-2">☀️</div>
+                <h3 className="font-black text-amber-400 uppercase text-xs tracking-widest mb-4">
+                  {current?.leftTeam?.name ?? 'Sun Team'}
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {current?.pairs?.map((pair) => (
+                    <button
+                      key={pair.sun}
+                      onClick={() => playLocalAudio(current?.consonantAudioMap?.[pair.sun])}
+                      className="bg-gray-900 border border-white/10 p-3 rounded-xl text-2xl font-bold"
+                      type="button"
+                    >
+                      {pair.sun}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-gradient-to-b from-indigo-500/20 to-transparent border border-indigo-500/30 p-4 rounded-3xl text-center">
+                <div className="text-4xl mb-2">🌑</div>
+                <h3 className="font-black text-indigo-400 uppercase text-xs tracking-widest mb-4">
+                  {current?.rightTeam?.name ?? 'Moon Team'}
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {current?.pairs?.map((pair) => (
+                    <button
+                      key={pair.moon}
+                      onClick={() => playLocalAudio(current?.consonantAudioMap?.[pair.moon])}
+                      className="bg-gray-900 border border-white/10 p-3 rounded-xl text-2xl font-bold"
+                      type="button"
+                    >
+                      {pair.moon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {type === 'vocab_card' && (
           <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
             <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
@@ -158,11 +239,20 @@ export default function LessonPlayer() {
               </div>
               <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
                 <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
-                <KhmerColoredText text={khmerText} fontUrl={DEFAULT_KHMER_FONT_URL} fontSize={72} className="text-4xl font-black mb-2" />
-                <p className="text-base text-cyan-100 font-semibold tracking-wide mb-4">
-                  <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
-                  {current.pronunciation || '—'}
-                </p>
+                <div className="flex flex-col items-center gap-3 w-full">
+                  <div className="min-h-[4.5rem] flex items-center justify-center">
+                    <KhmerColoredText
+                      text={khmerText}
+                      fontUrl={DEFAULT_KHMER_FONT_URL}
+                      fontSize={72}
+                      className="text-4xl font-black leading-[1.2]"
+                    />
+                  </div>
+                  <p className="text-base text-cyan-100 font-semibold tracking-wide">
+                    <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
+                    {current.pronunciation || '—'}
+                  </p>
+                </div>
                 {current.audio ? (
                   <div onClick={(e) => { e.stopPropagation(); playLocalAudio(current.audio); }} className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg">
                     <Volume2 size={28} />
@@ -209,11 +299,7 @@ export default function LessonPlayer() {
         )}
 
         {type === 'theory' && (
-          <div className="w-full bg-gray-900 border border-white/10 p-8 rounded-[3.5rem] text-center">
-            <BookOpen className="text-cyan-500/20 mx-auto mb-4" size={32} />
-            <h2 className="text-xl font-black italic uppercase text-cyan-400 mb-4">{current.title}</h2>
-            <p className="text-base text-gray-300 italic">{current.text}</p>
-          </div>
+          <UniversalTheorySlide data={{ ...current, icon: current?.icon ?? <BookOpen size={32} className="text-cyan-500/20 mx-auto" /> }} />
         )}
     </SessionFrame>
   );
