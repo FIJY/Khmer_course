@@ -319,7 +319,6 @@ export default function CourseMap() {
                             <div className="space-y-2">
                               {chapter.subLessons.map((sub) => {
                                 const isDone = completedLessons.includes(Number(sub.id));
-                                const isLastOpened = lastOpenedLessonId === Number(sub.id);
                                 return (
                                   <button
                                     key={sub.id}
@@ -335,7 +334,7 @@ export default function CourseMap() {
                                         ${isDone ? 'border-emerald-500 bg-emerald-500 text-black' : 'border-white/10 bg-black text-transparent'}`}>
                                         <Check size={10} strokeWidth={4} />
                                       </div>
-                                      <span className={`text-xs font-bold uppercase tracking-wider truncate transition-colors ${isLastOpened ? 'text-amber-300' : 'group-hover:text-white'}`}>
+                                      <span className="text-xs font-bold uppercase tracking-wider truncate group-hover:text-white transition-colors">
                                         {sub.title}
                                       </span>
                                     </div>
