@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import VisualDecoder from '../VisualDecoder';
-import { X, Zap, ArrowRight, ArrowLeft, MousePointerClick, Volume2 } from 'lucide-react';
+import { ArrowRight, ChevronLeft, MousePointerClick, Volume2 } from 'lucide-react';
 import { THEORY_SLIDES } from './BootcampSession.slides';
 import Button from '../UI/Button';
+import LoadingState from '../UI/LoadingState';
+import SessionCompletion from '../Session/SessionCompletion';
+import SessionFrame from '../Session/SessionFrame';
+import { t } from '../../i18n';
 
 /**
  * BOOTCAMP SESSION (Unit R1)
@@ -291,7 +295,7 @@ const extractVisualDecoderDrills = (items = []) => items
   })
   .filter(Boolean);
 
-const BootcampSession = ({ onClose, practiceItems = [] }) => {
+const BootcampSession = ({ onClose, practiceItems = [], title }) => {
 
   const [phase, setPhase] = useState('theory'); // 'theory' | 'practice'
   const [slideIndex, setSlideIndex] = useState(0);
@@ -307,20 +311,16 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
   const [loading, setLoading] = useState(true);
   const [usingFallbackPractice, setUsingFallbackPractice] = useState(false);
 
+  const practiceTotal = drillQuestions.length ? drillQuestions.length : FALLBACK_DRILLS.length;
+  const totalSteps = THEORY_SLIDES.length + practiceTotal;
+  const currentStep = phase === 'theory'
+    ? slideIndex + 1
+    : THEORY_SLIDES.length + Math.min(drillIndex + 1, practiceTotal);
+
   const currentSlide = THEORY_SLIDES[slideIndex];
   const requiresUnlock = currentSlide?.type === 'no-spaces' || currentSlide?.type === 'meet-teams';
   const isUnlocked = unlockedSlides[slideIndex] || !requiresUnlock;
   const nextDisabled = !isUnlocked;
-  const headerStatus = phase === 'theory' ? (
-    <span className="text-slate-400 font-mono text-sm">
-      BRIEFING: {slideIndex + 1}/{THEORY_SLIDES.length}
-    </span>
-  ) : (
-    <div className="flex items-center gap-2 text-amber-400 font-black text-xl">
-      <Zap size={20} fill="currentColor" />
-      SCORE: {score}
-    </div>
-  );
 
   // ---------- LOAD PRACTICE DATA ----------
   useEffect(() => {
@@ -637,24 +637,6 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
     <>
       {renderTheoryContent()}
 
-      {/* Nav buttons (hide on "ready") */}
-      {THEORY_SLIDES[slideIndex]?.type !== 'ready' && (
-        <div className="flex gap-3 mt-10 w-full max-w-md">
-          <button
-            onClick={prevSlide}
-            disabled={slideIndex === 0}
-            className={`p-5 rounded-2xl border transition-all ${slideIndex === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`}
-            type="button"
-          >
-            <ArrowLeft size={24} />
-          </button>
-          <Button onClick={nextSlide} disabled={nextDisabled} className="flex-1 text-sm">
-            {nextDisabled ? 'Tap all consonants' : 'Next'}
-            <ArrowRight size={20} />
-          </Button>
-        </div>
-      )}
-
       {/* Audio hint row on no-spaces */}
       {THEORY_SLIDES[slideIndex]?.type === 'no-spaces' && (
         <div className="mt-6 text-slate-400 text-sm flex items-center gap-2">
@@ -684,56 +666,55 @@ const BootcampSession = ({ onClose, practiceItems = [] }) => {
 
   // ---------- MAIN RETURN ----------
   if (loading) {
-    return (
-      <div className="fixed inset-0 bg-slate-900 flex items-center justify-center text-white">
-        Loading Mission Data...
-      </div>
-    );
+    return <LoadingState label={t('loading.lesson')} />;
   }
 
   if (phase === 'practice' && drillQuestions.length > 0 && drillIndex >= drillQuestions.length) {
     return (
-      <div className="fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 className="text-5xl font-black text-amber-400 mb-4">MISSION ACCOMPLISHED</h1>
-        <p className="text-3xl mb-8">Final Score: {score}</p>
-        <button onClick={onClose} className="px-8 py-4 bg-blue-600 rounded-xl font-bold text-lg" type="button">
-          Return to Base
-        </button>
-      </div>
+      <SessionCompletion
+        title={t('lesson.complete')}
+        description={t('lesson.score', { score, total: practiceTotal })}
+        score={score}
+        total={practiceTotal}
+        actionLabel={t('actions.backToMap')}
+        onAction={onClose}
+      />
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900 z-50 flex flex-col">
-      {/* HEADER */}
-      <div className="flex justify-between items-center p-4 bg-slate-800 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          {headerStatus}
-        </div>
-
-        <button onClick={onClose} className="p-2 bg-slate-700 rounded-full hover:bg-slate-600 transition-colors" type="button">
-          <X className="text-white w-6 h-6" />
-        </button>
-      </div>
-
-      {/* BODY */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto">
-        {bodyContent}
-      </div>
-
-      {/* PROGRESS BAR */}
-      <div className="h-2 bg-slate-800 w-full">
-        <div
-          className={`h-full transition-all duration-300 ${phase === 'theory' ? 'bg-blue-500' : 'bg-amber-400'}`}
-          style={{
-            width:
-              phase === 'theory'
-                ? `${((slideIndex + 1) / THEORY_SLIDES.length) * 100}%`
-                : `${(drillIndex / (drillQuestions.length ? drillQuestions.length : FALLBACK_DRILLS.length)) * 100}%`
-          }}
-        />
-      </div>
-    </div>
+    <SessionFrame
+      title={title || 'Bootcamp'}
+      progressCurrent={currentStep}
+      progressTotal={totalSteps}
+      progressLabel={t('lesson.progress', { current: currentStep, total: totalSteps })}
+      score={score}
+      onClose={onClose}
+      footer={phase === 'theory' && THEORY_SLIDES[slideIndex]?.type !== 'ready' ? (
+        <footer className="p-6 border-t border-white/5 bg-black/80">
+          <div className="flex gap-3">
+            <button
+              onClick={prevSlide}
+              disabled={slideIndex === 0}
+              className={`p-5 rounded-2xl border transition-all ${slideIndex === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`}
+              type="button"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <Button onClick={nextSlide} disabled={nextDisabled} className="flex-1">
+              {t('actions.continue')} <ArrowRight size={20} />
+            </Button>
+          </div>
+          {nextDisabled && (
+            <p className="mt-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center">
+              {t('lesson.hintContinue')}
+            </p>
+          )}
+        </footer>
+      ) : null}
+    >
+      {bodyContent}
+    </SessionFrame>
   );
 };
 
