@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import opentype from "opentype.js";
 import hbjs from "harfbuzzjs";
 
-// === ИСПРАВЛЕННАЯ ССЫЛКА ===
-// Используем jsDelivr - он самый стабильный и не дает CORS ошибок
+// === ФИНАЛЬНАЯ ССЫЛКА (JSDelivr) ===
+// Мы используем этот CDN, потому что он не имеет проблем с CORS
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/harfbuzzjs@0.3.3/hb-subset.wasm';
 const DEFAULT_FONT = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
@@ -27,7 +27,7 @@ export default function KhmerRenderEngine({
 
     (async () => {
       setStatus("loading");
-      setDebugMsg("Initializing Engine v6.0 (Final)...");
+      setDebugMsg("Initializing Engine v5.0 (Final)...");
       setGlyphs([]);
 
       try {
@@ -35,12 +35,12 @@ export default function KhmerRenderEngine({
         setDebugMsg(`Downloading WASM from CDN...`);
         const wasmRes = await fetch(WASM_URL);
 
-        if (!wasmRes.ok) throw new Error(`WASM 404 Error: ${wasmRes.status}`);
+        if (!wasmRes.ok) throw new Error(`WASM Fetch Error: ${wasmRes.status}`);
 
-        // Проверка MIME типа (на всякий случай)
+        // Проверяем, что нам прислали именно файл, а не страницу ошибки
         const contentType = wasmRes.headers.get("content-type");
         if (contentType && contentType.includes("text/html")) {
-             throw new Error("CDN returned HTML instead of Binary. URL is wrong.");
+             throw new Error("CDN returned HTML instead of Binary. Check URL.");
         }
 
         const wasmBuffer = await wasmRes.arrayBuffer();
@@ -53,10 +53,10 @@ export default function KhmerRenderEngine({
         // 3. СКАЧИВАЕМ ШРИФТ
         setDebugMsg("Loading Font...");
         const fontRes = await fetch(fontUrl);
-        if (!fontRes.ok) throw new Error(`Font 404 Error: ${fontRes.status}`);
+        if (!fontRes.ok) throw new Error(`Font Fetch Error: ${fontRes.status}`);
         const fontBuffer = await fontRes.arrayBuffer();
 
-        // 4. ШЕЙПИНГ
+        // 4. ШЕЙПИНГ (Магия)
         const otFont = opentype.parse(fontBuffer);
         const hbBlob = hb.createBlob(fontBuffer);
         const hbFace = hb.createFace(hbBlob, 0);
@@ -88,6 +88,7 @@ export default function KhmerRenderEngine({
           return { d: toPathData(path), gid, bb: path.getBoundingBox() };
         });
 
+        // Чистим память
         buf.destroy();
         hbFont.destroy();
         hbFace.destroy();
@@ -135,7 +136,7 @@ export default function KhmerRenderEngine({
 
   return (
     <div className="w-full flex flex-col items-center">
-      {/* ИНДИКАТОР ВЕРСИИ v6.0 */}
+      {/* ИНДИКАТОР: Если зеленый - всё работает */}
       {status !== 'success' && (
           <div className="text-[10px] text-green-400 font-mono mb-2 animate-pulse">
             [{status}] {debugMsg}
