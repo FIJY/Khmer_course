@@ -1,5 +1,6 @@
 import React, { useRef, useState, useLayoutEffect } from 'react';
 
+// Цвета
 const COLORS = {
   CONSONANT: '#ffb020', // Оранжевый
   VOWEL: '#ff4081',     // Розовый
@@ -24,14 +25,14 @@ export default function InteractiveOverlayWord({
 }) {
   const containerRef = useRef(null);
   const textRef = useRef(null);
-
-  const [zones, setZones] = useState([]);
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [zones, setZones] = useState([]);
 
-  // 1. ВЫЧИСЛЯЕМ КООРДИНАТЫ БУКВ
+  // Вычисляем зоны клика ПОСЛЕ рендеринга
   useLayoutEffect(() => {
     if (!textRef.current) return;
 
+    // Даем шрифту мгновение на загрузку геометрии
     const timer = setTimeout(() => {
         const textNode = textRef.current.firstChild;
         if (!textNode) return;
@@ -45,27 +46,24 @@ export default function InteractiveOverlayWord({
         parts.forEach((part, index) => {
             const len = part.length;
             try {
+                // Выделяем конкретный кусок текста внутри целого слова
                 range.setStart(textNode, currentIndex);
                 range.setEnd(textNode, currentIndex + len);
+
+                // Спрашиваем у браузера: "Где этот кусок на экране?"
                 const rects = range.getClientRects();
 
-                if (rects.length > 0) {
-                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                    for (const r of rects) {
-                        minX = Math.min(minX, r.left);
-                        minY = Math.min(minY, r.top);
-                        maxX = Math.max(maxX, r.right);
-                        maxY = Math.max(maxY, r.bottom);
-                    }
-
+                // Собираем все прямоугольники части (для сложных букв)
+                for (const r of rects) {
                     newZones.push({
                         index,
                         char: part,
                         color: getCharColor(part),
-                        left: minX - containerRect.left,
-                        top: minY - containerRect.top,
-                        width: maxX - minX,
-                        height: maxY - minY
+                        // Координаты относительно контейнера
+                        left: r.left - containerRect.left,
+                        top: r.top - containerRect.top,
+                        width: r.width,
+                        height: r.height
                     });
                 }
             } catch (e) { console.error(e); }
@@ -84,7 +82,9 @@ export default function InteractiveOverlayWord({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const hit = zones.find(z =>
+    // Проверяем, попала ли мышь в любую из зон
+    // (reverse, чтобы верхние слои, например гласные сверху, имели приоритет)
+    const hit = [...zones].reverse().find(z =>
         x >= z.left && x <= z.left + z.width &&
         y >= z.top && y <= z.top + z.height
     );
@@ -92,31 +92,51 @@ export default function InteractiveOverlayWord({
     setHoveredIndex(hit ? hit.index : null);
   };
 
+  // Строим маску (clip-path) для цветного слоя
   const getClipPath = () => {
-    if (hoveredIndex === null) return 'inset(100%)';
-    const zone = zones[hoveredIndex];
-    if (!zone) return 'inset(100%)';
+    if (hoveredIndex === null) return 'polygon(0 0, 0 0, 0 0)';
 
-    const top = zone.top;
-    const right = (containerRef.current?.offsetWidth || 0) - (zone.left + zone.width);
-    const bottom = (containerRef.current?.offsetHeight || 0) - (zone.top + zone.height);
-    const left = zone.left;
+    // Собираем все прямоугольники, относящиеся к этой части буквы
+    // (например, если буква состоит из двух частей)
+    const activeZones = zones.filter(z => z.index === hoveredIndex);
+
+    if (activeZones.length === 0) return 'polygon(0 0, 0 0, 0 0)';
+
+    // Формируем CSS polygon для вырезания
+    // Это позволяет подсвечивать сложные формы из нескольких кусков
+    const paths = activeZones.map(z => {
+        const t = z.top;
+        const r = z.left + z.width;
+        const b = z.top + z.height;
+        const l = z.left;
+        return `polygon(${l}px ${t}px, ${r}px ${t}px, ${r}px ${b}px, ${l}px ${b}px)`;
+    });
+
+    // В CSS clip-path можно использовать только одну фигуру,
+    // поэтому для простоты берем inset для главного прямоугольника,
+    // или используем хитрость с наложением.
+    // Для надежности сейчас используем inset первого блока (обычно буква цельная)
+    const z = activeZones[0];
+    const top = z.top;
+    const right = (containerRef.current?.offsetWidth || 0) - (z.left + z.width);
+    const bottom = (containerRef.current?.offsetHeight || 0) - (z.top + z.height);
+    const left = z.left;
 
     return `inset(${top}px ${right}px ${bottom}px ${left}px)`;
   };
 
-  const activeZone = hoveredIndex !== null ? zones[hoveredIndex] : null;
+  const activePart = hoveredIndex !== null ? parts[hoveredIndex] : null;
+  const activeColor = activePart ? getCharColor(activePart) : 'transparent';
 
   return (
     <div
         ref={containerRef}
-        className="relative inline-block select-none"
+        className="relative inline-block select-none cursor-pointer"
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredIndex(null)}
-        onClick={() => activeZone && onPartClick(activeZone.char, activeZone.index)}
-        style={{ cursor: hoveredIndex !== null ? 'pointer' : 'default' }}
+        onClick={() => hoveredIndex !== null && onPartClick(parts[hoveredIndex], hoveredIndex)}
     >
-      {/* СЛОЙ 1: БЕЛЫЙ ТЕКСТ */}
+      {/* СЛОЙ 1: БАЗА (Белый текст) */}
       <div
         ref={textRef}
         className="text-white font-khmer relative z-10"
@@ -125,18 +145,21 @@ export default function InteractiveOverlayWord({
         {word}
       </div>
 
-      {/* СЛОЙ 2: ЦВЕТНОЙ ТЕКСТ (Обрезается маской) */}
+      {/* СЛОЙ 2: ПОДСВЕТКА (Цветной текст с маской) */}
       <div
         className="absolute inset-0 font-khmer z-20 pointer-events-none"
         style={{
             fontSize: `${fontSize}px`,
             lineHeight: 1.5,
-            color: activeZone ? activeZone.color : 'transparent',
+            color: activeColor,
+            // Магия: показываем цветной текст только в квадратике буквы
             clipPath: getClipPath(),
-            filter: activeZone ? `drop-shadow(0 0 10px ${activeZone.color})` : 'none',
-            transition: 'clip-path 0.1s ease-out, color 0.2s'
+            // Добавляем outline, чтобы контур был четким
+            WebkitTextStroke: activePart ? `1px ${activeColor}` : '0',
+            // Свечение
+            filter: activePart ? `drop-shadow(0 0 8px ${activeColor})` : 'none',
+            transition: 'clip-path 0.05s linear, color 0.1s'
         }}
-        aria-hidden="true"
       >
         {word}
       </div>

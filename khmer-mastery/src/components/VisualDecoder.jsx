@@ -3,6 +3,7 @@ import { Sun, Moon, Volume2, Loader2 } from 'lucide-react';
 // Импортируем "Неоновый" компонент
 import InteractiveNativeWord from './InteractiveNativeWord';
 import InteractiveSkiaWord from './InteractiveSkiaWord';
+import InteractiveOverlayWord from './InteractiveOverlayWord';
 
 
 const DEFAULT_KHMER_FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
