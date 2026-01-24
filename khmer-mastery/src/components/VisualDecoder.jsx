@@ -16,10 +16,8 @@ export default function VisualDecoder({ data, onComplete }) {
   const [fontLoaded, setFontLoaded] = useState(false);
   const audioRef = useRef(null);
 
-  // Используем char_split для разделения
   const parts = char_split && char_split.length > 0 ? char_split : (word ? word.split('') : []);
 
-  // Загрузка шрифта
   useEffect(() => {
     const font = new FontFace('Noto Sans Khmer', `url(${DEFAULT_KHMER_FONT_URL})`);
     font.load().then(f => {
@@ -47,7 +45,6 @@ export default function VisualDecoder({ data, onComplete }) {
   const handlePartClick = (part) => {
     if (status === 'success') return;
 
-    // Звук
     const sound = char_audio_map?.[part] || char_audio_map?.[target_char];
     if (sound) playAudio(sound);
 
@@ -65,17 +62,15 @@ export default function VisualDecoder({ data, onComplete }) {
 
   return (
     <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4">
-
-      {/* СЛОВО */}
       <div className={`mb-12 relative transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
-         {!fontLoaded && <div className="animate-pulse text-cyan-400 flex gap-2"><Loader2 className="animate-spin"/> Loading...</div>}
+         {!fontLoaded && <div className="animate-pulse text-cyan-400 flex gap-2"><Loader2 className="animate-spin"/> Loading Font...</div>}
 
          {fontLoaded && (
             <InteractiveCanvasWord
                 word={word}
                 parts={parts}
                 onPartClick={handlePartClick}
-                fontSize={120} // Размер шрифта
+                fontSize={120}
                 defaultColor={status === 'success' ? '#34d399' : 'white'}
             />
          )}
@@ -89,7 +84,6 @@ export default function VisualDecoder({ data, onComplete }) {
          )}
       </div>
 
-      {/* ИНФО */}
       <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4">
          {pronunciation && <p className="text-cyan-300 font-mono text-xl tracking-widest">/{pronunciation}/</p>}
          <h3 className="text-4xl font-black text-white uppercase italic tracking-tighter">{english_translation}</h3>
