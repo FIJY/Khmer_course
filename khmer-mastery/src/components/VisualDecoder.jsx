@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Sun, Moon, Volume2 } from 'lucide-react';
 
-// ИМПОРТИРУЕМ НОВЫЙ ДВИЖОК
-import KhmerRenderEngine from './KhmerRenderEngine';
+// ИМПОРТИРУЕМ ФИНАЛЬНЫЙ ДВИЖОК
+import KhmerEngineFinal from './KhmerEngineFinal';
 
 const DEFAULT_KHMER_FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
@@ -34,16 +34,15 @@ export default function VisualDecoder({ data, onComplete }) {
   return (
     <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4 relative">
 
-      {/* МЕТКА ВЕРСИИ v4.0 (Если её нет - код старый!) */}
+      {/* Метка v7.0 */}
       <div className="absolute top-0 right-0 text-[9px] text-green-500 opacity-50 font-mono border border-green-500 px-1 rounded">
-        ENGINE: v4.0 (CDN)
+        ENGINE: v7.0 (FINAL)
       </div>
 
       <div className={`mb-12 w-full flex justify-center transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
          {status === 'success' && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl animate-pulse rounded-full"/>}
 
-         {/* НОВЫЙ КОМПОНЕНТ */}
-         <KhmerRenderEngine
+         <KhmerEngineFinal
             text={word}
             fontSize={140}
          />

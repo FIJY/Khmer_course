@@ -2,16 +2,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import opentype from "opentype.js";
 import hbjs from "harfbuzzjs";
 
-// === ФИНАЛЬНАЯ ССЫЛКА (JSDelivr) ===
-// Мы используем этот CDN, потому что он не имеет проблем с CORS
-const WASM_URL = 'https://cdn.jsdelivr.net/npm/harfbuzzjs@0.3.3/hb-subset.wasm';
+// ✅ ЕДИНСТВЕННО ВЕРНАЯ ССЫЛКА (с папкой /subset/)
+const WASM_URL = 'https://cdn.jsdelivr.net/npm/harfbuzzjs@0.3.3/subset/hb-subset.wasm';
 const DEFAULT_FONT = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 function toPathData(path) {
   return path.toPathData(3);
 }
 
-export default function KhmerRenderEngine({
+export default function KhmerEngineFinal({
   text = "កាហ្វេ",
   fontUrl = DEFAULT_FONT,
   fontSize = 150,
@@ -27,36 +26,36 @@ export default function KhmerRenderEngine({
 
     (async () => {
       setStatus("loading");
-      setDebugMsg("Initializing Engine v5.0 (Final)...");
+      setDebugMsg("Initializing v7.0 (Correct URL)..."); // <-- Метка версии
       setGlyphs([]);
 
       try {
         // 1. СКАЧИВАЕМ WASM
-        setDebugMsg(`Downloading WASM from CDN...`);
+        setDebugMsg(`Fetching WASM...`);
         const wasmRes = await fetch(WASM_URL);
 
-        if (!wasmRes.ok) throw new Error(`WASM Fetch Error: ${wasmRes.status}`);
+        if (!wasmRes.ok) throw new Error(`WASM 404: ${wasmRes.status}`);
 
-        // Проверяем, что нам прислали именно файл, а не страницу ошибки
+        // Проверка: это точно бинарник?
         const contentType = wasmRes.headers.get("content-type");
         if (contentType && contentType.includes("text/html")) {
-             throw new Error("CDN returned HTML instead of Binary. Check URL.");
+             throw new Error("CRITICAL: CDN returned HTML! URL is wrong.");
         }
 
         const wasmBuffer = await wasmRes.arrayBuffer();
 
         // 2. ЗАПУСКАЕМ
-        setDebugMsg("Instantiating Module...");
+        setDebugMsg("Starting Engine...");
         const { instance } = await WebAssembly.instantiate(wasmBuffer);
         const hb = hbjs(instance);
 
         // 3. СКАЧИВАЕМ ШРИФТ
         setDebugMsg("Loading Font...");
         const fontRes = await fetch(fontUrl);
-        if (!fontRes.ok) throw new Error(`Font Fetch Error: ${fontRes.status}`);
+        if (!fontRes.ok) throw new Error(`Font 404: ${fontRes.status}`);
         const fontBuffer = await fontRes.arrayBuffer();
 
-        // 4. ШЕЙПИНГ (Магия)
+        // 4. РИСУЕМ
         const otFont = opentype.parse(fontBuffer);
         const hbBlob = hb.createBlob(fontBuffer);
         const hbFace = hb.createFace(hbBlob, 0);
@@ -88,7 +87,6 @@ export default function KhmerRenderEngine({
           return { d: toPathData(path), gid, bb: path.getBoundingBox() };
         });
 
-        // Чистим память
         buf.destroy();
         hbFont.destroy();
         hbFace.destroy();
@@ -128,17 +126,16 @@ export default function KhmerRenderEngine({
   }, [glyphs]);
 
   if (status === "error") return (
-    <div className="p-4 bg-red-900/80 border border-red-500 text-white font-mono text-xs rounded m-4 max-w-md">
-      <p className="font-bold mb-1">❌ ERROR:</p>
+    <div className="p-4 bg-red-900/90 border border-red-500 text-white font-mono text-xs rounded m-4 max-w-md">
+      <p className="font-bold text-lg mb-2">🛑 STOP</p>
       <p>{debugMsg}</p>
     </div>
   );
 
   return (
     <div className="w-full flex flex-col items-center">
-      {/* ИНДИКАТОР: Если зеленый - всё работает */}
       {status !== 'success' && (
-          <div className="text-[10px] text-green-400 font-mono mb-2 animate-pulse">
+          <div className="text-[10px] text-yellow-400 font-mono mb-2 animate-pulse">
             [{status}] {debugMsg}
           </div>
       )}
