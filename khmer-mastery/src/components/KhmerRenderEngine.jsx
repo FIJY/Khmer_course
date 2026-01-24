@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import opentype from "opentype.js";
 import hbjs from "harfbuzzjs";
 
-// Используем UNPKG (он часто надежнее для raw файлов)
-const WASM_URL = 'https://unpkg.com/harfbuzzjs@0.3.3/hb-subset.wasm';
+// ИСПРАВЛЕННАЯ ССЫЛКА (добавили /subset/)
+const WASM_URL = 'https://unpkg.com/harfbuzzjs@0.3.3/subset/hb-subset.wasm';
 const DEFAULT_FONT = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 function toPathData(path) {
@@ -18,7 +18,7 @@ export default function KhmerRenderEngine({
 }) {
   const [glyphs, setGlyphs] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [status, setStatus] = useState("init"); // init, loading, success, error
+  const [status, setStatus] = useState("init");
   const [debugMsg, setDebugMsg] = useState("");
 
   useEffect(() => {
@@ -26,25 +26,32 @@ export default function KhmerRenderEngine({
 
     (async () => {
       setStatus("loading");
-      setDebugMsg("Starting Engine v4.0...");
+      setDebugMsg("Initializing Engine v5.0...");
       setGlyphs([]);
 
       try {
-        // 1. СКАЧИВАЕМ ДВИЖОК
-        setDebugMsg(`Fetching WASM from: ${WASM_URL}`);
+        // 1. СКАЧИВАЕМ WASM (Теперь по правильному адресу)
+        setDebugMsg(`Downloading WASM...`);
         const wasmRes = await fetch(WASM_URL);
-        if (!wasmRes.ok) throw new Error(`WASM 404: ${wasmRes.status}`);
+
+        // Проверка на ошибку 404 или HTML вместо файла
+        if (!wasmRes.ok) throw new Error(`WASM Fetch Failed: ${wasmRes.status}`);
+        const contentType = wasmRes.headers.get("content-type");
+        if (contentType && contentType.includes("text/html")) {
+             throw new Error("WASM URL returned HTML instead of binary! Check URL.");
+        }
+
         const wasmBuffer = await wasmRes.arrayBuffer();
 
         // 2. ЗАПУСКАЕМ
-        setDebugMsg("Instantiating WebAssembly...");
+        setDebugMsg("Instantiating Module...");
         const { instance } = await WebAssembly.instantiate(wasmBuffer);
         const hb = hbjs(instance);
 
         // 3. СКАЧИВАЕМ ШРИФТ
         setDebugMsg("Loading Font...");
         const fontRes = await fetch(fontUrl);
-        if (!fontRes.ok) throw new Error(`Font 404: ${fontRes.status}`);
+        if (!fontRes.ok) throw new Error(`Font Fetch Failed: ${fontRes.status}`);
         const fontBuffer = await fontRes.arrayBuffer();
 
         // 4. ШЕЙПИНГ
@@ -79,7 +86,6 @@ export default function KhmerRenderEngine({
           return { d: toPathData(path), gid, bb: path.getBoundingBox() };
         });
 
-        // Cleanup
         buf.destroy();
         hbFont.destroy();
         hbFace.destroy();
@@ -91,10 +97,10 @@ export default function KhmerRenderEngine({
         }
 
       } catch (e) {
-        console.error("ENGINE ERROR:", e);
+        console.error("ENGINE CRASH:", e);
         if (!cancelled) {
             setStatus("error");
-            setDebugMsg(e.toString());
+            setDebugMsg(e.message || e.toString());
         }
       }
     })();
@@ -102,7 +108,7 @@ export default function KhmerRenderEngine({
     return () => { cancelled = true; };
   }, [text, fontUrl, fontSize]);
 
-  // Вычисляем границы
+  // ViewBox Calc
   const viewBox = useMemo(() => {
     if (!glyphs.length) return `0 0 800 300`;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -116,23 +122,20 @@ export default function KhmerRenderEngine({
     });
     if (minX === Infinity) return "0 0 800 300";
     const p = 20;
-    const w = (maxX - minX) + p * 2;
-    const h = (maxY - minY) + p * 2;
-    return `${minX - p} ${minY - p} ${w} ${h}`;
+    return `${minX - p} ${minY - p} ${(maxX - minX) + p * 2} ${(maxY - minY) + p * 2}`;
   }, [glyphs]);
 
   if (status === "error") return (
-    <div className="p-4 bg-red-900/50 border border-red-500 text-red-200 text-xs font-mono rounded m-4">
-      <p className="font-bold">❌ RENDER ERROR:</p>
+    <div className="p-4 bg-red-900/80 border border-red-500 text-white font-mono text-xs rounded m-4 max-w-md">
+      <p className="font-bold mb-1">❌ FATAL ERROR:</p>
       <p>{debugMsg}</p>
     </div>
   );
 
   return (
     <div className="w-full flex flex-col items-center">
-      {/* ИНДИКАТОР ВЕРСИИ (Исчезнет при успехе, или будет зеленым) */}
       {status !== 'success' && (
-          <div className="text-[10px] text-cyan-500 font-mono mb-2 animate-pulse">
+          <div className="text-[10px] text-yellow-500 font-mono mb-2 animate-pulse">
             [{status}] {debugMsg}
           </div>
       )}
