@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Sun, Moon, Volume2, Loader2 } from 'lucide-react';
 
-// Дефолтный шрифт
 const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
   ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
@@ -22,9 +21,7 @@ export default function VisualDecoder({ data, onComplete }) {
   const [fontLoaded, setFontLoaded] = useState(false);
   const audioRef = useRef(null);
 
-  // Canvas refs
   const canvasRef = useRef(null);
-  const containerRef = useRef(null);
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [clickZones, setClickZones] = useState([]);
 
@@ -39,21 +36,17 @@ export default function VisualDecoder({ data, onComplete }) {
   };
   const theme = getTheme();
 
-  // 1. ЗАГРУЗКА ШРИФТА (Критически важно!)
+  // 1. ЗАГРУЗКА ШРИФТА
   useEffect(() => {
     const fontName = 'Noto Sans Khmer';
     const font = new FontFace(fontName, `url(${DEFAULT_KHMER_FONT_URL})`);
-
     font.load().then((loadedFont) => {
       document.fonts.add(loadedFont);
-      setFontLoaded(true); // Только теперь разрешаем рисовать
-    }).catch(err => {
-      console.warn("Font load failed, using fallback", err);
-      setFontLoaded(true); // Пытаемся рисовать даже если ошибка
-    });
+      setFontLoaded(true);
+    }).catch(() => setFontLoaded(true));
   }, []);
 
-  // 2. ОТРИСОВКА НА CANVAS (Только когда шрифт готов)
+  // 2. ОТРИСОВКА
   useEffect(() => {
     if (!fontLoaded || !canvasRef.current || !parts.length) return;
 
@@ -61,22 +54,25 @@ export default function VisualDecoder({ data, onComplete }) {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
 
-    // Настройки текста
-    const fontSize = 120; // Базовый размер
+    // НАСТРОЙКИ РАЗМЕРА
+    const fontSize = 100; // Чуть уменьшим базу, чтобы влезало
+    // Кхмерский требует много места сверху и снизу. Множитель 2.5 безопасен.
+    const lineHeight = fontSize * 2.5;
     const fontStr = `${fontSize}px "Noto Sans Khmer", serif`;
+
     ctx.font = fontStr;
 
-    // --- РАСЧЕТ ЗОН ---
-    // Чтобы узнать, где начинается и кончается каждая буква, мы измеряем части
+    // --- РАСЧЕТ ШИРИНЫ И ЗОН ---
     const zones = [];
     let currentX = 0;
 
-    // Хитрость: измеряем ширину нарастающим итогом, чтобы учесть кернинг
+    // Используем метод накопления ширины
     let accumStr = "";
     parts.forEach((part, i) => {
        const prevW = ctx.measureText(accumStr).width;
        accumStr += part;
        const currW = ctx.measureText(accumStr).width;
+
        const partW = currW - prevW;
 
        zones.push({ char: part, x: prevW, width: partW, index: i });
@@ -84,10 +80,10 @@ export default function VisualDecoder({ data, onComplete }) {
     });
     setClickZones(zones);
 
-    // --- НАСТРОЙКА РАЗМЕРА ---
-    // Устанавливаем размер с учетом Retina (DPR)
-    const displayWidth = currentX;
-    const displayHeight = fontSize * 1.6;
+    // Добавляем горизонтальный отступ (padding), чтобы swashes не резались
+    const paddingX = 20;
+    const displayWidth = currentX + (paddingX * 2);
+    const displayHeight = lineHeight;
 
     canvas.width = displayWidth * dpr;
     canvas.height = displayHeight * dpr;
@@ -97,58 +93,51 @@ export default function VisualDecoder({ data, onComplete }) {
 
     ctx.scale(dpr, dpr);
 
-    // --- ФУНКЦИЯ РИСОВАНИЯ ---
+    // --- РИСОВАНИЕ ---
     const draw = () => {
-        // Очистка
         ctx.clearRect(0, 0, displayWidth, displayHeight);
 
-        // Важно: переустанавливаем шрифт после ресайза/scale
         ctx.font = fontStr;
         ctx.textBaseline = 'middle';
-        const y = displayHeight / 2;
+        // Центруем по вертикали и добавляем отступ слева
+        const x = paddingX;
+        const y = displayHeight / 2 + (fontSize * 0.1); // Чуть ниже центра, так как у кхмерского "верх" тяжелее
 
-        // 1. БАЗОВЫЙ СЛОЙ (Белый)
-        // Рисуем слово целиком. Это гарантирует идеальные лигатуры.
+        // 1. БАЗОВЫЙ СЛОЙ
         ctx.fillStyle = 'white';
-        ctx.fillText(word, 0, y);
+        ctx.fillText(word, x, y);
 
-        // 2. СЛОЙ ПОДСВЕТКИ (Маска)
-        // Если есть наведение или статус успеха - рисуем цветную версию поверх
+        // 2. ПОДСВЕТКА (Через маску)
         if (hoveredIndex !== null || status === 'success') {
             zones.forEach((zone, i) => {
                 const isHovered = i === hoveredIndex;
                 const isTargetPart = zone.char.includes(target_char);
 
-                // Условия подсветки:
-                // - Если мы ищем (searching) и навели мышь -> Cyan
-                // - Если нашли (success) и это та самая часть -> Green
                 let shouldHighlight = false;
-                let color = '#22d3ee'; // Cyan
+                let color = '#22d3ee'; // Cyan (Поиск)
 
-                if (status === 'searching' && isHovered) {
-                    shouldHighlight = true;
-                }
+                if (status === 'searching' && isHovered) shouldHighlight = true;
                 if (status === 'success' && isTargetPart) {
                     shouldHighlight = true;
-                    color = '#34d399'; // Emerald
+                    color = '#34d399'; // Green (Успех)
                 }
 
                 if (shouldHighlight) {
                     ctx.save();
-                    // МАГИЯ: Обрезаем область рисования (Clip) только до ширины этой буквы
+                    // Маска: режем строго по ширине буквы (зона клика), но на всю высоту
+                    // Расширяем зону клика на 1px, чтобы не было щелей
                     ctx.beginPath();
-                    // Добавляем 1px чтобы перекрыть швы
-                    ctx.rect(zone.x - 1, 0, zone.width + 2, displayHeight);
+                    ctx.rect(x + zone.x - 1, 0, zone.width + 2, displayHeight);
                     ctx.clip();
 
-                    // Рисуем ТО ЖЕ САМОЕ слово, но цветное, в ТОЙ ЖЕ позиции
+                    // Рисуем цветное слово поверх
                     ctx.fillStyle = color;
-                    ctx.fillText(word, 0, y);
+                    ctx.fillText(word, x, y);
 
-                    // Добавляем свечение
+                    // Свечение для красоты
                     ctx.shadowColor = color;
                     ctx.shadowBlur = 15;
-                    ctx.fillText(word, 0, y);
+                    ctx.fillText(word, x, y);
 
                     ctx.restore();
                 }
@@ -160,26 +149,25 @@ export default function VisualDecoder({ data, onComplete }) {
 
   }, [fontLoaded, word, parts, hoveredIndex, status, target_char]);
 
-  // --- ОБРАБОТЧИКИ МЫШИ ---
+  // --- ОБРАБОТКА МЫШИ ---
   const handleMouseMove = (e) => {
     if (!clickZones.length) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+    // Учитываем paddingX при расчете координат мыши
+    const paddingX = 20;
+    const x = e.clientX - rect.left - paddingX;
 
+    // Ищем зону (добавляем допуск +/- 5px для удобства)
     const index = clickZones.findIndex(z => x >= z.x && x <= z.x + z.width);
     setHoveredIndex(index !== -1 ? index : null);
     canvasRef.current.style.cursor = index !== -1 ? 'pointer' : 'default';
   };
 
-  const handleMouseLeave = () => setHoveredIndex(null);
-
   const handleClick = () => {
     if (hoveredIndex === null || status === 'success') return;
-
     const zone = clickZones[hoveredIndex];
     const part = zone.char;
 
-    // Звук
     const sound = char_audio_map?.[part] || char_audio_map?.[target_char];
     if (sound) playAudio(sound);
 
@@ -191,51 +179,35 @@ export default function VisualDecoder({ data, onComplete }) {
     } else {
       setStatus('error');
       playAudio('error.mp3');
-      // При ошибке можно добавить визуальный эффект (например, красную вспышку),
-      // но в Canvas это сложнее, пока ограничимся звуком
       setTimeout(() => setStatus('searching'), 500);
     }
   };
 
-  // Аудио хелпер
   const playAudio = (file) => {
     if (!file) return;
     const path = file.startsWith('/') ? file : `/sounds/${file}`;
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     const audio = new Audio(path);
     audioRef.current = audio;
-    audio.play().catch(e => console.warn(e));
+    audio.play().catch(() => {});
   };
 
   return (
     <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4">
 
-      {/* ГЛАВНОЕ СЛОВО */}
       <div className={`mb-12 relative transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
+         {!fontLoaded && <div className="animate-pulse text-cyan-400">Loading Fonts...</div>}
 
-         {!fontLoaded && (
-            <div className="flex flex-col items-center text-cyan-400 animate-pulse">
-                <Loader2 className="animate-spin mb-2" />
-                <span className="text-xs uppercase tracking-widest">Loading Fonts...</span>
-            </div>
-         )}
-
-         {/* CANVAS */}
-         {/* opacity-0 пока шрифт не загрузится, чтобы не мигало квадратами */}
          <canvas
             ref={canvasRef}
             onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
+            onMouseLeave={() => setHoveredIndex(null)}
             onClick={handleClick}
             className={`transition-opacity duration-300 ${fontLoaded ? 'opacity-100' : 'opacity-0'}`}
          />
 
-         {/* Иконка звука */}
          {fontLoaded && (
-            <div
-                className="mt-4 flex justify-center opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
-                onClick={() => playAudio(word_audio)}
-            >
+            <div className="mt-4 flex justify-center opacity-50 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => playAudio(word_audio)}>
                 <div className="bg-white/5 border border-white/10 rounded-full p-2 hover:bg-cyan-500/20 hover:text-cyan-400">
                     <Volume2 size={24} />
                 </div>
@@ -243,20 +215,12 @@ export default function VisualDecoder({ data, onComplete }) {
          )}
       </div>
 
-      {/* ИНФО */}
       <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4">
-         {pronunciation && (
-            <p className="text-cyan-300 font-mono text-xl tracking-widest">/{pronunciation}/</p>
-         )}
-         <h3 className="text-4xl font-black text-white uppercase italic tracking-tighter">
-            {english_translation}
-         </h3>
-
+         {pronunciation && <p className="text-cyan-300 font-mono text-xl tracking-widest">/{pronunciation}/</p>}
+         <h3 className="text-4xl font-black text-white uppercase italic tracking-tighter">{english_translation}</h3>
          <div className="pt-6 flex justify-center gap-3">
              {theme.badge}
-             <span className="text-slate-400 text-xs font-bold uppercase tracking-widest bg-gray-900 px-4 py-2 rounded-xl border border-white/10">
-               Task: {hint}
-             </span>
+             <span className="text-slate-400 text-xs font-bold uppercase tracking-widest bg-gray-900 px-4 py-2 rounded-xl border border-white/10">Task: {hint}</span>
          </div>
       </div>
     </div>
