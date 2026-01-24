@@ -1,7 +1,8 @@
-import React from 'react';
-import { Volume2, ArrowRight, BookOpen, ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Volume2, ArrowRight, X, CheckCircle2, ChevronLeft } from 'lucide-react';
 import VisualDecoder from '../components/VisualDecoder';
 import KhmerColoredText from '../components/KhmerColoredText';
+import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
@@ -10,9 +11,11 @@ import { t } from '../i18n';
 import SessionCompletion from '../components/Session/SessionCompletion';
 import SessionFrame from '../components/Session/SessionFrame';
 
-// --- ИМПОРТИРУЕМ НОВЫЕ СЛАЙДЫ ---
+// --- НОВЫЕ КОМПОНЕНТЫ ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
 import InventorySlide from '../components/LessonSlides/InventorySlide';
+import UniversalTheorySlide from '../components/LessonSlides/UniversalTheorySlide';
+import ConsonantStreamDrill from '../components/Drills/ConsonantStreamDrill';
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
 const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
@@ -45,6 +48,41 @@ export default function LessonPlayer() {
 
   const safeItems = Array.isArray(items) ? items : [];
 
+  // --- ЛОГИКА ДЛЯ БУТКЕМП-ДРИЛЛОВ (No Spaces) ---
+  const [revealedConsonants, setRevealedConsonants] = useState(new Set());
+
+  // Сбрасываем состояние дрилла при смене слайда
+  useEffect(() => {
+    setRevealedConsonants(new Set());
+  }, [step]);
+
+  const current = safeItems[step]?.data;
+  const type = safeItems[step]?.type;
+
+  // Обработчик клика в дрилле "No Spaces"
+  const handleConsonantClick = (index, char) => {
+    setRevealedConsonants((prev) => {
+      const next = new Set(prev);
+      next.add(index);
+
+      // Проверка на победу (нашли все согласные)
+      if (current?.khmerText) {
+         const totalConsonants = Array.from(current.khmerText).filter(c => c.match(/[\u1780-\u17A2]/)).length;
+         if (next.size >= totalConsonants) {
+            playLocalAudio('success.mp3');
+            setCanAdvance(true);
+         } else {
+            // Играем звук конкретной буквы, если есть маппинг
+            const soundFile = current.consonantAudioMap?.[char];
+            if (soundFile) playLocalAudio(soundFile);
+            else playLocalAudio('click.mp3'); // или звук клика
+         }
+      }
+      return next;
+    });
+  };
+
+  // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ QUIZ ---
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
     safeItems.forEach(item => {
@@ -60,8 +98,23 @@ export default function LessonPlayer() {
     return map;
   }, [safeItems]);
 
+  const getQuizOption = (opt) => {
+    if (opt && typeof opt === 'object') {
+      return { text: opt.text ?? opt.value ?? opt.label ?? opt.answer ?? '', pronunciation: opt.pronunciation ?? '', audio: opt.audio ?? null };
+    }
+    const metadata = current?.options_metadata?.[opt];
+    if (metadata) {
+      return { text: opt, pronunciation: metadata.pronunciation, audio: metadata.audio };
+    }
+    const pronunciationMap = current?.option_pronunciations || current?.pronunciations || {};
+    return { text: opt, pronunciation: pronunciationMap?.[opt] ?? lessonPronunciations?.[opt] ?? '', audio: null };
+  };
+
+  // --- РЕНДЕРИНГ СОСТОЯНИЙ ---
   if (loading) return <LoadingState label={t('loading.lesson')} />;
+
   if (error) return <ErrorState title={t('errors.lesson')} message={error} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
+
   if (isFinished) {
     return lessonPassed ? (
       <SessionCompletion
@@ -84,9 +137,7 @@ export default function LessonPlayer() {
 
   if (!safeItems.length || !safeItems[step]) return <ErrorState title={t('errors.lessonEmpty')} message={t('empty.lessonContent')} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
 
-  const current = safeItems[step]?.data;
-  const type = safeItems[step]?.type;
-
+  // --- ПОДГОТОВКА ДАННЫХ ДЛЯ VOCAB CARD ---
   const frontText = current?.front ?? '';
   const backText = current?.back ?? '';
   const frontHasKhmer = KHMER_PATTERN.test(frontText);
@@ -94,18 +145,6 @@ export default function LessonPlayer() {
   const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
   const quizOptions = Array.isArray(current?.options) ? current.options : [];
-
-  const getQuizOption = (opt) => {
-    if (opt && typeof opt === 'object') {
-      return { text: opt.text ?? opt.value ?? opt.label ?? opt.answer ?? '', pronunciation: opt.pronunciation ?? '', audio: opt.audio ?? null };
-    }
-    const metadata = current?.options_metadata?.[opt];
-    if (metadata) {
-      return { text: opt, pronunciation: metadata.pronunciation, audio: metadata.audio };
-    }
-    const pronunciationMap = current?.option_pronunciations || current?.pronunciations || {};
-    return { text: opt, pronunciation: pronunciationMap?.[opt] ?? lessonPronunciations?.[opt] ?? '', audio: null };
-  };
 
   return (
     <SessionFrame
@@ -121,25 +160,36 @@ export default function LessonPlayer() {
             <button onClick={goBack} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`} type="button">
               <ChevronLeft size={24} />
             </button>
+            {/* Для типа 'ready' (финал теории) меняем текст кнопки */}
             <Button onClick={handleNext} disabled={!canAdvance} className="flex-1">
-              {t('actions.continue')} <ArrowRight size={20} />
+              {current?.type === 'ready' ? 'START MISSION' : t('actions.continue')} <ArrowRight size={20} />
             </Button>
           </div>
           {!canAdvance && <p className="mt-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center">{t('lesson.hintContinue')}</p>}
         </footer>
       )}
     >
-
+        {/* 1. БУКВА-ГЕРОЙ */}
         {type === 'learn_char' && (
           <HeroSlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
+        {/* 2. РАЗБОР СЛОВА */}
         {type === 'word_breakdown' && (
           <InventorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
-        {type === 'visual_decoder' && <VisualDecoder key={step} data={current} onComplete={() => setCanAdvance(true)} hideDefaultButton={true} />}
+        {/* 3. ВИЗУАЛЬНЫЙ ДЕКОДЕР (ДРИЛЛ) */}
+        {type === 'visual_decoder' && (
+           <VisualDecoder
+              key={step}
+              data={current}
+              onComplete={() => setCanAdvance(true)}
+              hideDefaultButton={true}
+           />
+        )}
 
+        {/* 4. КАРТОЧКА СЛОВА */}
         {type === 'vocab_card' && (
           <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
             <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
@@ -173,16 +223,14 @@ export default function LessonPlayer() {
           </div>
         )}
 
+        {/* 5. КВИЗ */}
         {type === 'quiz' && (
           <div className="w-full space-y-3">
              <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
              {quizOptions.map((opt, i) => {
                const { text, pronunciation, audio: optionAudio } = getQuizOption(opt);
-
-               // Получаем "сырое" значение для сравнения (учитываем, что это может быть объект)
                const rawValue = (typeof opt === 'object' && opt !== null) ? (opt.value || opt.text || opt.answer) : opt;
 
-               // Логика цвета кнопки
                let buttonClass = 'bg-gray-900 border-white/5 text-white';
                if (selectedOption === rawValue) {
                   const isCorrect = String(rawValue).trim() === String(current.correct_answer).trim();
@@ -208,13 +256,31 @@ export default function LessonPlayer() {
           </div>
         )}
 
-        {type === 'theory' && (
-          <div className="w-full bg-gray-900 border border-white/10 p-8 rounded-[3.5rem] text-center">
-            <BookOpen className="text-cyan-500/20 mx-auto mb-4" size={32} />
-            <h2 className="text-xl font-black italic uppercase text-cyan-400 mb-4">{current.title}</h2>
-            <p className="text-base text-gray-300 italic">{current.text}</p>
-          </div>
+        {/* 6. УНИВЕРСАЛЬНАЯ ТЕОРИЯ (Bootcamp + Classic) */}
+        {(type === 'theory' || type === 'title' || type === 'meet-teams' || type === 'rule' || type === 'reading-algorithm' || type === 'ready') && (
+          <UniversalTheorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
+
+        {/* 7. ИНТЕРАКТИВНЫЙ ДРИЛЛ NO-SPACES (Новинка!) */}
+        {type === 'no-spaces' && (
+           <div className="w-full flex flex-col items-center">
+              <h2 className="text-3xl font-black text-white mb-2 text-center uppercase italic">{current.title}</h2>
+              <p className="text-gray-400 mb-6 text-center text-sm font-medium">{current.subtitle}</p>
+
+              <ConsonantStreamDrill
+                 text={current.khmerText}
+                 revealedSet={revealedConsonants}
+                 onConsonantClick={handleConsonantClick}
+                 onNonConsonantClick={() => playLocalAudio('error.mp3')}
+              />
+
+              <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-white/10 text-xs text-gray-400 w-full text-center">
+                 <span className="text-emerald-400 font-bold uppercase tracking-widest mr-2">Goal:</span>
+                 Find all {Array.from(current.khmerText || '').filter(c => c.match(/[\u1780-\u17A2]/)).length} commanders
+              </div>
+           </div>
+        )}
+
     </SessionFrame>
   );
 }
