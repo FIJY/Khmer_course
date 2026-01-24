@@ -16,10 +16,10 @@ export default function VisualDecoder({ data, onComplete }) {
   const [fontLoaded, setFontLoaded] = useState(false);
   const audioRef = useRef(null);
 
-  // Используем разбивку из JSON или режем по буквам
+  // Используем char_split для разделения
   const parts = char_split && char_split.length > 0 ? char_split : (word ? word.split('') : []);
 
-  // Загрузка шрифта перед отрисовкой
+  // Загрузка шрифта
   useEffect(() => {
     const font = new FontFace('Noto Sans Khmer', `url(${DEFAULT_KHMER_FONT_URL})`);
     font.load().then(f => {
@@ -51,7 +51,6 @@ export default function VisualDecoder({ data, onComplete }) {
     const sound = char_audio_map?.[part] || char_audio_map?.[target_char];
     if (sound) playAudio(sound);
 
-    // Проверка (с очисткой от пробелов)
     if (part.includes(target_char.trim())) {
       setStatus('success');
       playAudio('success.mp3');
@@ -69,19 +68,18 @@ export default function VisualDecoder({ data, onComplete }) {
 
       {/* СЛОВО */}
       <div className={`mb-12 relative transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
-         {!fontLoaded && <div className="animate-pulse text-cyan-400 flex gap-2"><Loader2 className="animate-spin"/> Loading Font...</div>}
+         {!fontLoaded && <div className="animate-pulse text-cyan-400 flex gap-2"><Loader2 className="animate-spin"/> Loading...</div>}
 
          {fontLoaded && (
             <InteractiveCanvasWord
                 word={word}
                 parts={parts}
                 onPartClick={handlePartClick}
-                fontSize={120}
-                defaultColor={status === 'success' ? '#34d399' : 'white'} // Зеленеет при победе
+                fontSize={120} // Размер шрифта
+                defaultColor={status === 'success' ? '#34d399' : 'white'}
             />
          )}
 
-         {/* Звук */}
          {fontLoaded && (
             <div className="mt-4 flex justify-center opacity-50 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => playAudio(word_audio)}>
                 <div className="bg-white/5 border border-white/10 rounded-full p-2 hover:bg-cyan-500/20 hover:text-cyan-400">
