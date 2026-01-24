@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import opentype from 'opentype.js';
 
-// Убедись, что этот файл шрифта есть в папке public/fonts/
+// Прямой путь к шрифту
 const DEFAULT_FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
+// Путь к библиотеке в твоей папке vendor
+const OPENTYPE_URL = '/vendor/opentype.module.js';
 
 const COLORS = {
   CONSONANT: '#ffb020', // Оранжевый
@@ -31,28 +32,40 @@ export default function InteractiveVectorWord({
   const [viewBox, setViewBox] = useState('0 0 100 100');
   const containerRef = useRef(null);
 
-  // 1. Загрузка шрифта
+  // 1. Загрузка движка Opentype и Шрифта
   useEffect(() => {
-    opentype.load(DEFAULT_FONT_URL, (err, loadedFont) => {
-      if (err) {
-        console.error('Font loading failed:', err);
-      } else {
-        setFont(loadedFont);
+    async function loadEngineAndFont() {
+      try {
+        // А. Загружаем библиотеку из твоей папки vendor
+        // /* @vite-ignore */ говорит сборщику: "Не трогай это, файл уже там лежит"
+        const opentypeModule = await import(/* @vite-ignore */ OPENTYPE_URL);
+        const opentype = opentypeModule.default || opentypeModule;
+
+        // Б. Загружаем шрифт
+        opentype.load(DEFAULT_FONT_URL, (err, loadedFont) => {
+          if (err) {
+            console.error('Font loading failed:', err);
+          } else {
+            setFont(loadedFont);
+          }
+        });
+      } catch (e) {
+        console.error("Failed to load opentype.js from vendor:", e);
       }
-    });
+    }
+
+    loadEngineAndFont();
   }, []);
 
-  // 2. Генерация векторов
+  // 2. Генерация векторов (Работает только когда font загружен)
   useEffect(() => {
     if (!font || !parts.length) return;
 
     const paths = [];
     let currentX = 0;
-    // Базовая линия
     const baseline = fontSize * 1.2;
 
     parts.forEach((part, index) => {
-      // Превращаем буквы в кривые
       const path = font.getPath(part, currentX, baseline, fontSize);
 
       paths.push({
@@ -62,7 +75,6 @@ export default function InteractiveVectorWord({
         color: getCharColor(part)
       });
 
-      // Сдвигаем курсор
       currentX += font.getAdvanceWidth(part, fontSize);
     });
 
@@ -96,7 +108,6 @@ export default function InteractiveVectorWord({
             onMouseEnter={(e) => {
               e.currentTarget.style.fill = p.color;
               e.currentTarget.style.filter = `drop-shadow(0 0 15px ${p.color})`;
-              // Поднимаем слой наверх
               e.currentTarget.parentElement.appendChild(e.currentTarget);
             }}
             onMouseLeave={(e) => {
