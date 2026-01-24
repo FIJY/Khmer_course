@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
-import KhmerColoredText from './KhmerColoredText'; // <--- ИМПОРТ
+import KhmerColoredText from './KhmerColoredText';
 
-// Дефолтный шрифт (на всякий случай)
 const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
   ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
@@ -12,6 +11,7 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
     target_char,
     hint,
     english_translation,
+    pronunciation, // <--- ДОБАВИЛИ (в JSON это поле должно быть)
     letter_series,
     word_audio,
     char_audio_map,
@@ -21,10 +21,12 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
   const [status, setStatus] = useState('searching');
   const [selectedCharIndex, setSelectedCharIndex] = useState(null);
 
+  // Fallback, если char_split не пришел
   const chars = char_split && char_split.length > 0
     ? char_split
     : (word ? word.split('') : []);
 
+  // Цветовая тема (A/O Series)
   const getTheme = () => {
     if (letter_series === 1) return {
          bg: "bg-orange-500", border: "border-orange-400", text: "text-black",
@@ -39,9 +41,13 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
   const theme = getTheme();
 
   const playAudio = (file) => {
-    if (!file) return;
-    // Исправленный путь: ищем прямо в /sounds/
+    if (!file) {
+        console.warn("No audio file provided");
+        return;
+    }
+    // Упрощаем путь: всегда ищем в /sounds/
     const audioPath = file.startsWith('/') ? file : `/sounds/${file}`;
+    console.log("Playing:", audioPath); // Отладка
     const audio = new Audio(audioPath);
     audio.play().catch(e => console.error("Audio error:", e));
   };
@@ -49,8 +55,9 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
   const handleCharClick = (char, index) => {
     if (status === 'success') return;
     setSelectedCharIndex(index);
+
+    // Логика звука: Свой звук -> Звук цели -> Тишина
     const charSound = char_audio_map?.[char];
-    // Если звука буквы нет, пробуем звук целевой буквы
     const soundToPlay = charSound || char_audio_map?.[target_char];
 
     if (char === target_char) {
@@ -70,33 +77,42 @@ export default function VisualDecoder({ data, onComplete, hideDefaultButton = fa
   return (
     <div className="w-full flex flex-col items-center justify-start min-h-[50vh] py-4">
 
-      {/* 1. БЛОК ЦЕЛИКОМ (КРАСИВЫЙ) */}
-      <div className="mb-8 relative group">
-         <div className="absolute inset-0 bg-cyan-500/20 blur-3xl rounded-full opacity-20"></div>
-         <KhmerColoredText
-            text={word}
-            fontUrl={DEFAULT_KHMER_FONT_URL}
-            fontSize={80}
-            className="relative z-10 drop-shadow-2xl"
-         />
-         <div className="text-center mt-2">
-            <p className="text-gray-500 font-black uppercase tracking-[0.2em] text-[10px]">
-              {english_translation}
-            </p>
+      {/* 1. ГЛАВНОЕ СЛОВО (ЦВЕТНОЕ) */}
+      <div className="mb-6 relative group transform transition-all duration-500 hover:scale-105 cursor-pointer" onClick={() => playAudio(word_audio)}>
+         <div className="absolute inset-0 bg-cyan-500/10 blur-3xl rounded-full opacity-30"></div>
+
+         {/* Рендер слова целиком с раскраской */}
+         <div className="relative z-10 text-center">
+            <KhmerColoredText
+                text={word}
+                fontUrl={DEFAULT_KHMER_FONT_URL}
+                fontSize={80}
+                className="drop-shadow-2xl"
+            />
          </div>
       </div>
 
-      {/* 2. ЗАДАНИЕ */}
-      <div className="text-center space-y-3 mb-8">
-        <div className="flex flex-col items-center gap-2">
-            <span className="text-white font-black text-lg uppercase tracking-tight">
-              {hint}
+      {/* 2. ИНФОРМАЦИЯ (ПЕРЕВОД + ТРАНСКРИПЦИЯ) */}
+      <div className="text-center space-y-2 mb-8 animate-in fade-in slide-in-from-bottom-2">
+         {pronunciation && (
+            <p className="text-cyan-300 font-mono text-lg tracking-wider">
+               /{pronunciation}/
+            </p>
+         )}
+         <h3 className="text-2xl font-black text-white uppercase italic">
+            {english_translation}
+         </h3>
+
+         {/* Подсказка, что искать */}
+         <div className="pt-4 flex flex-col items-center gap-2">
+            <span className="text-slate-400 text-xs font-bold uppercase tracking-widest bg-gray-900 px-3 py-1 rounded-lg border border-white/10">
+              Goal: {hint}
             </span>
             {status === 'success' && <div className="animate-in fade-in zoom-in">{theme.badge}</div>}
-        </div>
+         </div>
       </div>
 
-      {/* 3. КНОПКИ РАЗБОРА (ИНТЕРАКТИВ) */}
+      {/* 3. ИНТЕРАКТИВНЫЙ РАЗБОР */}
       <div className="flex flex-wrap justify-center items-center gap-3 w-full max-w-md px-2">
         {chars.map((char, index) => {
           const isTarget = char === target_char;
