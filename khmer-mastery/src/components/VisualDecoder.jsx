@@ -1,16 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Sun, Moon, Volume2 } from 'lucide-react';
 
-// Подключаем наш новый векторный движок
-import MicroGlyphWord from './MicroGlyphWord';
+// ИМПОРТИРУЕМ НОВЫЙ ДВИЖОК
+import KhmerRenderEngine from './KhmerRenderEngine';
 
 const DEFAULT_KHMER_FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 export default function VisualDecoder({ data, onComplete }) {
   const {
-    word, target_char, hint, english_translation,
-    pronunciation, letter_series, word_audio,
-    char_audio_map
+    word, hint, english_translation,
+    pronunciation, letter_series, word_audio
   } = data;
 
   const [status, setStatus] = useState('searching');
@@ -35,23 +34,20 @@ export default function VisualDecoder({ data, onComplete }) {
   return (
     <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4 relative">
 
-      {/* Маркер версии */}
-      <div className="absolute top-0 right-0 text-[10px] text-cyan-500 opacity-30 font-mono">
-        ENGINE: HarfBuzz WASM
+      {/* МЕТКА ВЕРСИИ v4.0 (Если её нет - код старый!) */}
+      <div className="absolute top-0 right-0 text-[9px] text-green-500 opacity-50 font-mono border border-green-500 px-1 rounded">
+        ENGINE: v4.0 (CDN)
       </div>
 
       <div className={`mb-12 w-full flex justify-center transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
-         {/* Звук успеха / Фон */}
          {status === 'success' && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl animate-pulse rounded-full"/>}
 
-         {/* НАШ НОВЫЙ КОМПОНЕНТ */}
-         <MicroGlyphWord
+         {/* НОВЫЙ КОМПОНЕНТ */}
+         <KhmerRenderEngine
             text={word}
-            fontUrl={DEFAULT_KHMER_FONT_URL}
             fontSize={140}
          />
 
-         {/* Кнопка звука */}
          <div className="absolute -bottom-16 opacity-50 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => playAudio(word_audio)}>
             <div className="bg-white/5 border border-white/10 rounded-full p-3 hover:bg-cyan-500/20 hover:text-cyan-400">
                 <Volume2 size={24} />
