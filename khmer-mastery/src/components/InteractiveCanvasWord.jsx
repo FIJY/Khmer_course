@@ -1,126 +1,150 @@
 import React, { useRef, useEffect, useState } from 'react';
 
+// Цветовая палитра (как в твоем Анализаторе)
+const COLORS = {
+  CONSONANT: '#ffb020', // Оранжевый
+  VOWEL: '#ff4081',     // Розовый
+  SUBSCRIPT: '#6b5cff', // Синий/Индиго
+  OTHER: '#34d399'      // Зеленый (дефолт)
+};
+
+// Хелпер: Определяем тип буквы для цвета
+function getCharColor(char) {
+  const code = char.codePointAt(0);
+  // Согласные (K-A2)
+  if (code >= 0x1780 && code <= 0x17a2) return COLORS.CONSONANT;
+  // Независимые гласные (A3-B5)
+  if (code >= 0x17a3 && code <= 0x17b5) return COLORS.VOWEL;
+  // Зависимые гласные (B6-C5)
+  if (code >= 0x17b6 && code <= 0x17c5) return COLORS.VOWEL;
+  // Подписные (обычно начинаются с 17D2, но мы проверяем проще)
+  // В разбивке подписная часто идет как "្" + буква.
+  if (char.length > 1 || code === 0x17d2) return COLORS.SUBSCRIPT;
+
+  return COLORS.OTHER;
+}
+
 export default function InteractiveCanvasWord({
   word,
-  parts, // ["ក", "ា", "ហ្វ", "េ"]
+  parts,
   onPartClick,
   fontSize = 100,
-  color = 'white',
-  highlightColor = '#34d399' // Emerald-400
+  defaultColor = 'white'
 }) {
   const canvasRef = useRef(null);
   const [hoveredIndex, setHoveredIndex] = useState(null);
-  const [clickedIndex, setClickedIndex] = useState(null); // Чтобы подсветить клик
+  const [clickedIndex, setClickedIndex] = useState(null);
   const [clickZones, setClickZones] = useState([]);
 
-  // Отрисовка и расчет зон
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
     // Настраиваем шрифт
-    // Важно: используем тот же шрифт, что и на сайте, чтобы метрики совпали
-    ctx.font = `${fontSize}px "Noto Sans Khmer", serif`;
+    const fontStr = `${fontSize}px "Noto Sans Khmer", serif`;
+    ctx.font = fontStr;
 
-    // 1. Рассчитываем зоны клика для каждой части
-    let currentX = 0;
+    // 1. РАСЧЕТ ЗОН (Слайсы)
     const zones = [];
+    let currentX = 0;
+    let accumStr = "";
 
-    // Чтобы узнать ширину части внутри слова, мы измеряем "Слово до" и "Слово после"
-    // Пример: ширина("ា") = ширина("កា") - ширина("ក")
-    let accumulatedString = "";
-
-    parts.forEach((part, index) => {
-      const prevWidth = ctx.measureText(accumulatedString).width;
-      accumulatedString += part;
-      const currentWidth = ctx.measureText(accumulatedString).width;
-
-      const partWidth = currentWidth - prevWidth;
+    parts.forEach((part, i) => {
+      const prevW = ctx.measureText(accumStr).width;
+      accumStr += part;
+      const currW = ctx.measureText(accumStr).width;
+      const partW = currW - prevW;
 
       zones.push({
         char: part,
-        x: prevWidth,
-        width: partWidth,
-        index: index
+        x: prevW,
+        width: partW,
+        index: i,
+        color: getCharColor(part) // Вычисляем цвет сразу
       });
-
-      currentX = currentWidth;
+      currentX = currW;
     });
-
     setClickZones(zones);
 
-    // 2. Настраиваем размеры Canvas (с учетом Retina экранов)
+    // 2. НАСТРОЙКА CANVAS
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = currentX * dpr;
-    canvas.height = (fontSize * 1.5) * dpr;
+    // Добавляем padding по краям, чтобы широкие буквы не резались
+    const paddingX = 20;
+    const width = currentX + (paddingX * 2);
+    const height = fontSize * 1.8;
 
-    canvas.style.width = `${currentX}px`;
-    canvas.style.height = `${fontSize * 1.5}px`;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
 
     ctx.scale(dpr, dpr);
-    ctx.font = `${fontSize}px "Noto Sans Khmer", serif`;
+    ctx.font = fontStr;
     ctx.textBaseline = 'middle';
 
-    // 3. Функция рисования
+    // 3. ОТРИСОВКА
     const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, width, height);
+      const y = height / 2 + (fontSize * 0.1);
+      const startX = paddingX;
 
-      // Рисуем слово целиком (Базовый слой) - ИДЕАЛЬНЫЙ ВИЗУАЛ
-      ctx.fillStyle = color;
-      ctx.fillText(word, 0, fontSize * 0.8);
+      // СЛОЙ А: Базовый текст (Белый)
+      // Рисуем всё слово целиком. Это база.
+      ctx.fillStyle = defaultColor;
+      ctx.fillText(word, startX, y);
 
-      // Рисуем подсветку (поверх)
+      // СЛОЙ Б: Подсветка частей
+      // Мы проходимся по зонам. Если мышь на зоне - рисуем её цветной.
       zones.forEach((zone, i) => {
         const isHovered = i === hoveredIndex;
         const isClicked = i === clickedIndex;
 
         if (isHovered || isClicked) {
-          // Трюк: Чтобы подсветить только часть, мы используем compositing
-          // Но для простоты в Canvas можно просто перерисовать эту часть другим цветом
-          // ВНИМАНИЕ: Простая перерисовка части может сломать лигатуры на стыках.
-          // Но для подсветки "при наведении" это обычно приемлемо.
+           ctx.save();
 
-          ctx.fillStyle = isClicked ? '#ef4444' : highlightColor; // Красный при клике (если ошибка) или зеленый
-          if (isClicked && word.includes(zone.char)) ctx.fillStyle = highlightColor; // Если это правильная буква - зеленый
+           // Магия: Создаем "окно" (clip) только для этой буквы
+           ctx.beginPath();
+           // Расширяем зону на 1px, чтобы перекрыть стыки
+           ctx.rect(startX + zone.x - 0.5, 0, zone.width + 1, height);
+           ctx.clip();
 
-          // Рисуем только эту часть в нужном месте
-          ctx.fillText(zone.char, zone.x, fontSize * 0.8);
+           // Рисуем ВСЁ слово нужным цветом.
+           // Из-за clip мы увидим только нужный кусочек.
+           ctx.fillStyle = zone.color;
+           ctx.fillText(word, startX, y);
+
+           // Добавляем свечение того же цвета
+           ctx.shadowColor = zone.color;
+           ctx.shadowBlur = 20;
+           ctx.fillText(word, startX, y);
+
+           ctx.restore();
         }
       });
     };
 
     draw();
 
-  }, [word, parts, fontSize, hoveredIndex, clickedIndex, color, highlightColor]);
+  }, [word, parts, fontSize, hoveredIndex, clickedIndex, defaultColor]);
 
-  // Обработчики мыши
+  // ОБРАБОТЧИКИ
   const handleMouseMove = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+    const paddingX = 20; // Тот же padding, что при рисовании
+    const x = e.clientX - rect.left - paddingX;
 
-    // Ищем, в какую зону попали
-    // Добавляем небольшой запас (padding) для узких букв (как диакритика)
-    const hitIndex = clickZones.findIndex(z => {
-      // Расширяем зону клика для очень узких символов (как 'ា')
-      const effectiveWidth = Math.max(z.width, 15);
-      return x >= z.x && x <= (z.x + effectiveWidth);
-    });
-
-    setHoveredIndex(hitIndex !== -1 ? hitIndex : null);
-    canvasRef.current.style.cursor = hitIndex !== -1 ? 'pointer' : 'default';
+    // Ищем зону
+    const index = clickZones.findIndex(z => x >= z.x && x <= z.x + z.width);
+    setHoveredIndex(index !== -1 ? index : null);
+    canvasRef.current.style.cursor = index !== -1 ? 'pointer' : 'default';
   };
 
   const handleClick = () => {
     if (hoveredIndex !== null) {
-      const zone = clickZones[hoveredIndex];
-      // Визуальный отклик
       setClickedIndex(hoveredIndex);
-      // Возвращаем результат
-      onPartClick(zone.char, hoveredIndex);
-
-      // Сброс визуального клика через 200мс
-      setTimeout(() => setClickedIndex(null), 200);
+      onPartClick(clickZones[hoveredIndex].char, hoveredIndex);
+      setTimeout(() => setClickedIndex(null), 300);
     }
   };
 
@@ -130,7 +154,7 @@ export default function InteractiveCanvasWord({
       onMouseMove={handleMouseMove}
       onClick={handleClick}
       onMouseLeave={() => setHoveredIndex(null)}
-      className="touch-none select-none transition-transform duration-200 active:scale-95" // touch-none для мобилок
+      className="touch-none select-none transition-transform active:scale-95"
     />
   );
 }
