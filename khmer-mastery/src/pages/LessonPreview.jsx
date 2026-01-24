@@ -72,7 +72,7 @@ export default function LessonPlayer() {
   if (loading) return <LoadingState label={t('loading.lesson')} />;
   if (error) return <ErrorState title={t('errors.lesson')} message={error} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
   if (isFinished) { /* ... код финиша ... */ return (/* ... */ <MobileLayout withNav={true}> ... </MobileLayout>); }
-  if (isBootcampLesson) return <BootcampSession onClose={() => navigate('/map')} practiceItems={safeItems} />;
+  if (isBootcampLesson) return <BootcampSession onClose={() => navigate('/map')} practiceItems={safeItems} title={lessonInfo?.title} />;
   if (!safeItems.length || !safeItems[step]) return <ErrorState title={t('errors.lessonEmpty')} message={t('empty.lessonContent')} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
 
 

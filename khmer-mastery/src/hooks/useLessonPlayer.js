@@ -7,6 +7,7 @@ import { markLessonCompleted } from '../data/progress';
 export default function useLessonPlayer() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isSandboxLesson = import.meta.env.DEV && id === 'sandbox';
   const [lessonInfo, setLessonInfo] = useState(null);
   const [items, setItems] = useState([]);
   const [step, setStep] = useState(0);
@@ -46,10 +47,86 @@ export default function useLessonPlayer() {
     return {};
   }, []);
 
+  const buildSandboxLesson = useCallback(() => ({
+    lessonInfo: {
+      id: 'sandbox',
+      title: 'Sandbox: все механики'
+    },
+    items: [
+      {
+        type: 'learn_char',
+        data: {
+          char: 'ក',
+          name: 'Kaa Commander',
+          group: 'high',
+          hook: 'Командир задает звук гласной после себя.',
+          audio: ''
+        }
+      },
+      {
+        type: 'word_breakdown',
+        data: {
+          word: 'កា',
+          pronunciation: 'Kaa',
+          translation: 'Каа (пример)',
+          chars: ['ក', 'ា'],
+          audio: ''
+        }
+      },
+      {
+        type: 'theory',
+        data: {
+          title: 'Правило 80/20',
+          text: 'Быстрое напоминание о главном правиле чтения.'
+        }
+      },
+      {
+        type: 'vocab_card',
+        data: {
+          front: 'coffee',
+          back: 'កាហ្វេ',
+          pronunciation: 'kaa-fae',
+          audio: ''
+        }
+      },
+      {
+        type: 'quiz',
+        data: {
+          question: 'Как читается «កា»?',
+          options: ['Kaa', 'Kea', 'Ka'],
+          correct_answer: 'Kaa'
+        }
+      },
+      {
+        type: 'visual_decoder',
+        data: {
+          word: 'គា',
+          target_char: 'គ',
+          hint: 'Commander + RIGHT vowel',
+          char_split: ['គ', 'ា'],
+          english_translation: 'Kea',
+          letter_series: 2,
+          word_audio: '',
+          char_audio_map: { 'គ': '' }
+        }
+      }
+    ]
+  }), []);
+
   const fetchLessonData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+
+      if (isSandboxLesson) {
+        const sandbox = buildSandboxLesson();
+        setLessonInfo(sandbox.lessonInfo);
+        setLessonId(sandbox.lessonInfo.id);
+        setItems(sandbox.items);
+        setQuizCount(sandbox.items.filter((item) => item.type === 'quiz').length || 0);
+        setLoading(false);
+        return;
+      }
 
       // 1. Загружаем сам урок
       const lesson = await fetchLessonById(id);
@@ -112,7 +189,7 @@ export default function useLessonPlayer() {
     } finally {
       setLoading(false);
     }
-  }, [id, normalizeItemData]);
+  }, [buildSandboxLesson, id, isSandboxLesson, normalizeItemData]);
 
   useEffect(() => { fetchLessonData(); }, [fetchLessonData]);
 
@@ -144,8 +221,10 @@ export default function useLessonPlayer() {
         console.error('Failed to save lesson completion', err);
       }
     };
-    persistCompletion();
-  }, [id, isFinished, lessonId, lessonPassed]);
+    if (!isSandboxLesson) {
+      persistCompletion();
+    }
+  }, [id, isFinished, lessonId, lessonPassed, isSandboxLesson]);
 
   const handleNext = () => {
     if (step < items.length - 1) {
