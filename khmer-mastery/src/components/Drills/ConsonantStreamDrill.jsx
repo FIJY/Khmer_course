@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { MousePointerClick } from 'lucide-react';
 
+// Хелпер для определения согласных
 const isKhmerConsonant = (ch) => {
   if (!ch) return false;
   const cp = ch.codePointAt(0);
@@ -11,7 +12,7 @@ export default function ConsonantStreamDrill({
   text,
   revealedSet,
   onConsonantClick,
-  onNonConsonantClick
+  onNonConsonantClick // Эта функция будет вызываться для гласных
 }) {
   const chars = useMemo(() => Array.from(text || ''), [text]);
   const anyRevealed = revealedSet.size > 0;
@@ -23,24 +24,30 @@ export default function ConsonantStreamDrill({
         <span>Tap Consonants</span>
       </div>
 
-      <div className="w-full bg-gray-900/50 border border-white/5 p-8 rounded-[2rem]">
-        {/* tracking-normal и leading-relaxed важны для кхмерского */}
-        <p className="text-4xl md:text-5xl font-khmer leading-[2.0] text-center select-none break-words tracking-normal">
+      <div className="bg-gray-900 border border-white/10 p-8 rounded-[2rem] shadow-2xl w-full text-center">
+        <p className="text-5xl md:text-6xl font-khmer leading-[1.8] select-none text-white break-words">
           {chars.map((ch, i) => {
             const isC = isKhmerConsonant(ch);
             const revealed = isC && revealedSet.has(i);
 
+            // Общие стили
+            const baseStyle = "cursor-pointer transition-all duration-100 inline-block px-[2px] active:scale-95";
+
+            // Стили состояний
+            const revealedStyle = "text-emerald-400 font-bold drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]";
+            const normalStyle = "text-white hover:text-cyan-300";
+            const errorStyle = "text-gray-500 hover:text-red-400"; // Гласные
+
             return (
               <span
                 key={i}
-                onClick={() => isC ? onConsonantClick(i, ch) : (onNonConsonantClick && onNonConsonantClick(ch))}
-                className={`
-                  cursor-pointer transition-all duration-300 inline-block px-[1px]
-                  ${isC
-                    ? (revealed ? 'text-emerald-400 font-bold scale-110' : 'text-white hover:text-cyan-300')
-                    : (anyRevealed ? 'text-gray-700' : 'text-gray-400 hover:text-red-400')
-                  }
-                `}
+                // Теперь клик работает ВЕЗДЕ
+                onClick={() => isC ? onConsonantClick(i, ch) : onNonConsonantClick(ch)}
+                className={`${baseClass} ${
+                  isC
+                    ? (revealed ? revealedStyle : normalStyle)
+                    : errorStyle
+                }`}
               >
                 {ch}
               </span>

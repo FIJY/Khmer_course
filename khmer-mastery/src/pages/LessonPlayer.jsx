@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, ArrowRight, X, CheckCircle2, ChevronLeft } from 'lucide-react';
 import VisualDecoder from '../components/VisualDecoder';
 import KhmerColoredText from '../components/KhmerColoredText';
@@ -11,7 +11,7 @@ import { t } from '../i18n';
 import SessionCompletion from '../components/Session/SessionCompletion';
 import SessionFrame from '../components/Session/SessionFrame';
 
-// --- НОВЫЕ КОМПОНЕНТЫ ---
+// --- ИМПОРТ НОВЫХ КОМПОНЕНТОВ ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
 import InventorySlide from '../components/LessonSlides/InventorySlide';
 import UniversalTheorySlide from '../components/LessonSlides/UniversalTheorySlide';
@@ -47,35 +47,61 @@ export default function LessonPlayer() {
   } = useLessonPlayer();
 
   const safeItems = Array.isArray(items) ? items : [];
+  const audioRef = useRef(null); // Локальный реф для звука, если в хуке его нет
 
-  // --- ЛОГИКА ДЛЯ БУТКЕМП-ДРИЛЛОВ (No Spaces) ---
+  // --- ЛОГИКА ДЛЯ МАТРИЦЫ (No Spaces) ---
   const [revealedConsonants, setRevealedConsonants] = useState(new Set());
 
-  // Сбрасываем состояние дрилла при смене слайда
+  // --- УПРАВЛЕНИЕ БЛОКИРОВКОЙ КНОПКИ "ДАЛЕЕ" ---
   useEffect(() => {
+    // 1. Сбрасываем состояние при входе на новый слайд
+    setCanAdvance(false);
     setRevealedConsonants(new Set());
-  }, [step]);
 
+    // 2. Определяем тип текущего слайда
+    const currentType = safeItems[step]?.type;
+
+    // 3. БЕЛЫЙ СПИСОК: Слайды, где кнопка "Далее" активна сразу
+    const autoUnlockTypes = [
+      'theory',
+      'learn_char',
+      'word_breakdown',
+      'title',            // Новый
+      'meet-teams',       // Новый
+      'rule',             // Новый
+      'reading-algorithm',// Новый
+      'ready'             // Новый
+    ];
+
+    if (autoUnlockTypes.includes(currentType)) {
+        setCanAdvance(true);
+    }
+
+  }, [step, safeItems, setCanAdvance]);
+
+  // Данные текущего слайда
   const current = safeItems[step]?.data;
   const type = safeItems[step]?.type;
 
-  // Обработчик клика в дрилле "No Spaces"
+  // --- ОБРАБОТЧИК ДЛЯ МАТРИЦЫ (Слайд 3) ---
   const handleConsonantClick = (index, char) => {
     setRevealedConsonants((prev) => {
       const next = new Set(prev);
       next.add(index);
 
-      // Проверка на победу (нашли все согласные)
+      // Проверка победы (нашли все согласные)
       if (current?.khmerText) {
          const totalConsonants = Array.from(current.khmerText).filter(c => c.match(/[\u1780-\u17A2]/)).length;
+
+         // Если нашли все — победа
          if (next.size >= totalConsonants) {
             playLocalAudio('success.mp3');
             setCanAdvance(true);
          } else {
-            // Играем звук конкретной буквы, если есть маппинг
+            // Иначе играем звук буквы (если есть) или клик
             const soundFile = current.consonantAudioMap?.[char];
             if (soundFile) playLocalAudio(soundFile);
-            else playLocalAudio('click.mp3'); // или звук клика
+            else playLocalAudio('click.mp3');
          }
       }
       return next;
@@ -110,9 +136,8 @@ export default function LessonPlayer() {
     return { text: opt, pronunciation: pronunciationMap?.[opt] ?? lessonPronunciations?.[opt] ?? '', audio: null };
   };
 
-  // --- РЕНДЕРИНГ СОСТОЯНИЙ ---
+  // --- РЕНДЕРИНГ ОШИБОК И ЗАГРУЗКИ ---
   if (loading) return <LoadingState label={t('loading.lesson')} />;
-
   if (error) return <ErrorState title={t('errors.lesson')} message={error} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
 
   if (isFinished) {
@@ -160,26 +185,26 @@ export default function LessonPlayer() {
             <button onClick={goBack} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`} type="button">
               <ChevronLeft size={24} />
             </button>
-            {/* Для типа 'ready' (финал теории) меняем текст кнопки */}
+            {/* Для типа 'ready' меняем текст кнопки */}
             <Button onClick={handleNext} disabled={!canAdvance} className="flex-1">
-              {current?.type === 'ready' ? 'START MISSION' : t('actions.continue')} <ArrowRight size={20} />
+              {current?.type === 'ready' ? 'FINISH' : t('actions.continue')} <ArrowRight size={20} />
             </Button>
           </div>
           {!canAdvance && <p className="mt-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center">{t('lesson.hintContinue')}</p>}
         </footer>
       )}
     >
-        {/* 1. БУКВА-ГЕРОЙ */}
+        {/* 1. БУКВА-ГЕРОЙ (Старый) */}
         {type === 'learn_char' && (
           <HeroSlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
-        {/* 2. РАЗБОР СЛОВА */}
+        {/* 2. РАЗБОР СЛОВА (Старый) */}
         {type === 'word_breakdown' && (
           <InventorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
-        {/* 3. ВИЗУАЛЬНЫЙ ДЕКОДЕР (ДРИЛЛ) */}
+        {/* 3. ВИЗУАЛЬНЫЙ ДЕКОДЕР (Слайд 4 - Кофе) */}
         {type === 'visual_decoder' && (
            <VisualDecoder
               key={step}
@@ -189,7 +214,7 @@ export default function LessonPlayer() {
            />
         )}
 
-        {/* 4. КАРТОЧКА СЛОВА */}
+        {/* 4. КАРТОЧКА СЛОВА (Старый) */}
         {type === 'vocab_card' && (
           <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
             <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
@@ -223,7 +248,7 @@ export default function LessonPlayer() {
           </div>
         )}
 
-        {/* 5. КВИЗ */}
+        {/* 5. КВИЗ (Старый) */}
         {type === 'quiz' && (
           <div className="w-full space-y-3">
              <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
@@ -256,12 +281,12 @@ export default function LessonPlayer() {
           </div>
         )}
 
-        {/* 6. УНИВЕРСАЛЬНАЯ ТЕОРИЯ (Bootcamp + Classic) */}
+        {/* 6. УНИВЕРСАЛЬНАЯ ТЕОРИЯ (Заголовки, Команды, Правила) */}
         {(type === 'theory' || type === 'title' || type === 'meet-teams' || type === 'rule' || type === 'reading-algorithm' || type === 'ready') && (
           <UniversalTheorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
-        {/* 7. ИНТЕРАКТИВНЫЙ ДРИЛЛ NO-SPACES (Новинка!) */}
+        {/* 7. ИНТЕРАКТИВНЫЙ ДРИЛЛ NO-SPACES (Слайд 3) */}
         {type === 'no-spaces' && (
            <div className="w-full flex flex-col items-center">
               <h2 className="text-3xl font-black text-white mb-2 text-center uppercase italic">{current.title}</h2>
