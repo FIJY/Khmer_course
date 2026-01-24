@@ -2,25 +2,26 @@ import React, { useEffect, useMemo, useState } from "react";
 import opentype from "opentype.js";
 import hbjs from "harfbuzzjs";
 
-// Твой путь к WASM файлу
+// Ссылка на движок в облаке
 const WASM_URL = 'https://unpkg.com/harfbuzzjs@0.3.3/hb-subset.wasm';
+// Твой локальный шрифт
 const DEFAULT_FONT = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 async function loadArrayBuffer(url) {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch: ${url}`);
+  if (!res.ok) throw new Error(`Failed to fetch font: ${url}`);
   return await res.arrayBuffer();
 }
 
 function toPathData(path) {
-  return path.toPathData(3); // 3 знака после запятой для точности
+  return path.toPathData(3);
 }
 
 export default function MicroGlyphWord({
   text = "កាហ្វេ",
   fontUrl = DEFAULT_FONT,
   fontSize = 150,
-  padding = 40, // Отступ, чтобы глифы не обрезались
+  padding = 40,
 }) {
   const [glyphs, setGlyphs] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -35,37 +36,40 @@ export default function MicroGlyphWord({
       setSelected(null);
 
       try {
-        // 1. Загружаем шрифт и инициализируем движки
-        const [fontData, hb] = await Promise.all([
-          loadArrayBuffer(fontUrl),
-          hbjs(WASM_URL) // <--- ВАЖНО: передаем путь к wasm
-        ]);
+        console.log("Starting engine loading...");
 
+        // 1. СКАЧИВАЕМ WASM ВРУЧНУЮ (Самый надежный способ)
+        const wasmRes = await fetch(WASM_URL);
+        if (!wasmRes.ok) throw new Error(`WASM Fetch Error: ${wasmRes.status}`);
+        const wasmBuffer = await wasmRes.arrayBuffer();
+
+        // 2. Инициализируем WebAssembly сами
+        const { instance } = await WebAssembly.instantiate(wasmBuffer);
+
+        // 3. Передаем готовый инстанс в HarfBuzz
+        const hb = hbjs(instance);
+        console.log("Engine loaded!");
+
+        // 4. Скачиваем шрифт
+        const fontData = await loadArrayBuffer(fontUrl);
         if (cancelled) return;
 
-        // 2. OpenType (для контуров)
+        // 5. Запускаем обработку (как раньше)
         const otFont = opentype.parse(fontData);
-
-        // 3. HarfBuzz (для шейпинга - правильного расположения)
         const hbBlob = hb.createBlob(fontData);
         const hbFace = hb.createFace(hbBlob, 0);
         const hbFont = hb.createFont(hbFace);
 
-        // Настройка масштаба
-        const upem = hbFace.upem; // Units Per Em (обычно 1000 или 2048)
+        const upem = hbFace.upem;
         hbFont.setScale(upem, upem);
 
-        // Создаем буфер и шейпим текст
         const buf = hb.createBuffer();
         buf.addText(text);
-        buf.guessSegmentProperties(); // Авто-определение направления (LTR) и скрипта
-        hb.shape(hbFont, buf, []); // Самая главная магия здесь
+        buf.guessSegmentProperties();
+        hb.shape(hbFont, buf, []);
 
         const shaped = buf.json().glyphs;
-        // shaped содержит: { g: glyphId, cl: cluster, ax, ay, dx, dy }
 
-        // Базовая линия (в SVG Y растет вниз)
-        // Смещаем вниз на padding + fontSize, чтобы текст не улетел вверх
         const baseX = padding;
         const baseY = padding + fontSize;
         const scale = fontSize / upem;
@@ -75,28 +79,20 @@ export default function MicroGlyphWord({
 
         const out = shaped.map((it) => {
           const gid = it.g;
-
-          // Вычисляем позицию глифа
           const x = (penX + it.dx) * scale;
           const y = (penY + it.dy) * scale;
 
-          // Получаем Векторный Контур из OpenType
           const glyph = otFont.glyphs.get(gid);
-          // getPath(x, y, fontSize)
           const path = glyph.getPath(baseX + x, baseY - y, fontSize);
           const d = toPathData(path);
-
-          // Сохраняем BBox для расчета viewBox
           const bb = path.getBoundingBox();
 
-          // Двигаем "перо" для следующей буквы
           penX += it.ax;
           penY += it.ay;
 
           return { d, gid, cluster: it.cl, bb };
         });
 
-        // Чистим память (HarfBuzz это C++, надо убирать за собой)
         buf.destroy();
         hbFont.destroy();
         hbFace.destroy();
@@ -105,22 +101,18 @@ export default function MicroGlyphWord({
         if (!cancelled) setGlyphs(out);
 
       } catch (e) {
-        console.error(e);
-        if (!cancelled) setError(e.message);
+        console.error("Critical Render Error:", e);
+        if (!cancelled) setError(e.toString());
       }
     })();
 
     return () => { cancelled = true; };
   }, [text, fontUrl, fontSize, padding]);
 
-  // Вычисляем границы SVG, чтобы камера смотрела ровно на текст
   const viewBox = useMemo(() => {
     if (!glyphs.length) return `0 0 800 300`;
-
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
     glyphs.forEach(g => {
-        // bb может быть пустым для пробелов
         if (g.bb.x1 !== undefined) {
             minX = Math.min(minX, g.bb.x1);
             minY = Math.min(minY, g.bb.y1);
@@ -128,40 +120,39 @@ export default function MicroGlyphWord({
             maxY = Math.max(maxY, g.bb.y2);
         }
     });
-
-    // Если текст пустой или только пробелы
     if (minX === Infinity) return "0 0 800 300";
-
-    const p = 20; // Небольшой запас вокруг
+    const p = 20;
     const w = (maxX - minX) + p * 2;
     const h = (maxY - minY) + p * 2;
-
     return `${minX - p} ${minY - p} ${w} ${h}`;
   }, [glyphs]);
 
-  if (error) return <div className="text-red-500 text-xs">Error: {error}</div>;
+  if (error) return (
+    <div className="flex flex-col items-center justify-center p-4 border border-red-500 bg-red-900/20 text-red-200 rounded-lg">
+      <p className="font-bold">Render Error</p>
+      <pre className="text-xs mt-2">{error}</pre>
+    </div>
+  );
 
   return (
     <div className="w-full flex justify-center">
       <svg
         width="100%"
-        height="300" // Высота контейнера SVG
+        height="300"
         viewBox={viewBox}
         style={{ overflow: "visible", maxWidth: "800px" }}
-        onPointerDown={() => setSelected(null)} // Сброс при клике в пустоту
+        onPointerDown={() => setSelected(null)}
       >
         {glyphs.map((g, idx) => {
           const isSelected = selected === idx;
           return (
             <g key={idx} style={{ cursor: "pointer" }}>
-
-              {/* СЛОЙ 1: СВЕЧЕНИЕ (Только если выбран) */}
               {isSelected && (
                 <path
                   d={g.d}
                   fill="none"
-                  stroke="#06b6d4" // Cyan-500
-                  strokeWidth={fontSize * 0.05} // Толщина зависит от размера шрифта
+                  stroke="#06b6d4"
+                  strokeWidth={fontSize * 0.05}
                   style={{
                     filter: "drop-shadow(0 0 15px rgba(6,182,212, 0.8))",
                     transition: "all 0.3s ease"
@@ -169,17 +160,12 @@ export default function MicroGlyphWord({
                   pointerEvents="none"
                 />
               )}
-
-              {/* СЛОЙ 2: САМ ГЛИФ (Белый текст) */}
-              {/* pointer-events="visiblePainted" означает, что клик проходит
-                  только по закрашенной части буквы! Идеальный хит-тест. */}
               <path
                 d={g.d}
                 fill={isSelected ? "#06b6d4" : "white"}
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   setSelected(idx);
-                  console.log(`Clicked glyph index: ${idx}, ID: ${g.gid}`);
                 }}
                 style={{ transition: "fill 0.2s ease" }}
               />
