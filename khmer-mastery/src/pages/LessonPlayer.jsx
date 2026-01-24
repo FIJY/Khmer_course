@@ -158,11 +158,20 @@ export default function LessonPlayer() {
               </div>
               <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
                 <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
-                <KhmerColoredText text={khmerText} fontUrl={DEFAULT_KHMER_FONT_URL} fontSize={72} className="text-4xl font-black mb-2" />
-                <p className="text-base text-cyan-100 font-semibold tracking-wide mb-4">
-                  <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
-                  {current.pronunciation || '—'}
-                </p>
+                <div className="flex flex-col items-center gap-3 w-full">
+                  <div className="min-h-[4.5rem] flex items-center justify-center">
+                    <KhmerColoredText
+                      text={khmerText}
+                      fontUrl={DEFAULT_KHMER_FONT_URL}
+                      fontSize={72}
+                      className="text-4xl font-black leading-[1.2]"
+                    />
+                  </div>
+                  <p className="text-base text-cyan-100 font-semibold tracking-wide">
+                    <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
+                    {current.pronunciation || '—'}
+                  </p>
+                </div>
                 {current.audio ? (
                   <div onClick={(e) => { e.stopPropagation(); playLocalAudio(current.audio); }} className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg">
                     <Volume2 size={28} />

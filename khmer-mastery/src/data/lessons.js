@@ -10,6 +10,16 @@ export const fetchLessonById = async (id) => {
   return data;
 };
 
+export const fetchLessonByLessonId = async (lessonId) => {
+  const { data, error } = await supabase
+    .from('lessons')
+    .select('*')
+    .eq('lesson_id', lessonId)
+    .single();
+  if (error) throw error;
+  return data;
+};
+
 export const fetchLessonItemsByLessonId = async (lessonId) => {
   const { data, error } = await supabase
     .from('lesson_items')
