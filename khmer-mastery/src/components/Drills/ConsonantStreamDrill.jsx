@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 import { MousePointerClick } from 'lucide-react';
 
 // Хелпер для определения согласных
@@ -12,7 +12,7 @@ export default function ConsonantStreamDrill({
   text,
   revealedSet,
   onConsonantClick,
-  onNonConsonantClick // Эта функция будет вызываться для гласных
+  onNonConsonantClick
 }) {
   const chars = useMemo(() => Array.from(text || ''), [text]);
   const anyRevealed = revealedSet.size > 0;
@@ -30,8 +30,8 @@ export default function ConsonantStreamDrill({
             const isC = isKhmerConsonant(ch);
             const revealed = isC && revealedSet.has(i);
 
-            // Общие стили
-            const baseStyle = "cursor-pointer transition-all duration-100 inline-block px-[2px] active:scale-95";
+            // ИСПРАВЛЕНИЕ: Теперь имя переменной (baseClass) совпадает с тем, что используется ниже
+            const baseClass = "cursor-pointer transition-all duration-100 inline-block px-[2px] active:scale-95";
 
             // Стили состояний
             const revealedStyle = "text-emerald-400 font-bold drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]";
@@ -41,8 +41,7 @@ export default function ConsonantStreamDrill({
             return (
               <span
                 key={i}
-                // Теперь клик работает ВЕЗДЕ
-                onClick={() => isC ? onConsonantClick(i, ch) : onNonConsonantClick(ch)}
+                onClick={() => isC ? onConsonantClick(i, ch) : (onNonConsonantClick && onNonConsonantClick(ch))}
                 className={`${baseClass} ${
                   isC
                     ? (revealed ? revealedStyle : normalStyle)
