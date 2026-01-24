@@ -7,7 +7,6 @@ import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
-import BootcampSession from '../components/Bootcamp/BootcampSession';
 import { t } from '../i18n';
 
 // --- ИМПОРТИРУЕМ НОВЫЕ СЛАЙДЫ ---
@@ -44,13 +43,6 @@ export default function LessonPlayer() {
   } = useLessonPlayer();
 
   const safeItems = Array.isArray(items) ? items : [];
-  const bootcampLessonIds = React.useMemo(() => new Set([10000, 10100, 10101]), []);
-  const bootcampLessonId = Number(lessonInfo?.lesson_id ?? lessonInfo?.id ?? id);
-  const bootcampTitle = lessonInfo?.title?.toLowerCase() ?? '';
-  const isBootcampLesson = bootcampLessonIds.has(bootcampLessonId)
-    || bootcampTitle.includes('bootcamp')
-    || bootcampTitle.includes('unit r1')
-    || bootcampTitle.includes('the foundation');
 
   // ... (Оставляем логику lessonPronunciations без изменений) ...
   const lessonPronunciations = React.useMemo(() => {
@@ -72,7 +64,6 @@ export default function LessonPlayer() {
   if (loading) return <LoadingState label={t('loading.lesson')} />;
   if (error) return <ErrorState title={t('errors.lesson')} message={error} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
   if (isFinished) { /* ... код финиша ... */ return (/* ... */ <MobileLayout withNav={true}> ... </MobileLayout>); }
-  if (isBootcampLesson) return <BootcampSession onClose={() => navigate('/map')} practiceItems={safeItems} title={lessonInfo?.title} />;
   if (!safeItems.length || !safeItems[step]) return <ErrorState title={t('errors.lessonEmpty')} message={t('empty.lessonContent')} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
 
 

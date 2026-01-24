@@ -5,8 +5,11 @@ export const fetchLessonById = async (id) => {
     .from('lessons')
     .select('*')
     .eq('id', id)
-    .single();
-  if (error) throw error;
+    .maybeSingle();
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
   return data;
 };
 
