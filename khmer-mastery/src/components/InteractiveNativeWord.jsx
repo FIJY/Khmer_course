@@ -25,20 +25,14 @@ export default function InteractiveNativeWord({
 }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
-  // Если частей нет, просто показываем слово
-  if (!parts || parts.length === 0) {
-    return <div className="text-white text-9xl font-khmer">{word}</div>;
-  }
-
   return (
     <div
-      className="relative inline-block select-none cursor-pointer"
+      className="relative inline-block select-none"
       style={{
         fontFamily: '"Noto Sans Khmer", serif',
         fontSize: `${fontSize}px`,
-        lineHeight: 1.5,
-        // Важно: display flex может сломать лигатуры, поэтому используем обычный текст
-        // Но чтобы ловить наведение на части, используем span
+        lineHeight: 1.6, // Чуть больше воздуха, чтобы свечение не перекрывало соседей
+        cursor: 'default'
       }}
     >
       {parts.map((part, index) => {
@@ -48,17 +42,31 @@ export default function InteractiveNativeWord({
         return (
           <span
             key={index}
-            onClick={() => onPartClick(part, index)}
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPartClick(part, index);
+            }}
             style={{
-              color: isHovered ? color : 'white',
-              transition: 'all 0.15s ease-out',
-              // Свечение при наведении (создает эффект "Glow" по форме буквы)
-              textShadow: isHovered ? `0 0 30px ${color}, 0 0 10px ${color}` : 'none',
+              display: 'inline-block', // Важно для трансформаций
+              transition: 'all 0.2s ease-out',
               position: 'relative',
-              zIndex: isHovered ? 10 : 1,
-              // Важно для кхмерского: cursor pointer на буквах
+
+              // 1. ЦВЕТ БУКВЫ
+              // Если навели - берем цвет категории. Если нет - белый.
+              color: isHovered ? color : 'white',
+
+              // 2. НЕОНОВОЕ СВЕЧЕНИЕ (По форме буквы!)
+              // Это убирает ощущение "квадрата". Светится только контур.
+              textShadow: isHovered
+                ? `0 0 10px ${color}, 0 0 20px ${color}, 0 0 40px ${color}`
+                : 'none',
+
+              // 3. ЭФФЕКТ "ВСПЛЫТИЯ"
+              // Буква чуть-чуть увеличивается и всплывает, отделяясь от слова
+              transform: isHovered ? 'scale(1.1) translateY(-5px)' : 'scale(1) translateY(0)',
+              zIndex: isHovered ? 10 : 1, // Поверх соседей
               cursor: 'pointer'
             }}
           >
