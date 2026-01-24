@@ -4,6 +4,7 @@ import { MousePointerClick } from 'lucide-react';
 const isKhmerConsonant = (ch) => {
   if (!ch) return false;
   const cp = ch.codePointAt(0);
+  // Khmer consonants: U+1780..U+17A2
   return cp >= 0x1780 && cp <= 0x17A2;
 };
 
@@ -24,32 +25,31 @@ export default function ConsonantStreamDrill({
       </div>
 
       <div className="w-full bg-gray-900 border border-white/10 p-8 rounded-[2rem] shadow-2xl text-center">
-        <div className="text-5xl md:text-6xl font-khmer leading-[1.8] select-none text-white break-words tracking-wide">
+        {/* Используем обычный параграф, чтобы текст не разваливался */}
+        <p className="text-5xl md:text-6xl font-khmer leading-[2.0] select-none text-white break-words tracking-normal">
           {chars.map((ch, i) => {
             const isC = isKhmerConsonant(ch);
             const revealed = isC && revealedSet.has(i);
+
+            // Стиль курсора
+            const cursorClass = "cursor-pointer hover:opacity-80 active:scale-95 transition-all duration-100 inline-block";
+
+            // Цвет
+            let colorClass = "text-white";
+            if (isC && revealed) colorClass = "text-emerald-400 font-bold drop-shadow-[0_0_10px_rgba(52,211,153,0.8)]";
+            else if (!isC && anyRevealed) colorClass = "text-gray-600"; // Тускнеем гласные после первого клика
 
             return (
               <span
                 key={i}
                 onClick={() => isC ? onConsonantClick(i, ch) : (onNonConsonantClick && onNonConsonantClick(ch))}
-                className={`
-                  transition-all duration-200 inline-block px-1 rounded-lg cursor-pointer
-                  ${isC
-                    ? (revealed
-                        ? 'text-emerald-400 font-bold scale-110 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]'
-                        : 'text-white hover:text-cyan-300 hover:bg-white/5 active:scale-95')
-                    : (anyRevealed
-                        ? 'text-gray-600'
-                        : 'text-gray-400 hover:text-red-400 active:animate-ping') // Анимация при ошибке
-                  }
-                `}
+                className={`${cursorClass} ${colorClass}`}
               >
                 {ch}
               </span>
             );
           })}
-        </div>
+        </p>
       </div>
     </div>
   );
