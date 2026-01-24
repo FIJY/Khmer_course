@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sun, Moon, Volume2, Loader2 } from 'lucide-react';
-// ВАЖНО: Импортируем именно Overlay компонент
+
+// ВАЖНО: Мы подключаем компонент, который НЕ режет слово на спаны
 import InteractiveOverlayWord from './InteractiveOverlayWord';
 
 const DEFAULT_KHMER_FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
@@ -16,6 +17,7 @@ export default function VisualDecoder({ data, onComplete }) {
   const [fontLoaded, setFontLoaded] = useState(false);
   const audioRef = useRef(null);
 
+  // Используем разбивку из БД для ЛОГИКИ кликов
   const parts = char_split && char_split.length > 0 ? char_split : (word ? word.split('') : []);
 
   useEffect(() => {
@@ -60,9 +62,9 @@ export default function VisualDecoder({ data, onComplete }) {
   return (
     <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4 relative">
 
-      {/* ДЕБАГ-МАРКЕР: Если видишь это, значит код обновился */}
-      <div className="absolute top-0 left-0 text-[10px] text-red-500 opacity-50 font-mono border border-red-500 p-1">
-        VERSION: OVERLAY (CSS)
+      {/* Метка версии, чтобы ты точно знала, что код обновился */}
+      <div className="absolute top-0 left-0 text-[10px] text-green-500 font-mono border border-green-500 p-1 opacity-50">
+        MODE: OVERLAY (NO SPANS)
       </div>
 
       <div className={`mb-12 relative transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
@@ -71,7 +73,8 @@ export default function VisualDecoder({ data, onComplete }) {
          {!fontLoaded && <div className="text-cyan-400 animate-pulse">Loading Font...</div>}
 
          {fontLoaded && (
-            // Здесь используется компонент БЕЗ Skia
+            // InteractiveOverlayWord рисует слово ЦЕЛИКОМ.
+            // parts передаются только для вычисления координат.
             <InteractiveOverlayWord
                 word={word}
                 parts={parts}
