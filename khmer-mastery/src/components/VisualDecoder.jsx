@@ -1,24 +1,20 @@
 import React, { useState, useRef } from 'react';
-import { Sun, Moon, Volume2 } from 'lucide-react';
-import KhmerColoredText from './KhmerColoredText';
-
-const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
-  ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
+import { Sun, Moon } from 'lucide-react';
+import InteractiveKhmerWord from './InteractiveKhmerWord'; // <--- НОВЫЙ
 
 export default function VisualDecoder({ data, onComplete }) {
   const {
-    target_char, // То, что ищем (например "ក")
+    word,
+    target_char, // Например "ក"
     hint,
     english_translation,
     pronunciation,
     letter_series,
     word_audio,
-    char_audio_map,
-    char_split // Части: ["ក", "ា", "ហ្វេ"]
+    char_audio_map
   } = data;
 
   const [status, setStatus] = useState('searching');
-  const [shakingIndex, setShakingIndex] = useState(null);
   const audioRef = useRef(null);
 
   // Тема
@@ -32,107 +28,67 @@ export default function VisualDecoder({ data, onComplete }) {
   const playAudio = (file) => {
     if (!file) return;
     const path = `/sounds/${file}`;
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     const audio = new Audio(path);
-    audio.volume = 1.0;
-    audio.play().catch(e => console.warn("Audio fail:", path));
+    audioRef.current = audio;
+    audio.play().catch(() => {});
   };
 
-  const handlePartClick = (part, index) => {
+  const handlePartClick = (clickedChar, index) => {
     if (status === 'success') return;
 
-    // Проверяем: содержит ли эта часть целевую букву?
-    // (Потому что "ក" может быть частью слога "កា")
-    const isTarget = part.includes(target_char);
+    // Звук
+    const sound = char_audio_map?.[clickedChar] || char_audio_map?.[target_char];
 
-    // Звук части
-    const sound = char_audio_map?.[part] || char_audio_map?.[target_char];
-
-    if (isTarget) {
+    if (clickedChar === target_char) {
+      // ПОБЕДА
       setStatus('success');
       playAudio('success.mp3');
-      if (sound) setTimeout(() => playAudio(sound), 600);
-      if (word_audio) setTimeout(() => playAudio(word_audio), 1600);
+      if (sound) setTimeout(() => playAudio(sound), 800);
       onComplete();
     } else {
-      setShakingIndex(index);
+      // ОШИБКА
       playAudio('error.mp3');
-      setTimeout(() => setShakingIndex(null), 500);
+      if (sound) setTimeout(() => playAudio(sound), 600);
     }
   };
 
   return (
     <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4">
 
-      {/* ИНФО БЛОК */}
-      <div className="text-center space-y-2 mb-12 animate-in fade-in slide-in-from-bottom-2">
-         {pronunciation && (
-            <p className="text-cyan-300 font-mono text-lg tracking-wider">/{pronunciation}/</p>
+      {/* 1. ИНТЕРАКТИВНОЕ СЛОВО (ВЕКТОРНОЕ) */}
+      <div className={`mb-10 transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
+         {/* Если успех — подсветка сзади */}
+         {status === 'success' && (
+            <div className="absolute inset-0 bg-emerald-500/30 blur-3xl animate-pulse rounded-full"></div>
          )}
-         <h3 className="text-3xl font-black text-white uppercase italic tracking-tight">
+
+         <InteractiveKhmerWord
+            word={word}
+            targetChar={target_char}
+            onPartClick={handlePartClick}
+            fontSize={130} // Огромный размер для удобства
+         />
+      </div>
+
+      {/* 2. ИНФО БЛОК */}
+      <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4">
+         {pronunciation && (
+            <p className="text-cyan-300 font-mono text-xl tracking-widest">/{pronunciation}/</p>
+         )}
+         <h3 className="text-4xl font-black text-white uppercase italic tracking-tighter">
             {english_translation}
          </h3>
 
-         <div className="pt-4 flex flex-col items-center gap-2">
-            <div className="flex gap-2 items-center">
+         <div className="pt-6 flex flex-col items-center gap-3">
+            <div className="flex gap-3 items-center">
                 {theme.badge}
-                <span className="text-slate-400 text-xs font-bold uppercase tracking-widest bg-gray-900 px-3 py-1 rounded border border-white/10">
+                <span className="text-slate-400 text-xs font-bold uppercase tracking-widest bg-gray-900 px-4 py-2 rounded-xl border border-white/10">
                 Task: {hint}
                 </span>
             </div>
          </div>
       </div>
-
-      {/* --- ИНТЕРАКТИВНОЕ СЛОВО (КНОПКИ СЛЕПЛЕНЫ ВМЕСТЕ) --- */}
-      {/* gap-0.5 делает их почти слитными, но оставляет микро-зазор для понимания границ (можно gap-0) */}
-      <div className="flex flex-wrap justify-center items-center gap-0">
-        {char_split.map((part, index) => {
-          const isTarget = part.includes(target_char);
-          const isShaking = shakingIndex === index;
-          const isRevealed = status === 'success' && isTarget;
-
-          return (
-            <button
-              key={index}
-              onClick={() => handlePartClick(part, index)}
-              className={`
-                relative transition-all duration-200 px-1 py-2 rounded-lg
-                ${isShaking ? 'animate-shake bg-red-500/20' : ''}
-                ${isRevealed
-                    ? 'z-10 scale-110' // При успехе увеличиваем часть
-                    : 'hover:bg-white/10 hover:scale-105 active:scale-95'
-                }
-              `}
-            >
-                {/* Используем KhmerColoredText для каждой части.
-                   Если часть - это "កា", она отренедерится слитно и красиво.
-                */}
-                <KhmerColoredText
-                    text={part}
-                    fontUrl={DEFAULT_KHMER_FONT_URL}
-                    fontSize={96}
-                    className={`
-                        transition-all duration-500 block leading-none
-                        ${isRevealed
-                            ? 'drop-shadow-[0_0_20px_rgba(52,211,153,0.8)] filter brightness-125'
-                            : 'opacity-90'
-                        }
-                    `}
-                />
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-12 opacity-50 hover:opacity-100 transition-opacity">
-         <button onClick={() => playAudio(word_audio)} className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-widest border border-cyan-500/30 px-4 py-2 rounded-full hover:bg-cyan-500/10">
-            <Volume2 size={14} /> Listen to word
-         </button>
-      </div>
-
-      <style>{`
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-      `}</style>
     </div>
   );
 }

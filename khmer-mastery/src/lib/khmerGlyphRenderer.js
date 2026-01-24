@@ -9,12 +9,6 @@ const DEFAULT_DIACRITIC_GROUPS = {
 };
 
 const KHMER_RANGE = [0x1780, 0x17ff];
-const KHMER_CONSONANT_RANGE = [0x1780, 0x17a2];
-const KHMER_INDEPENDENT_VOWELS = [0x17a3, 0x17b5];
-const KHMER_DEPENDENT_VOWELS = [0x17b6, 0x17c5];
-const KHMER_DIACRITICS = [0x17c6, 0x17d3];
-const KHMER_NUMERALS = [0x17e0, 0x17e9];
-
 const DEFAULT_MODULE_URLS = {
   harfbuzz: '/vendor/harfbuzzjs.js',
   opentype: '/vendor/opentype.module.js',
@@ -28,6 +22,7 @@ function isInRange(cp, [start, end]) {
   return cp >= start && cp <= end;
 }
 
+// Создает карту соответствия между байтовым смещением (HarfBuzz) и индексом символа (JS string)
 function buildUtf8IndexMap(text) {
   const encoder = new TextEncoder();
   const byteToCp = new Map();
@@ -35,11 +30,12 @@ function buildUtf8IndexMap(text) {
   let cpIndex = 0;
 
   for (const ch of text) {
+    // Записываем, какому индексу символа соответствует текущий байт
     byteToCp.set(byteOffset, cpIndex);
     byteOffset += encoder.encode(ch).length;
     cpIndex += 1;
   }
-
+  // Для конца строки
   byteToCp.set(byteOffset, cpIndex);
 
   return {
@@ -50,105 +46,13 @@ function buildUtf8IndexMap(text) {
   };
 }
 
-function buildSeriesSets(seriesOverrides = DEFAULT_SERIES_OVERRIDES) {
-  const aSeries = new Set(seriesOverrides.aSeries ?? []);
-  const oSeries = new Set(seriesOverrides.oSeries ?? []);
-  return { aSeries, oSeries };
-}
-
-function buildDiacriticSets(groups = DEFAULT_DIACRITIC_GROUPS) {
-  return {
-    bantoc: new Set(groups.bantoc ?? DEFAULT_DIACRITIC_GROUPS.bantoc),
-    seriesSwitch: new Set(groups.seriesSwitch ?? DEFAULT_DIACRITIC_GROUPS.seriesSwitch),
-  };
-}
-
-function classifyCodepoint(cp, seriesSets, diacriticSets) {
-  if (!isInRange(cp, KHMER_RANGE)) return 'OTHER';
-
-  if (isInRange(cp, KHMER_NUMERALS)) return 'NUMERAL';
-  if (cp === 0x17d7) return 'REPEAT';
-  if (cp === 0x17d4 || cp === 0x17d5) return 'PUNCT';
-  if (cp === 0x17d2) return 'SUBSCRIPT';
-
-  if (isInRange(cp, KHMER_DEPENDENT_VOWELS)) return 'VOWEL_DEP';
-  if (isInRange(cp, KHMER_INDEPENDENT_VOWELS)) return 'VOWEL_IND';
-
-  if (isInRange(cp, KHMER_DIACRITICS)) {
-    if (diacriticSets.bantoc.has(cp)) return 'DIACRITIC_BANTOC';
-    if (diacriticSets.seriesSwitch.has(cp)) return 'DIACRITIC_SERIES_SWITCH';
-    return 'DIACRITIC_OTHER';
-  }
-
-  if (isInRange(cp, KHMER_CONSONANT_RANGE)) {
-    if (seriesSets.aSeries.has(cp)) return 'CONSONANT_A';
-    if (seriesSets.oSeries.has(cp)) return 'CONSONANT_O';
-    return 'CONSONANT_O';
-  }
-
-  return 'OTHER';
-}
-
-function classifyText(text, seriesSets, diacriticSets) {
-  const categories = [];
-  for (const ch of text) {
-    const cp = ch.codePointAt(0);
-    if (cp == null) {
-      categories.push('OTHER');
-      continue;
-    }
-    categories.push(classifyCodepoint(cp, seriesSets, diacriticSets));
-  }
-  return categories;
-}
-
-function applySeriesSwitches(text, categories, clusters, byteToCp, byteLength, diacriticSets) {
-  if (!clusters.length) return categories;
-
-  const codepoints = Array.from(text, (ch) => ch.codePointAt(0) ?? 0);
-  const clusterStarts = clusters.map((cluster) => cluster);
-  const updated = [...categories];
-
-  for (let i = 0; i < clusterStarts.length; i += 1) {
-    const clusterStart = clusterStarts[i];
-    const clusterEnd = clusterStarts[i + 1] ?? byteLength;
-    const startCpIndex = byteToCp.get(clusterStart) ?? 0;
-    const endCpIndex = byteToCp.get(clusterEnd) ?? categories.length;
-
-    let hasSeriesSwitch = false;
-    for (let cpIndex = startCpIndex; cpIndex < endCpIndex; cpIndex += 1) {
-      if (diacriticSets.seriesSwitch.has(codepoints[cpIndex])) {
-        hasSeriesSwitch = true;
-        break;
-      }
-    }
-
-    if (!hasSeriesSwitch) continue;
-
-    for (let cpIndex = endCpIndex - 1; cpIndex >= startCpIndex; cpIndex -= 1) {
-      if (updated[cpIndex] === 'CONSONANT_A') {
-        updated[cpIndex] = 'CONSONANT_O';
-        break;
-      }
-      if (updated[cpIndex] === 'CONSONANT_O') {
-        updated[cpIndex] = 'CONSONANT_A';
-        break;
-      }
-    }
-  }
-
-  return updated;
-}
-
 function loadScript(url) {
   if (scriptLoadCache.has(url)) return scriptLoadCache.get(url);
-
   const promise = new Promise((resolve, reject) => {
     if (typeof document === 'undefined') {
-      reject(new Error('Script loading is only supported in the browser.'));
+      reject(new Error('Browser only'));
       return;
     }
-
     const script = document.createElement('script');
     script.src = url;
     script.async = true;
@@ -156,46 +60,25 @@ function loadScript(url) {
     script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
     document.head.appendChild(script);
   });
-
   scriptLoadCache.set(url, promise);
   return promise;
 }
 
 function getHbFactory(mod) {
   const candidates = [
-    mod?.Module,
-    mod?.default?.hbjs,
-    mod?.default,
-    mod?.hbjs,
-    mod?.hbjs?.default,
-    mod,
-    globalThis.hbjs,
-    globalThis.hbjs?.default,
-    globalThis.harfbuzzjs,
-    globalThis.harfbuzzjs?.default,
-    globalThis.Module,
+    mod?.Module, mod?.default?.hbjs, mod?.default, mod?.hbjs,
+    globalThis.hbjs, globalThis.harfbuzzjs, globalThis.Module
   ];
-
-  return candidates.find((candidate) => typeof candidate === 'function');
+  return candidates.find(c => typeof c === 'function');
 }
 
 async function loadHarfbuzz(moduleUrl) {
   if (!hbPromise) {
     hbPromise = import(/* @vite-ignore */ moduleUrl)
-      .then((mod) => {
-        const factory = getHbFactory(mod);
-        if (typeof factory !== 'function') {
-          throw new Error('HarfBuzz module did not expose a factory function.');
-        }
-        return factory();
-      })
+      .then(mod => getHbFactory(mod)())
       .catch(async () => {
         await loadScript(moduleUrl);
-        const factory = getHbFactory();
-        if (typeof factory !== 'function') {
-          throw new Error('HarfBuzz module did not expose a factory function.');
-        }
-        return factory();
+        return getHbFactory()();
       });
   }
   return hbPromise;
@@ -214,147 +97,131 @@ async function loadOpenType(moduleUrl) {
 
 async function loadFont(fontUrl, opentype) {
   if (fontCache.has(fontUrl)) return fontCache.get(fontUrl);
-
   const fontPromise = fetch(fontUrl)
-    .then((response) => {
-      if (!response.ok) throw new Error(`Failed to fetch font: ${response.status}`);
-      return response.arrayBuffer();
+    .then(r => {
+        if (!r.ok) throw new Error(r.statusText);
+        return r.arrayBuffer();
     })
-    .then((buffer) => ({
-      buffer,
-      font: opentype.parse(buffer),
-    }));
-
+    .then(buffer => ({ buffer, font: opentype.parse(buffer) }));
   fontCache.set(fontUrl, fontPromise);
   return fontPromise;
 }
 
-function renderWithOpenType({ text, font, fontSize, colors, padding, categories }) {
-  const scale = fontSize / font.unitsPerEm;
-  const glyphs = font.stringToGlyphs(text);
-
-  let advance = 0;
-  glyphs.forEach((glyph) => {
-    advance += glyph.advanceWidth ?? font.unitsPerEm;
-  });
-
-  const width = padding * 2 + advance * scale + 2;
-  const height = Math.ceil(fontSize * 1.6) + padding * 2;
-  const baseline = padding + fontSize * 1.15;
-
-  let x = padding;
-  let paths = '';
-
-  glyphs.forEach((glyph, index) => {
-    const category = categories[index] ?? 'OTHER';
-    const fill = colors?.[category] ?? colors?.OTHER ?? '#ffffff';
-    const path = glyph.getPath(x, baseline, fontSize);
-    const d = path.toPathData(3);
-    paths += `<path d="${d}" fill="${fill}" />`;
-    x += (glyph.advanceWidth ?? font.unitsPerEm) * scale;
-  });
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${paths}</svg>`;
-}
-
-export async function renderColoredKhmerToSvg({
+/**
+ * Основная функция для получения векторных данных глифов.
+ * Возвращает объект с viewBox и массивом путей (paths).
+ * Каждый путь содержит SVG 'd' атрибут и charIndex (к какой букве относится).
+ */
+export async function getKhmerGlyphData({
   text,
   fontUrl,
   fontSize = 96,
-  colors = {},
-  padding = 16,
-  seriesOverrides = DEFAULT_SERIES_OVERRIDES,
-  diacriticOverrides = DEFAULT_DIACRITIC_GROUPS,
   moduleUrls = DEFAULT_MODULE_URLS,
 }) {
-  if (!text || !fontUrl) return '';
-
-  const opentype = await loadOpenType(moduleUrls.opentype);
-  let hb = null;
+  if (!text || !fontUrl) return null;
 
   try {
-    hb = await loadHarfbuzz(moduleUrls.harfbuzz);
-  } catch (error) {
-    hb = null;
-  }
+    const opentype = await loadOpenType(moduleUrls.opentype);
+    const hb = await loadHarfbuzz(moduleUrls.harfbuzz);
+    const { buffer, font } = await loadFont(fontUrl, opentype);
 
-  if (!hb) {
-    return '';
-  }
+    if (!hb || !font) return null;
 
-  const { buffer, font } = await loadFont(fontUrl, opentype);
-  const indexMap = buildUtf8IndexMap(text);
-  const seriesSets = buildSeriesSets(seriesOverrides);
-  const diacriticSets = buildDiacriticSets(diacriticOverrides);
-  const categories = classifyText(text, seriesSets, diacriticSets);
+    const indexMap = buildUtf8IndexMap(text);
 
-  if (!hb) {
-    return renderWithOpenType({
-      text,
-      font,
-      fontSize,
-      colors,
-      padding,
-      categories,
+    // Создаем шрифт для HarfBuzz
+    const blob = hb.createBlob(buffer);
+    const face = hb.createFace(blob, 0);
+    const hbFont = hb.createFont(face);
+    hbFont.setScale(font.unitsPerEm, font.unitsPerEm);
+
+    // Шейпинг текста
+    const buf = hb.createBuffer();
+    buf.addUtf8(indexMap.bytes);
+    buf.guessSegmentProperties();
+    hb.shape(hbFont, buf);
+
+    const glyphData = buf.json();
+    const glyphs = glyphData.glyphs || [];
+
+    const scale = fontSize / font.unitsPerEm;
+    let totalAdvance = 0;
+
+    // 1. Считаем общую ширину слова
+    glyphs.forEach(g => totalAdvance += g.ax);
+
+    // Немного запаса по высоте, чтобы диакритика не обрезалась
+    const width = (totalAdvance * scale);
+    const height = fontSize * 1.8;
+    const baseline = fontSize * 1.2; // Смещаем базовую линию вниз
+
+    let cursorX = 0;
+    const resultPaths = [];
+
+    // 2. Генерируем SVG пути для каждого глифа
+    glyphs.forEach((g) => {
+      const otGlyph = font.glyphs.get(g.g);
+
+      // Самая важная часть: связываем глиф с индексом буквы в исходной строке
+      // g.cl - это индекс байта в UTF-8 строке. Мы переводим его в индекс символа (0, 1, 2...)
+      const charIndex = indexMap.byteToCp.get(g.cl) ?? -1;
+
+      // Получаем SVG path data (команды рисования)
+      const path = otGlyph.getPath(
+        cursorX + g.dx * scale,
+        baseline - g.dy * scale,
+        fontSize
+      );
+
+      resultPaths.push({
+        d: path.toPathData(2), // 2 знака после запятой для оптимизации
+        charIndex: charIndex,  // Индекс буквы в строке
+        char: text[charIndex], // Сама буква (например "ក")
+        ax: g.ax * scale
+      });
+
+      cursorX += g.ax * scale;
     });
+
+    // Чистим память WASM
+    buf.destroy();
+    hbFont.destroy();
+    face.destroy();
+    blob.destroy();
+
+    return {
+      viewBox: `0 0 ${width} ${height}`,
+      width,
+      height,
+      paths: resultPaths
+    };
+  } catch (err) {
+    console.error("Khmer Glyph Renderer Error:", err);
+    return null;
   }
+}
 
-  const face = hb.createFace(buffer);
-  const hbFont = hb.createFont(face);
-  hbFont.setScale(font.unitsPerEm, font.unitsPerEm);
+// Старая функция рендеринга в строку HTML (оставляем для совместимости, если используется в других местах)
+// Если она больше не нужна, можно оставить пустую заглушку или удалить.
+export async function renderColoredKhmerToSvg(props) {
+    const data = await getKhmerGlyphData(props);
+    if (!data) return "";
 
-  const buf = hb.createBuffer();
-  buf.addUtf8(indexMap.bytes);
-  buf.guessSegmentProperties();
-  hb.shape(hbFont, buf);
+    const { width, height, viewBox, paths } = data;
+    const { colors = {}, text } = props;
 
-  const glyphData = buf.json();
-  const glyphs = glyphData.glyphs || [];
-  const clusters = glyphs.map((glyph) => glyph.cl);
-  const finalCategories = applySeriesSwitches(
-    text,
-    categories,
-    clusters,
-    indexMap.byteToCp,
-    indexMap.byteLength,
-    diacriticSets,
-  );
+    // Простая логика раскраски для старого метода (если вдруг понадобится)
+    // В реальности лучше использовать InteractiveKhmerWord для сложных вещей
+    let svgContent = "";
 
-  const scale = fontSize / font.unitsPerEm;
-  let advance = 0;
-  glyphs.forEach((glyph) => {
-    advance += glyph.ax;
-  });
+    paths.forEach(p => {
+       // Здесь можно было бы добавить логику определения типа буквы,
+       // но для интерактивности мы используем другой компонент.
+       // Просто заливаем белым по дефолту.
+       svgContent += `<path d="${p.d}" fill="#ffffff" />`;
+    });
 
-  const width = padding * 2 + advance * scale + 2;
-  const height = Math.ceil(fontSize * 1.6) + padding * 2;
-  const baseline = padding + fontSize * 1.15;
-
-  let x = padding;
-  let paths = '';
-
-  glyphs.forEach((glyph) => {
-    const otGlyph = font.glyphs.get(glyph.g);
-    const cpIndex = indexMap.byteToCp.get(glyph.cl) ?? 0;
-    const category = finalCategories[cpIndex] ?? 'OTHER';
-    const fill = colors?.[category] ?? colors?.OTHER ?? '#ffffff';
-
-    const path = otGlyph.getPath(
-      x + glyph.dx * scale,
-      baseline - glyph.dy * scale,
-      fontSize,
-    );
-    const d = path.toPathData(3);
-
-    paths += `<path d="${d}" fill="${fill}" />`;
-    x += glyph.ax * scale;
-  });
-
-  buf.destroy();
-  hbFont.destroy();
-  face.destroy();
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${paths}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">${svgContent}</svg>`;
 }
 
 export const khmerGlyphDefaults = {
