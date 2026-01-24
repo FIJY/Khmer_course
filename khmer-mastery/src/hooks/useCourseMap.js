@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchCurrentUser } from '../data/auth';
 import { fetchAllLessons } from '../data/lessons';
-import { fetchCompletedLessonIds } from '../data/progress';
+import { fetchCompletedLessonIds, fetchLastOpenedProgress } from '../data/progress';
 
 const getChapterId = (lessonId) => {
   if (lessonId < 100) return lessonId;
@@ -69,6 +69,9 @@ export default function useCourseMap() {
   const [completedLessons, setCompletedLessons] = useState([]);
   const [chapters, setChapters] = useState({});
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [lastOpenedBlockId, setLastOpenedBlockId] = useState(null);
+  const [lastOpenedLessonId, setLastOpenedLessonId] = useState(null);
 
   const fetchAllData = useCallback(async () => {
     try {
@@ -79,6 +82,7 @@ export default function useCourseMap() {
         navigate('/login');
         return;
       }
+      setUserId(user.id);
 
       const doneIds = await fetchCompletedLessonIds(user.id);
       setCompletedLessons(doneIds);
@@ -90,6 +94,10 @@ export default function useCourseMap() {
       }
 
       setChapters(buildChaptersMap(allLessons));
+
+      const lastOpened = await fetchLastOpenedProgress(user.id);
+      setLastOpenedBlockId(lastOpened?.last_opened_block_id ?? null);
+      setLastOpenedLessonId(lastOpened?.last_opened_lesson_id ?? null);
     } catch (e) {
       console.error('CRITICAL MAP ERROR:', e);
       setError('Unable to load the course map. Please try again.');
@@ -101,8 +109,11 @@ export default function useCourseMap() {
   useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
   return {
+    userId,
     loading,
     completedLessons,
+    lastOpenedBlockId,
+    lastOpenedLessonId,
     chapters,
     error,
     navigate,
