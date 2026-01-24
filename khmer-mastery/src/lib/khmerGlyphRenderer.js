@@ -1,37 +1,81 @@
-const DEFAULT_SERIES_OVERRIDES = { aSeries: [], oSeries: [] };
-const DEFAULT_DIACRITIC_GROUPS = { bantoc: [0x17cb], seriesSwitch: [0x17c9, 0x17ca] };
+const DEFAULT_SERIES_OVERRIDES = {
+  aSeries: [],
+  oSeries: [],
+};
 
-// Указываем пути ЖЕСТКО, чтобы они точно нашлись в public/vendor
+const DEFAULT_DIACRITIC_GROUPS = {
+  bantoc: [0x17cb],
+  seriesSwitch: [0x17c9, 0x17ca],
+};
+
+const KHMER_RANGE = [0x1780, 0x17ff];
+const KHMER_CONSONANT_RANGE = [0x1780, 0x17a2];
+const KHMER_INDEPENDENT_VOWELS = [0x17a3, 0x17b5];
+const KHMER_DEPENDENT_VOWELS = [0x17b6, 0x17c5];
+const KHMER_DIACRITICS = [0x17c6, 0x17d3];
+const KHMER_NUMERALS = [0x17e0, 0x17e9];
+
 const DEFAULT_MODULE_URLS = {
   harfbuzz: '/vendor/harfbuzzjs.js',
-  harfbuzzWasm: '/vendor/harfbuzzjs.wasm', // Добавили явный путь к WASM
+  harfbuzzWasm: '/vendor/harfbuzzjs.wasm',
   opentype: '/vendor/opentype.module.js',
 };
 
 let hbInstance = null;
+const scriptLoadCache = new Map();
 const fontCache = new Map();
 
-// Загрузчик скриптов
+// --- Хелперы классификации (нужны для раскраски) ---
+function isInRange(cp, [start, end]) {
+  return cp >= start && cp <= end;
+}
+
+function classifyCodepoint(cp) {
+  if (!isInRange(cp, KHMER_RANGE)) return 'OTHER';
+  if (isInRange(cp, KHMER_NUMERALS)) return 'NUMERAL';
+  if (cp === 0x17d7) return 'REPEAT';
+  if (cp === 0x17d4 || cp === 0x17d5) return 'PUNCT';
+  if (cp === 0x17d2) return 'SUBSCRIPT'; // Coeng
+  if (isInRange(cp, KHMER_DEPENDENT_VOWELS)) return 'VOWEL_DEP';
+  if (isInRange(cp, KHMER_INDEPENDENT_VOWELS)) return 'VOWEL_IND';
+  if (isInRange(cp, KHMER_DIACRITICS)) return 'DIACRITIC_OTHER';
+  if (isInRange(cp, KHMER_CONSONANT_RANGE)) return 'CONSONANT_O'; // Упрощенно, точнее через series overrides
+  return 'OTHER';
+}
+
+function buildUtf8IndexMap(text) {
+  const encoder = new TextEncoder();
+  const byteToCp = new Map();
+  let byteOffset = 0;
+  let cpIndex = 0;
+  for (const ch of text) {
+    byteToCp.set(byteOffset, cpIndex);
+    byteOffset += encoder.encode(ch).length;
+    cpIndex += 1;
+  }
+  byteToCp.set(byteOffset, cpIndex);
+  return { byteToCp, bytes: encoder.encode(text) };
+}
+
+// --- Загрузчики ---
 async function loadHarfbuzz(moduleUrls) {
   if (hbInstance) return hbInstance;
 
-  // 1. Загружаем JS
   if (!window.hbjs) {
+      if (typeof document === 'undefined') return null;
       const script = document.createElement('script');
       script.src = moduleUrls.harfbuzz;
       await new Promise((resolve, reject) => {
           script.onload = resolve;
-          script.onerror = () => reject(new Error(`Failed to load ${moduleUrls.harfbuzz}`));
+          script.onerror = () => reject(new Error(`Failed load ${moduleUrls.harfbuzz}`));
           document.head.appendChild(script);
       });
   }
 
-  // 2. Инициализируем WASM
   const wasmResponse = await fetch(moduleUrls.harfbuzzWasm);
-  if (!wasmResponse.ok) throw new Error("WASM not found");
+  if (!wasmResponse.ok) throw new Error("WASM file not found in /public/vendor/");
   const wasmBuffer = await wasmResponse.arrayBuffer();
 
-  // 3. Запускаем фабрику
   const { instance } = await WebAssembly.instantiate(wasmBuffer);
   hbInstance = window.hbjs(instance);
   return hbInstance;
@@ -53,21 +97,7 @@ async function loadFont(fontUrl, opentype) {
   return fontPromise;
 }
 
-function buildUtf8IndexMap(text) {
-  const encoder = new TextEncoder();
-  const byteToCp = new Map();
-  let byteOffset = 0;
-  let cpIndex = 0;
-  for (const ch of text) {
-    byteToCp.set(byteOffset, cpIndex);
-    byteOffset += encoder.encode(ch).length;
-    cpIndex += 1;
-  }
-  byteToCp.set(byteOffset, cpIndex);
-  return { byteToCp, bytes: encoder.encode(text) };
-}
-
-// ГЛАВНАЯ ФУНКЦИЯ: Генерирует Векторные Данные для Слова
+// --- ГЛАВНАЯ ФУНКЦИЯ (Векторные данные) ---
 export async function getKhmerGlyphData({
   text,
   fontUrl,
@@ -105,13 +135,12 @@ export async function getKhmerGlyphData({
     glyphs.forEach((g) => {
       const otGlyph = font.glyphs.get(g.g);
       const charIndex = indexMap.byteToCp.get(g.cl) ?? -1;
-
       const path = otGlyph.getPath(cursorX + g.dx * scale, baseline - g.dy * scale, fontSize);
 
       paths.push({
         d: path.toPathData(2),
-        charIndex: charIndex, // Какая это буква в строке (0, 1, 2...)
-        char: text[charIndex], // Сама буква
+        charIndex: charIndex,
+        char: text[charIndex],
         ax: g.ax * scale
       });
       cursorX += g.ax * scale;
@@ -126,4 +155,26 @@ export async function getKhmerGlyphData({
   }
 }
 
-export const khmerGlyphDefaults = { DEFAULT_MODULE_URLS };
+// --- ФУНКЦИЯ ДЛЯ KHMER COLORED TEXT (Восстановленная) ---
+export async function renderColoredKhmerToSvg(props) {
+    const { text, colors = {} } = props;
+    const data = await getKhmerGlyphData(props);
+    if (!data) return "";
+
+    let svgContent = "";
+
+    data.paths.forEach(p => {
+       const charCode = p.char ? p.char.codePointAt(0) : 0;
+       const category = classifyCodepoint(charCode);
+       const fill = colors[category] || colors.OTHER || "#ffffff";
+       svgContent += `<path d="${p.d}" fill="${fill}" />`;
+    });
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${data.viewBox}" width="${data.width}" height="${data.height}">${svgContent}</svg>`;
+}
+
+export const khmerGlyphDefaults = {
+  DEFAULT_MODULE_URLS,
+  DEFAULT_SERIES_OVERRIDES,
+  DEFAULT_DIACRITIC_GROUPS,
+};
