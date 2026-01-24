@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sun, Moon, Volume2, Loader2 } from 'lucide-react';
-import InteractiveNativeWord from './InteractiveNativeWord'; // <--- НОВЫЙ КОМПОНЕНТ
+import InteractivePixelWord from './InteractivePixelWord'; // <--- НОВЫЙ ИМПОРТ
 
 const DEFAULT_KHMER_FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
@@ -15,10 +15,8 @@ export default function VisualDecoder({ data, onComplete }) {
   const [fontLoaded, setFontLoaded] = useState(false);
   const audioRef = useRef(null);
 
-  // Используем разбивку из БД
   const parts = char_split && char_split.length > 0 ? char_split : (word ? word.split('') : []);
 
-  // Предзагрузка шрифта (чтобы не моргало)
   useEffect(() => {
     const font = new FontFace('Noto Sans Khmer', `url(${DEFAULT_KHMER_FONT_URL})`);
     font.load().then(f => {
@@ -62,16 +60,13 @@ export default function VisualDecoder({ data, onComplete }) {
   return (
     <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4">
 
-      {/* СЛОВО */}
       <div className={`mb-12 relative transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
-
-         {/* Зеленое свечение при победе */}
          {status === 'success' && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl animate-pulse rounded-full"/>}
 
-         {!fontLoaded && <div className="text-cyan-400 animate-pulse">Loading Font...</div>}
+         {!fontLoaded && <div className="text-cyan-400 animate-pulse">Loading...</div>}
 
          {fontLoaded && (
-            <InteractiveNativeWord
+            <InteractivePixelWord
                 word={word}
                 parts={parts}
                 onPartClick={handlePartClick}
@@ -79,7 +74,6 @@ export default function VisualDecoder({ data, onComplete }) {
             />
          )}
 
-         {/* Звук */}
          <div className="mt-6 flex justify-center opacity-50 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => playAudio(word_audio)}>
             <div className="bg-white/5 border border-white/10 rounded-full p-2 hover:bg-cyan-500/20 hover:text-cyan-400">
                 <Volume2 size={24} />
@@ -87,7 +81,6 @@ export default function VisualDecoder({ data, onComplete }) {
          </div>
       </div>
 
-      {/* ИНФО */}
       <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4">
          {pronunciation && <p className="text-cyan-300 font-mono text-xl tracking-widest">/{pronunciation}/</p>}
          <h3 className="text-4xl font-black text-white uppercase italic tracking-tighter">{english_translation}</h3>
