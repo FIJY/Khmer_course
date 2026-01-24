@@ -3,7 +3,7 @@ import opentype from "opentype.js";
 import hbjs from "harfbuzzjs";
 
 // Твой путь к WASM файлу
-const WASM_URL = '/vendor/harfbuzzjs.wasm';
+const WASM_URL = 'https://unpkg.com/harfbuzzjs@0.3.3/hb-subset.wasm';
 const DEFAULT_FONT = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 async function loadArrayBuffer(url) {
