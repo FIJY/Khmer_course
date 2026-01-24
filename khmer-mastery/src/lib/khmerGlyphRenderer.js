@@ -4,18 +4,11 @@ const DEFAULT_MODULE_URLS = {
   opentype: '/vendor/opentype.module.js',
 };
 
-// Хелперы для классификации (нужны для цветов)
 const KHMER_RANGE = [0x1780, 0x17ff];
 const KHMER_CONSONANT_RANGE = [0x1780, 0x17a2];
 const KHMER_NUMERALS = [0x17e0, 0x17e9];
-function isInRange(cp, [start, end]) { return cp >= start && cp <= end; }
 
-function classifyCodepoint(cp) {
-  if (!isInRange(cp, KHMER_RANGE)) return 'OTHER';
-  if (isInRange(cp, KHMER_CONSONANT_RANGE)) return 'CONSONANT_O';
-  if (isInRange(cp, KHMER_NUMERALS)) return 'NUMERAL';
-  return 'OTHER'; // Остальное упрощаем
-}
+function isInRange(cp, [start, end]) { return cp >= start && cp <= end; }
 
 function buildUtf8IndexMap(text) {
   const encoder = new TextEncoder();
@@ -39,11 +32,11 @@ export async function getKhmerGlyphData({
   moduleUrls = DEFAULT_MODULE_URLS,
 }) {
   try {
-    // 1. Загружаем OpenType
+    // 1. Загружаем OpenType через import
     const opentypeModule = await import(/* @vite-ignore */ moduleUrls.opentype);
     const opentype = opentypeModule.default || opentypeModule;
 
-    // 2. Загружаем HarfBuzz (через import, а не script tag!)
+    // 2. Загружаем HarfBuzz через import (это лечит ошибку 'export')
     const hbModule = await import(/* @vite-ignore */ moduleUrls.harfbuzz);
     const hbFactory = hbModule.default || hbModule;
 
@@ -51,9 +44,9 @@ export async function getKhmerGlyphData({
     const wasmResponse = await fetch(moduleUrls.harfbuzzWasm);
     if (!wasmResponse.ok) throw new Error("WASM not found");
     const wasmBuffer = await wasmResponse.arrayBuffer();
-    const { instance } = await WebAssembly.instantiate(wasmBuffer);
 
-    // 4. Инициализируем движок
+    // 4. Инициализируем WASM (лечит ошибку 'Imports argument')
+    const { instance } = await WebAssembly.instantiate(wasmBuffer, {});
     const hb = hbFactory(instance);
 
     // 5. Грузим шрифт
@@ -61,7 +54,7 @@ export async function getKhmerGlyphData({
     const fontBuffer = await fontRes.arrayBuffer();
     const font = opentype.parse(fontBuffer);
 
-    // 6. Шейпинг (Превращаем текст в кривые)
+    // 6. Шейпинг
     const blob = hb.createBlob(fontBuffer);
     const face = hb.createFace(blob, 0);
     const hbFont = hb.createFont(face);
@@ -76,10 +69,13 @@ export async function getKhmerGlyphData({
     const glyphs = buf.json();
     const scale = fontSize / font.unitsPerEm;
     let totalAdvance = 0;
+
+    // Считаем общую ширину с учетом всех глифов
     glyphs.forEach(g => totalAdvance += g.ax);
 
+    // Немного магии для высоты, чтобы диакритика влезала
     const width = totalAdvance * scale;
-    const height = fontSize * 1.6;
+    const height = fontSize * 1.8;
     const baseline = fontSize * 1.2;
 
     let cursorX = 0;
@@ -88,6 +84,7 @@ export async function getKhmerGlyphData({
     glyphs.forEach((g) => {
       const otGlyph = font.glyphs.get(g.g);
       const charIndex = indexMap.byteToCp.get(g.cl) ?? -1;
+
       const path = otGlyph.getPath(cursorX + g.dx * scale, baseline - g.dy * scale, fontSize);
 
       paths.push({
@@ -99,29 +96,19 @@ export async function getKhmerGlyphData({
       cursorX += g.ax * scale;
     });
 
-    // Чистим память
     buf.destroy(); hbFont.destroy(); face.destroy(); blob.destroy();
 
     return { viewBox: `0 0 ${width} ${height}`, width, height, paths };
 
   } catch (e) {
-    console.warn("HarfBuzz Render Failed (using fallback):", e);
-    return null; // Возвращаем null, чтобы компоненты включили Fallback режим
+    console.error("HarfBuzz CRASH:", e);
+    return null;
   }
 }
 
-// Для KhmerColoredText
+// Для совместимости
 export async function renderColoredKhmerToSvg(props) {
-    const data = await getKhmerGlyphData(props);
-    if (!data) return null; // Вернем null, компонент сам отрисует текст
-    let svgContent = "";
-    data.paths.forEach(p => {
-       const charCode = p.char ? p.char.codePointAt(0) : 0;
-       const category = classifyCodepoint(charCode);
-       const fill = props.colors?.[category] || props.colors?.OTHER || "#ffffff";
-       svgContent += `<path d="${p.d}" fill="${fill}" />`;
-    });
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${data.viewBox}" width="${data.width}" height="${data.height}">${svgContent}</svg>`;
+    return ""; // Пока не используем старый рендер
 }
 
 export const khmerGlyphDefaults = { DEFAULT_MODULE_URLS };

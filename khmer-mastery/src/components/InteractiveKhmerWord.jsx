@@ -4,7 +4,13 @@ import { getKhmerGlyphData } from '../lib/khmerGlyphRenderer';
 const DEFAULT_FONT = import.meta.env.VITE_KHMER_FONT_URL
   ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
-export default function InteractiveKhmerWord({ word, targetChar, onPartClick }) {
+export default function InteractiveKhmerWord({
+  word,
+  targetChar,
+  onPartClick,
+  revealedIndices, // NEW: Набор индексов, которые надо подсветить зеленым
+  fontSize = 120
+}) {
   const [vectorData, setVectorData] = useState(null);
   const [useFallback, setUseFallback] = useState(false);
 
@@ -12,38 +18,38 @@ export default function InteractiveKhmerWord({ word, targetChar, onPartClick }) 
     let active = true;
     setUseFallback(false);
 
-    getKhmerGlyphData({ text: word, fontUrl: DEFAULT_FONT, fontSize: 130 })
+    getKhmerGlyphData({ text: word, fontUrl: DEFAULT_FONT, fontSize: fontSize })
       .then(data => {
         if (!active) return;
         if (data) setVectorData(data);
-        else setUseFallback(true); // Движок упал -> включаем фоллбек
+        else setUseFallback(true);
       })
-      .catch(() => {
-        if (active) setUseFallback(true);
-      });
+      .catch(() => setUseFallback(true));
 
     return () => { active = false; };
-  }, [word]);
+  }, [word, fontSize]);
 
-  // ПЛАН Б: Если движок не сработал, рисуем просто буквы кнопками
+  // ПЛАН Б: Обычный текст (если движок упал)
   if (useFallback) {
     return (
-      <div className="flex justify-center items-center">
-        {word.split('').map((char, i) => (
-          <button
-            key={i}
-            onClick={() => onPartClick(char)}
-            className="text-7xl font-khmer text-white hover:text-cyan-400 active:scale-95 transition-transform px-1"
-          >
-            {char}
-          </button>
-        ))}
+      <div className="flex flex-wrap justify-center font-khmer text-white text-6xl gap-1">
+        {word.split('').map((char, i) => {
+           const isRevealed = revealedIndices?.has(i);
+           return (
+             <span
+                key={i}
+                onClick={() => onPartClick(char, i)}
+                className={`cursor-pointer ${isRevealed ? 'text-emerald-400' : ''}`}
+             >
+                {char}
+             </span>
+           )
+        })}
       </div>
     );
   }
 
-  // ПЛАН А: Векторная красота (пока грузится или если сработал)
-  if (!vectorData) return <div className="text-6xl font-khmer animate-pulse text-gray-500">{word}</div>;
+  if (!vectorData) return <div className="text-4xl font-khmer animate-pulse text-gray-500">{word}</div>;
 
   return (
     <svg
@@ -53,16 +59,27 @@ export default function InteractiveKhmerWord({ word, targetChar, onPartClick }) 
       className="overflow-visible drop-shadow-2xl"
     >
       {vectorData.paths.map((p, i) => {
+        // Логика подсветки
+        // 1. Если это целевая буква (для Декодера)
+        // 2. ИЛИ если этот индекс есть в revealedIndices (для Матрицы)
+        const isTarget = targetChar && p.char === targetChar;
+        const isRevealed = revealedIndices && revealedIndices.has(p.charIndex);
+
+        const fillColor = isRevealed ? "#34d399" : "white";
+
         return (
           <path
             key={i}
             d={p.d}
-            onClick={() => onPartClick(p.char)}
-            fill="white"
-            // Расширяем зону клика (strokeWidth)
+            onClick={() => onPartClick(p.char, p.charIndex)}
+            fill={fillColor}
             stroke="transparent"
             strokeWidth="30"
             className="transition-all duration-200 cursor-pointer hover:fill-cyan-400 hover:scale-110 origin-center"
+            style={{
+               fill: fillColor,
+               opacity: isRevealed ? 1 : 0.9
+            }}
           />
         );
       })}
