@@ -23,48 +23,30 @@ export default function ConsonantStreamDrill({
         <span>Tap Consonants</span>
       </div>
 
-      {/* Контейнер текста: убрали gap, добавили tracking-normal */}
-      <div className="bg-gray-900 border border-white/10 p-8 rounded-[2rem] shadow-2xl w-full">
-        <div className="flex flex-wrap justify-center text-4xl md:text-5xl font-khmer select-none leading-relaxed break-words text-center">
+      <div className="w-full bg-gray-900/50 border border-white/5 p-8 rounded-[2rem]">
+        {/* tracking-normal и leading-relaxed важны для кхмерского */}
+        <p className="text-4xl md:text-5xl font-khmer leading-[2.0] text-center select-none break-words tracking-normal">
           {chars.map((ch, i) => {
             const isC = isKhmerConsonant(ch);
             const revealed = isC && revealedSet.has(i);
 
-            // Базовый стиль для всех букв (cursor-pointer делает их "нажимаемыми")
-            const baseClass = "cursor-pointer transition-all duration-200 inline-block";
-
-            if (isC) {
-              return (
-                <span
-                  key={i}
-                  onClick={() => onConsonantClick(i, ch)}
-                  className={`${baseClass}
-                    ${revealed
-                      ? 'text-emerald-400 font-bold scale-110 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] z-10 relative'
-                      : 'text-white hover:text-cyan-200 hover:scale-105'
-                    }
-                  `}
-                >
-                  {ch}
-                </span>
-              );
-            }
-
-            // Гласные и знаки
             return (
               <span
                 key={i}
-                onClick={() => onNonConsonantClick && onNonConsonantClick(ch)}
-                className={`${baseClass}
-                  ${anyRevealed ? 'text-gray-600' : 'text-gray-300'}
-                  hover:text-red-400
+                onClick={() => isC ? onConsonantClick(i, ch) : (onNonConsonantClick && onNonConsonantClick(ch))}
+                className={`
+                  cursor-pointer transition-all duration-300 inline-block px-[1px]
+                  ${isC
+                    ? (revealed ? 'text-emerald-400 font-bold scale-110' : 'text-white hover:text-cyan-300')
+                    : (anyRevealed ? 'text-gray-700' : 'text-gray-400 hover:text-red-400')
+                  }
                 `}
               >
                 {ch}
               </span>
             );
           })}
-        </div>
+        </p>
       </div>
     </div>
   );
