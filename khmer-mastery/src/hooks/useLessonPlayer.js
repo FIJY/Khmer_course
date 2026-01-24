@@ -126,8 +126,18 @@ export default function useLessonPlayer() {
         };
       });
 
-      setItems(normalizedItems);
-      setQuizCount(normalizedItems.filter(i => i.type === 'quiz').length || 0);
+      const fallbackItems = id === 'sandbox' && normalizedItems.length === 0
+        ? [{
+            type: 'theory',
+            data: {
+              title: 'Sandbox Lesson',
+              text: "This lesson doesn't have content yet. Check back soon."
+            }
+          }]
+        : normalizedItems;
+
+      setItems(fallbackItems);
+      setQuizCount(fallbackItems.filter(i => i.type === 'quiz').length || 0);
     } catch (err) {
       console.error(err);
       setError('Unable to load this lesson.');
