@@ -22,11 +22,12 @@ export default function VisualDecoder({ data, onComplete }) {
   const [selectedCharIndex, setSelectedCharIndex] = useState(null);
   const audioRef = useRef(null);
 
-  // Fallback, если char_split не пришел
+  // Если char_split не пришел, режем слово по буквам (fallback)
   const chars = char_split && char_split.length > 0
     ? char_split
     : (word ? word.split('') : []);
 
+  // Тема (Series)
   const getTheme = () => {
     if (letter_series === 1) return { color: "text-amber-400", badge: <span className="text-amber-400 text-xs font-bold border border-amber-500/30 px-2 py-1 rounded bg-amber-500/10 flex gap-1"><Sun size={14}/> Sun Series</span> };
     if (letter_series === 2) return { color: "text-indigo-400", badge: <span className="text-indigo-400 text-xs font-bold border border-indigo-500/30 px-2 py-1 rounded bg-indigo-500/10 flex gap-1"><Moon size={14}/> Moon Series</span> };
@@ -37,8 +38,7 @@ export default function VisualDecoder({ data, onComplete }) {
   const playAudio = (file) => {
     if (!file) return;
     const path = `/sounds/${file}`;
-    console.log("Playing:", path);
-
+    console.log("Playing:", path); // Отладка в консоль
     if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -52,28 +52,26 @@ export default function VisualDecoder({ data, onComplete }) {
     if (status === 'success') return;
     setSelectedCharIndex(index);
 
-    const charSound = char_audio_map?.[char];
-    const soundToPlay = charSound || char_audio_map?.[target_char];
+    // Ищем звук: сначала буквы, потом слова
+    const soundToPlay = char_audio_map?.[char] || word_audio;
 
     if (char === target_char) {
       setStatus('success');
       playAudio('success.mp3');
       if (soundToPlay) setTimeout(() => playAudio(soundToPlay), 800);
-      if (word_audio) setTimeout(() => playAudio(word_audio), 1800);
       onComplete();
     } else {
       setStatus('error');
       playAudio('error.mp3');
-      if (soundToPlay) setTimeout(() => playAudio(soundToPlay), 900);
-      setTimeout(() => { setStatus('searching'); setSelectedCharIndex(null); }, 1500);
+      setTimeout(() => { setStatus('searching'); setSelectedCharIndex(null); }, 1000);
     }
   };
 
   return (
     <div className="w-full flex flex-col items-center justify-start min-h-[50vh] py-4">
 
-      {/* 1. СЛОВО ЦЕЛИКОМ (Через рендерер) */}
-      <div className="mb-6 relative group cursor-pointer transform transition-transform active:scale-95" onClick={() => playAudio(word_audio)}>
+      {/* 1. ГЛАВНОЕ СЛОВО (Кликабельное, красивое) */}
+      <div className="mb-6 relative group cursor-pointer" onClick={() => playAudio(word_audio)}>
          <div className="absolute inset-0 bg-cyan-500/10 blur-3xl rounded-full opacity-30"></div>
          <KhmerColoredText
             text={word}
@@ -86,26 +84,26 @@ export default function VisualDecoder({ data, onComplete }) {
          </div>
       </div>
 
-      {/* 2. ПЕРЕВОД И ЗАДАНИЕ */}
+      {/* 2. ПЕРЕВОД И ТРАНСКРИПЦИЯ (Вернули!) */}
       <div className="text-center space-y-2 mb-8 animate-in fade-in slide-in-from-bottom-2">
          {pronunciation && (
-            <p className="text-cyan-300 font-mono text-lg tracking-wider">
-               /{pronunciation}/
-            </p>
+            <p className="text-cyan-300 font-mono text-lg tracking-wider">/{pronunciation}/</p>
          )}
-         <h3 className="text-3xl font-black text-white uppercase italic tracking-tight">
+         <h3 className="text-2xl font-black text-white uppercase italic tracking-tight">
             {english_translation}
          </h3>
 
          <div className="pt-4 flex flex-col items-center gap-2">
-            <span className="text-slate-400 text-xs font-bold uppercase tracking-widest bg-gray-900 px-4 py-2 rounded-xl border border-white/10">
-              Goal: {hint}
-            </span>
-            {status === 'success' && <div className="animate-in fade-in zoom-in">{theme.badge}</div>}
+            <div className="flex gap-2">
+                {theme.badge}
+                <span className="text-slate-400 text-xs font-bold uppercase tracking-widest bg-gray-900 px-3 py-1 rounded border border-white/10">
+                Find: {hint}
+                </span>
+            </div>
          </div>
       </div>
 
-      {/* 3. КНОПКИ РАЗБОРА */}
+      {/* 3. КНОПКИ РАЗБОРА (Точная копия букв) */}
       <div className="flex flex-wrap justify-center items-center gap-3 w-full max-w-md px-2">
         {chars.map((char, index) => {
           const isTarget = char === target_char;
@@ -131,7 +129,6 @@ export default function VisualDecoder({ data, onComplete }) {
           );
         })}
       </div>
-
       <style>{`
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
         .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }

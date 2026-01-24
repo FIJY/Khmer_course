@@ -1,7 +1,11 @@
 import React from 'react';
-import { Volume2 } from 'lucide-react';
+import { Volume2, Sun, Moon } from 'lucide-react';
 
 export default function UniversalTheorySlide({ data, onPlayAudio }) {
+  // Хелпер для безопасного воспроизведения
+  const play = (file) => {
+    if (onPlayAudio && file) onPlayAudio(file);
+  };
 
   switch (data.type) {
     case 'title':
@@ -31,24 +35,15 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
             <div className="bg-gradient-to-b from-amber-500/10 to-transparent border border-amber-500/20 rounded-[2.5rem] p-6 text-center relative overflow-hidden">
                 <div className="text-5xl mb-4">☀️</div>
                 <h3 className="text-amber-400 font-black uppercase text-sm tracking-[0.2em] mb-4">Sun Team</h3>
-
                 <div className="flex flex-col gap-3">
                     {data.pairs.map((pair, i) => (
                         <button
                             key={i}
                             type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onPlayAudio(data.consonantAudioMap?.[pair.sun]);
-                            }}
-                            className="bg-gray-900 border border-white/5 hover:border-amber-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all active:scale-95 cursor-pointer"
+                            onClick={() => play(data.consonantAudioMap?.[pair.sun])}
+                            className="bg-gray-900 border border-white/5 hover:border-amber-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all active:scale-95 cursor-pointer w-full"
                         >
-                            <div className="flex items-center gap-3">
-                                <span className="p-2 rounded-full bg-white/5 group-hover:bg-amber-500/20 transition-colors">
-                                    <Volume2 size={16} className="text-gray-400 group-hover:text-amber-400" />
-                                </span>
-                                <span className="text-3xl font-khmer text-white">{pair.sun}</span>
-                            </div>
+                            <span className="text-3xl font-khmer text-white">{pair.sun}</span>
                             <span className="text-xs text-gray-500 font-bold group-hover:text-amber-400">{pair.sunRead}</span>
                         </button>
                     ))}
@@ -59,24 +54,15 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
             <div className="bg-gradient-to-b from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-[2.5rem] p-6 text-center relative overflow-hidden">
                 <div className="text-5xl mb-4">🌑</div>
                 <h3 className="text-indigo-400 font-black uppercase text-sm tracking-[0.2em] mb-4">Moon Team</h3>
-
                 <div className="flex flex-col gap-3">
                     {data.pairs.map((pair, i) => (
                         <button
                             key={i}
                             type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onPlayAudio(data.consonantAudioMap?.[pair.moon]);
-                            }}
-                            className="bg-gray-900 border border-white/5 hover:border-indigo-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all active:scale-95 cursor-pointer"
+                            onClick={() => play(data.consonantAudioMap?.[pair.moon])}
+                            className="bg-gray-900 border border-white/5 hover:border-indigo-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all active:scale-95 cursor-pointer w-full"
                         >
-                            <div className="flex items-center gap-3">
-                                <span className="p-2 rounded-full bg-white/5 group-hover:bg-indigo-500/20 transition-colors">
-                                    <Volume2 size={16} className="text-gray-400 group-hover:text-indigo-400" />
-                                </span>
-                                <span className="text-3xl font-khmer text-white">{pair.moon}</span>
-                            </div>
+                            <span className="text-3xl font-khmer text-white">{pair.moon}</span>
                             <span className="text-xs text-gray-500 font-bold group-hover:text-indigo-400">{pair.moonRead}</span>
                         </button>
                     ))}
@@ -119,6 +105,10 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
         );
 
     default:
-      return null;
+      return (
+        <div className="p-10 text-center text-red-500 bg-gray-900 rounded-2xl">
+           UniversalSlide: Unknown type "{data.type}"
+        </div>
+      );
   }
 }
