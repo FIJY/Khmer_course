@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Volume2, Loader2 } from 'lucide-react';
-import InteractiveCanvasWord from './InteractiveCanvasWord';
-
-const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
-  ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
+import React, { useState, useRef } from 'react';
+import { Sun, Moon, Volume2 } from 'lucide-react';
+import InteractiveVectorWord from './InteractiveVectorWord'; // <--- НОВЫЙ ИМПОРТ
 
 export default function VisualDecoder({ data, onComplete }) {
   const {
@@ -13,18 +10,10 @@ export default function VisualDecoder({ data, onComplete }) {
   } = data;
 
   const [status, setStatus] = useState('searching');
-  const [fontLoaded, setFontLoaded] = useState(false);
   const audioRef = useRef(null);
 
+  // Используем разбивку из БД
   const parts = char_split && char_split.length > 0 ? char_split : (word ? word.split('') : []);
-
-  useEffect(() => {
-    const font = new FontFace('Noto Sans Khmer', `url(${DEFAULT_KHMER_FONT_URL})`);
-    font.load().then(f => {
-      document.fonts.add(f);
-      setFontLoaded(true);
-    }).catch(() => setFontLoaded(true));
-  }, []);
 
   const getTheme = () => {
     if (letter_series === 1) return { badge: <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-400 px-3 py-1 rounded-full text-[10px] font-black uppercase"><Sun size={12}/> A-Series</div> };
@@ -54,36 +43,35 @@ export default function VisualDecoder({ data, onComplete }) {
       if (word_audio) setTimeout(() => playAudio(word_audio), 1000);
       onComplete();
     } else {
-      setStatus('error');
       playAudio('error.mp3');
-      setTimeout(() => setStatus('searching'), 500);
     }
   };
 
   return (
     <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4">
+
+      {/* ВЕКТОРНОЕ СЛОВО */}
       <div className={`mb-12 relative transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
-         {!fontLoaded && <div className="animate-pulse text-cyan-400 flex gap-2"><Loader2 className="animate-spin"/> Loading Font...</div>}
 
-         {fontLoaded && (
-            <InteractiveCanvasWord
-                word={word}
-                parts={parts}
-                onPartClick={handlePartClick}
-                fontSize={120}
-                defaultColor={status === 'success' ? '#34d399' : 'white'}
-            />
-         )}
+         {/* При успехе добавляем общее зеленое свечение */}
+         {status === 'success' && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl animate-pulse rounded-full"/>}
 
-         {fontLoaded && (
-            <div className="mt-4 flex justify-center opacity-50 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => playAudio(word_audio)}>
-                <div className="bg-white/5 border border-white/10 rounded-full p-2 hover:bg-cyan-500/20 hover:text-cyan-400">
-                    <Volume2 size={24} />
-                </div>
+         <InteractiveVectorWord
+            word={word}
+            parts={parts}
+            onPartClick={handlePartClick}
+            fontSize={130} // Можно сделать побольше
+         />
+
+         {/* Звук */}
+         <div className="mt-6 flex justify-center opacity-50 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => playAudio(word_audio)}>
+            <div className="bg-white/5 border border-white/10 rounded-full p-2 hover:bg-cyan-500/20 hover:text-cyan-400">
+                <Volume2 size={24} />
             </div>
-         )}
+         </div>
       </div>
 
+      {/* ИНФО */}
       <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4">
          {pronunciation && <p className="text-cyan-300 font-mono text-xl tracking-widest">/{pronunciation}/</p>}
          <h3 className="text-4xl font-black text-white uppercase italic tracking-tighter">{english_translation}</h3>
