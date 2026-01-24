@@ -1,111 +1,139 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight, Zap
+  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight, ChevronDown, ChevronUp
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import EmptyState from '../components/UI/EmptyState';
 import useCourseMap from '../hooks/useCourseMap';
-import BootcampSession from '../components/Bootcamp/BootcampSession'; // Убедись, что путь правильный
 import { t } from '../i18n';
+import { updateLastOpenedProgress } from '../data/progress';
 
-// МЫ ОСТАВИЛИ ТОЛЬКО ОДИН БЛОК, ЧТОБЫ БЫЛО КРАСИВО И НЕ ПУСТО
 const COURSE_LEVELS = [
-  // --- СКРЫТЫЕ ПУСТЫЕ УРОВНИ ---
-  /*
   {
-    title: "CONTACT & REACTIONS",
-    description: "I don't get lost, I'm polite, and I am understood.",
+    title: "A1.1 — CONTACT & REACTIONS",
+    description: "Greetings, politeness, and basic responses.",
     range: [1, 5],
     color: "text-cyan-400",
     bg: "from-cyan-500/10 to-transparent",
     border: "border-cyan-500/20"
   },
-  */
-
-  // --- 🔥 ТВОЙ ГЛАВНЫЙ БЛОК (R1 и далее) ---
   {
-    title: "VISUAL DECODER: READING & WRITING",
-    description: "Crack the code. Learn the Khmer script from scratch.",
-    range: [10000, 12000],
-    color: "text-amber-400",
-    bg: "from-amber-500/10 to-transparent",
-    border: "border-amber-500/20"
-  },
-
-  // --- СКРЫТЫЕ ПУСТЫЕ УРОВНИ ---
-  /*
-  {
-    title: "DAILY LIFE",
-    description: "I live, buy, get medical help, and move around.",
+    title: "A1.2 — DAILY LIFE",
+    description: "Market, time, housing, health, transport.",
     range: [6, 10],
     color: "text-teal-400",
     bg: "from-teal-500/10 to-transparent",
     border: "border-teal-500/20"
   },
   {
-    title: "THINKING IN KHMER",
-    description: "I start understanding the meaning, not just the phrases.",
+    title: "A1.3 — THINKING IN KHMER",
+    description: "From phrases to meaning and simple stories.",
     range: [11, 18],
     color: "text-sky-400",
     bg: "from-sky-500/10 to-transparent",
     border: "border-sky-500/20"
   },
   {
-    title: "GRAMMAR AS A TOOL",
-    description: "Understanding structure: Causes, conditions, and frequency.",
+    title: "A2.1 — GRAMMAR AS A TOOL",
+    description: "Structure, conditions, comparison, habit.",
     range: [19, 23],
     color: "text-indigo-400",
     bg: "from-indigo-500/10 to-transparent",
     border: "border-indigo-500/20"
   },
   {
-    title: "EXPANDING THE WORLD",
-    description: "Work, education, technology, and travel.",
+    title: "A2.2 — EXPANDING THE WORLD",
+    description: "Work, education, media, travel, environment.",
     range: [24, 28],
     color: "text-violet-400",
     bg: "from-violet-500/10 to-transparent",
     border: "border-violet-500/20"
   },
   {
-    title: "CONNECTED SPEECH",
-    description: "Logic, opinions, conflicts, and storytelling.",
+    title: "A2.3 — CONNECTED SPEECH",
+    description: "Logic, opinions, conflicts, stories.",
     range: [29, 38],
     color: "text-purple-400",
     bg: "from-purple-500/10 to-transparent",
     border: "border-purple-500/20"
   },
   {
-    title: "LANGUAGE AS THOUGHT",
-    description: "Abstract concepts, idioms, and native speed.",
+    title: "BOOTCAMP — VISUAL DECODER",
+    description: "Reading & writing bootcamp (before lesson 39).",
+    range: [10000, 10699],
+    color: "text-amber-400",
+    bg: "from-amber-500/10 to-transparent",
+    border: "border-amber-500/20",
+    isBootcamp: true
+  },
+  {
+    title: "B1 — LANGUAGE AS THOUGHT",
+    description: "Abstract concepts, nuance, native-speed input.",
     range: [39, 46],
     color: "text-fuchsia-400",
     bg: "from-fuchsia-500/10 to-transparent",
     border: "border-fuchsia-500/20"
   },
   {
-    title: "NO TRANSLATION NEEDED",
-    description: "Cultural subtext, humor, irony, and fluency.",
+    title: "B2 — UNDERSTANDING WITHOUT TRANSLATION",
+    description: "Argumentation, culture, fluency, compression.",
     range: [47, 60],
     color: "text-rose-400",
     bg: "from-rose-500/10 to-transparent",
     border: "border-rose-500/20"
   }
-  */
 ];
 
 export default function CourseMap() {
-  const [showBootcamp, setShowBootcamp] = useState(false); // Состояние для открытия Буткемпа
-
   const {
+    userId,
     loading,
     completedLessons,
+    lastOpenedBlockId,
+    lastOpenedLessonId,
     chapters,
     error,
     navigate,
     refresh
   } = useCourseMap();
+  const [openBootcampBlockId, setOpenBootcampBlockId] = useState(null);
+  const bootcampChapters = useMemo(
+    () => Object.values(chapters).filter((ch) => ch.id >= 10000),
+    [chapters]
+  );
+  const sortedBootcampChapters = useMemo(
+    () => [...bootcampChapters].sort((a, b) => a.id - b.id),
+    [bootcampChapters]
+  );
+
+  const handleBootcampToggle = async (blockId) => {
+    setOpenBootcampBlockId((prev) => (prev === blockId ? null : blockId));
+    if (!userId) return;
+    try {
+      await updateLastOpenedProgress(userId, blockId, blockId);
+    } catch (err) {
+      console.error('Failed to update last opened bootcamp block', err);
+    }
+  };
+
+  const handleBootcampNavigate = async (blockId, lessonId, target) => {
+    if (userId) {
+      try {
+        await updateLastOpenedProgress(userId, blockId, lessonId);
+      } catch (err) {
+        console.error('Failed to update last opened bootcamp lesson', err);
+      }
+    }
+    navigate(target);
+  };
+
+  useEffect(() => {
+    if (lastOpenedBlockId && lastOpenedBlockId >= 10000) {
+      setOpenBootcampBlockId(lastOpenedBlockId);
+    }
+  }, [lastOpenedBlockId]);
 
   if (loading) return <LoadingState label={t('loading.worldMap')} className="gap-4" />;
 
@@ -120,22 +148,8 @@ export default function CourseMap() {
   }
 
   return (
-    <MobileLayout withNav={true}>
-
-      {/* --- МОДУЛЬ БУТКЕМПА (Всплывает поверх всего) --- */}
-      {showBootcamp && (
-        <BootcampSession onClose={() => setShowBootcamp(false)} />
-      )}
-
-      {/* --- КНОПКА ЗАПУСКА БУТКЕМПА (Плавающая) --- */}
-      <button
-        onClick={() => setShowBootcamp(true)}
-        className="fixed bottom-24 right-6 z-50 bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest py-3 px-6 rounded-full shadow-lg border-4 border-amber-600 animate-pulse flex items-center gap-2 active:scale-95 transition-transform"
-      >
-        <Zap size={24} fill="black" />
-        BOOTCAMP
-      </button>
-
+      <MobileLayout withNav={true}>
+      
       {/* Sticky header */}
       <div className="p-6 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-40">
         <h1 className="text-2xl font-black tracking-tighter uppercase italic text-white">
@@ -159,7 +173,7 @@ export default function CourseMap() {
             ch.id >= level.range[0] && ch.id <= level.range[1]
           );
 
-          if (levelChapters.length === 0) return null;
+          if (!level.isBootcamp && levelChapters.length === 0) return null;
 
           return (
             <div key={levelIndex} className="relative">
@@ -178,7 +192,96 @@ export default function CourseMap() {
               </div>
 
               <div className="p-6 space-y-8">
-                {levelChapters.map((chapter) => {
+                {level.isBootcamp ? sortedBootcampChapters.map((chapter) => {
+                  const isOpen = openBootcampBlockId === chapter.id;
+                  const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
+                  const isChapterFullDone = subLessonIds.length > 0
+                    && subLessonIds.every(id => completedLessons.includes(id));
+                  const lessonCount = chapter.subLessons.length;
+
+                  return (
+                    <div key={chapter.id} className="relative pl-4 border-l-2 border-white/5">
+                      <div className={`absolute -left-[9px] top-10 w-4 h-4 rounded-full border-4 bg-black transition-colors ${isChapterFullDone ? 'border-emerald-500' : 'border-gray-800'}`} />
+
+                      <div className={`bg-gray-900/40 border rounded-[2.5rem] p-6 transition-all duration-500
+                        ${isChapterFullDone ? 'border-emerald-500/30' : 'border-white/5'}`}>
+
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="max-w-[70%] text-white">
+                            <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1 block">
+                              Unit {chapter.displayId}
+                            </span>
+                            <h3 className={`text-xl font-black uppercase tracking-tight leading-none mb-2 ${isChapterFullDone ? 'text-emerald-400' : 'text-white'}`}>
+                              {chapter.title}
+                            </h3>
+                            <p className="text-gray-500 text-xs italic leading-tight">{chapter.description}</p>
+                            {lessonCount > 0 && (
+                              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mt-2">
+                                {lessonCount} lessons
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleBootcampNavigate(chapter.id, chapter.id, `/lesson/${chapter.id}/preview`)}
+                              className={`p-3 rounded-2xl border transition-all active:scale-90
+                                ${isChapterFullDone ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-500/30'}`}
+                              type="button"
+                            >
+                              <BookOpen size={20} />
+                            </button>
+
+                            <button
+                              onClick={() => handleBootcampToggle(chapter.id)}
+                              className="p-3 rounded-2xl border bg-black border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                              type="button"
+                            >
+                              {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {isOpen && (
+                          chapter.subLessons.length > 0 ? (
+                            <div className="space-y-2">
+                              {chapter.subLessons.map((sub) => {
+                                const isDone = completedLessons.includes(Number(sub.id));
+                                const isLastOpened = lastOpenedLessonId === Number(sub.id);
+                                return (
+                                  <button
+                                    key={sub.id}
+                                    onClick={() => handleBootcampNavigate(chapter.id, Number(sub.id), `/lesson/${sub.id}`)}
+                                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border text-left group
+                                      ${isDone
+                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                        : 'bg-black/20 border-white/5 text-gray-400 hover:bg-white/5'}`}
+                                    type="button"
+                                  >
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                      <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border
+                                        ${isDone ? 'border-emerald-500 bg-emerald-500 text-black' : 'border-white/10 bg-black text-transparent'}`}>
+                                        <Check size={10} strokeWidth={4} />
+                                      </div>
+                                      <span className={`text-xs font-bold uppercase tracking-wider truncate transition-colors ${isLastOpened ? 'text-amber-300' : 'group-hover:text-white'}`}>
+                                        {sub.title}
+                                      </span>
+                                    </div>
+                                    <ChevronRight size={14} className={isDone ? 'text-emerald-500' : 'text-gray-700'} />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-gray-500 uppercase tracking-widest font-semibold">
+                              Lessons coming soon
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  );
+                }) : levelChapters.map((chapter) => {
                   const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
                   const isChapterFullDone = subLessonIds.length > 0
                     && subLessonIds.every(id => completedLessons.includes(id));
