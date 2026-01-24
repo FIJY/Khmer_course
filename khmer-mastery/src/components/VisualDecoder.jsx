@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { Sun, Moon, Volume2 } from 'lucide-react';
-import InteractiveVectorWord from './InteractiveVectorWord'; // <--- НОВЫЙ ИМПОРТ
+import React, { useState, useRef, useEffect } from 'react';
+import { Sun, Moon, Volume2, Loader2 } from 'lucide-react';
+import InteractiveNativeWord from './InteractiveNativeWord'; // <--- НОВЫЙ КОМПОНЕНТ
 
+const DEFAULT_KHMER_FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 export default function VisualDecoder({ data, onComplete }) {
   const {
@@ -11,10 +12,20 @@ export default function VisualDecoder({ data, onComplete }) {
   } = data;
 
   const [status, setStatus] = useState('searching');
+  const [fontLoaded, setFontLoaded] = useState(false);
   const audioRef = useRef(null);
 
   // Используем разбивку из БД
   const parts = char_split && char_split.length > 0 ? char_split : (word ? word.split('') : []);
+
+  // Предзагрузка шрифта (чтобы не моргало)
+  useEffect(() => {
+    const font = new FontFace('Noto Sans Khmer', `url(${DEFAULT_KHMER_FONT_URL})`);
+    font.load().then(f => {
+      document.fonts.add(f);
+      setFontLoaded(true);
+    }).catch(() => setFontLoaded(true));
+  }, []);
 
   const getTheme = () => {
     if (letter_series === 1) return { badge: <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-400 px-3 py-1 rounded-full text-[10px] font-black uppercase"><Sun size={12}/> A-Series</div> };
@@ -51,18 +62,22 @@ export default function VisualDecoder({ data, onComplete }) {
   return (
     <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4">
 
-      {/* ВЕКТОРНОЕ СЛОВО */}
+      {/* СЛОВО */}
       <div className={`mb-12 relative transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
 
-         {/* При успехе добавляем общее зеленое свечение */}
+         {/* Зеленое свечение при победе */}
          {status === 'success' && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl animate-pulse rounded-full"/>}
 
-         <InteractiveVectorWord
-            word={word}
-            parts={parts}
-            onPartClick={handlePartClick}
-            fontSize={130} // Можно сделать побольше
-         />
+         {!fontLoaded && <div className="text-cyan-400 animate-pulse">Loading Font...</div>}
+
+         {fontLoaded && (
+            <InteractiveNativeWord
+                word={word}
+                parts={parts}
+                onPartClick={handlePartClick}
+                fontSize={130}
+            />
+         )}
 
          {/* Звук */}
          <div className="mt-6 flex justify-center opacity-50 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => playAudio(word_audio)}>
