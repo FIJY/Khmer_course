@@ -3,7 +3,7 @@ import opentype from "opentype.js";
 import hbjs from "harfbuzzjs";
 
 // Используем локальный путь, который мы только что "пробили" через кэш
-const WASM_URL = '/hb-subset.wasm';
+const WASM_URL = '/vendor/hb-subset.wasm';
 const DEFAULT_FONT = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
 function toPathData(path) {
