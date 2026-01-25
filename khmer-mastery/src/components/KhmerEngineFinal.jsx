@@ -2,13 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import opentype from "opentype.js";
 import hbjs from "harfbuzzjs";
 
-// Используем стабильную прямую ссылку на бинарный файл движка
-const WASM_URL = 'https://cdn.jsdelivr.net/npm/harfbuzzjs@0.3.3/subset/hb-subset.wasm';
+const WASM_URL = '/hb-subset.wasm'; // Берем из public
 const DEFAULT_FONT = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
-/**
- * Преобразует путь OpenType в строку данных для SVG path (d)
- */
 function toPathData(path) {
   return path.toPathData(3);
 }
@@ -29,34 +25,30 @@ export default function KhmerEngineFinal({
 
     (async () => {
       setStatus("loading");
-      setDebugMsg("Initializing Engine v8.0...");
+      setDebugMsg("Initializing Engine v9.0...");
       setGlyphs([]);
 
       try {
-        setDebugMsg("Fetching WASM & Font assets...");
-
-        // 1. Загружаем движок и шрифт параллельно
-        // Передаем fetch напрямую в hbjs, чтобы библиотека сама настроила WebAssembly
-        const [hb, fontBuffer] = await Promise.all([
-          hbjs(fetch(WASM_URL)),
-          fetch(fontUrl).then(res => {
-            if (!res.ok) throw new Error(`Font 404: ${res.status}`);
-            return res.arrayBuffer();
-          })
+        const [wasmRes, fontRes] = await Promise.all([
+          fetch(WASM_URL),
+          fetch(fontUrl)
         ]);
+
+        if (!wasmRes.ok) throw new Error("WASM file not found in public folder");
+        const wasmBuffer = await wasmRes.arrayBuffer();
 
         if (cancelled) return;
 
-        // 2. Инициализируем шрифтовой движок OpenType
-        const otFont = opentype.parse(fontBuffer);
+        // Инициализация HarfBuzz
+        const hb = await hbjs(wasmBuffer);
 
-        // 3. Подготавливаем HarfBuzz для шейпинга (правильного расположения знаков)
-        const hbBlob = hb.createBlob(fontBuffer);
+        const fontData = await fontRes.arrayBuffer();
+        const otFont = opentype.parse(fontData);
+
+        const hbBlob = hb.createBlob(fontData);
         const hbFace = hb.createFace(hbBlob, 0);
         const hbFont = hb.createFont(hbFace);
-
-        const upem = hbFace.upem;
-        hbFont.setScale(upem, upem);
+        hbFont.setScale(hbFace.upem, hbFace.upem);
 
         const buf = hb.createBuffer();
         buf.addText(text);
@@ -64,8 +56,7 @@ export default function KhmerEngineFinal({
         hb.shape(hbFont, buf, []);
 
         const shaped = buf.json().glyphs;
-
-        // Масштабирование из единиц шрифта в пиксели
+        const upem = hbFace.upem;
         const scale = fontSize / upem;
         const baseX = padding;
         const baseY = padding + fontSize;
@@ -73,12 +64,10 @@ export default function KhmerEngineFinal({
         let penX = 0;
         let penY = 0;
 
-        // 4. Генерируем векторные контуры для каждого глифа
         const out = shaped.map((it) => {
           const gid = it.g;
           const x = (penX + it.dx) * scale;
           const y = (penY + it.dy) * scale;
-
           const glyph = otFont.glyphs.get(gid);
           const path = glyph.getPath(baseX + x, baseY - y, fontSize);
 
@@ -93,7 +82,6 @@ export default function KhmerEngineFinal({
           };
         });
 
-        // Освобождаем память в WASM
         buf.destroy();
         hbFont.destroy();
         hbFace.destroy();
@@ -103,9 +91,8 @@ export default function KhmerEngineFinal({
           setGlyphs(out);
           setStatus("success");
         }
-
       } catch (e) {
-        console.error("ENGINE ERROR:", e);
+        console.error("V9 ERROR:", e);
         if (!cancelled) {
           setStatus("error");
           setDebugMsg(e.message || e.toString());
@@ -114,13 +101,11 @@ export default function KhmerEngineFinal({
     })();
 
     return () => { cancelled = true; };
-  }, [text, fontUrl, fontSize, padding]);
+  }, [text, fontUrl, fontSize]);
 
-  // Вычисляем границы SVG так, чтобы текст всегда был по центру и виден
   const viewBox = useMemo(() => {
     if (!glyphs.length) return `0 0 800 300`;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
     glyphs.forEach(g => {
       if (g.bb.x1 !== undefined) {
         minX = Math.min(minX, g.bb.x1);
@@ -129,55 +114,43 @@ export default function KhmerEngineFinal({
         maxY = Math.max(maxY, g.bb.y2);
       }
     });
-
-    if (minX === Infinity) return "0 0 800 300";
     const p = 20;
     return `${minX - p} ${minY - p} ${(maxX - minX) + p * 2} ${(maxY - minY) + p * 2}`;
   }, [glyphs]);
 
   if (status === "error") return (
-    <div className="p-4 bg-red-900/80 border border-red-500 text-white font-mono text-xs rounded m-4 max-w-lg">
-      <p className="font-bold text-sm mb-1">❌ RENDER ERROR v8.0</p>
+    <div className="p-4 bg-red-900/80 border border-red-500 text-white font-mono text-xs rounded m-4">
+      <p className="font-bold mb-1">❌ SYSTEM ERROR v9.0</p>
       <p>{debugMsg}</p>
     </div>
   );
 
   return (
     <div className="w-full flex flex-col items-center">
-      {status !== 'success' && (
-        <div className="text-[10px] text-cyan-400 font-mono mb-2 animate-pulse italic">
-          [{status}] {debugMsg}
-        </div>
-      )}
-
       <svg
         width="100%"
         height="300"
         viewBox={viewBox}
-        className="drop-shadow-2xl"
         style={{ overflow: "visible", maxWidth: "900px" }}
         onPointerDown={() => setSelected(null)}
       >
         {glyphs.map((g, idx) => {
-          const isSelected = selected === idx;
+          const isSel = selected === idx;
           return (
-            <g key={idx} className="transition-all duration-300">
-              {/* Эффект свечения для выбранного глифа */}
-              {isSelected && (
+            <g key={idx} style={{ cursor: "pointer" }}>
+              {isSel && (
                 <path
                   d={g.d}
                   fill="none"
                   stroke="#06b6d4"
-                  strokeWidth={fontSize * 0.06}
-                  style={{ filter: "drop-shadow(0 0 12px rgba(6,182,212,0.8))" }}
+                  strokeWidth={fontSize * 0.05}
+                  style={{ filter: "drop-shadow(0 0 15px cyan)" }}
                   pointerEvents="none"
                 />
               )}
-              {/* Основное тело буквы (SVG Path) */}
               <path
                 d={g.d}
-                fill={isSelected ? "#06b6d4" : "white"}
-                className="cursor-pointer"
+                fill={isSel ? "#06b6d4" : "white"}
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   setSelected(idx);
