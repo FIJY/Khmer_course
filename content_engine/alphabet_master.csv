@@ -31,53 +31,53 @@ id,name_en,type,series,shape_group,subscript_form,sound_series_1,sound_series_2,
 ស,sa,consonant,1,,,,,letter_sa.mp3,0,Sound: S. Series: A
 ហ,ha,consonant,1,,,,,letter_ha.mp3,0,Sound: H. Series: A
 ឡ,la,consonant,1,,,,,letter_la.mp3,0,Sound: L. Series: A
-អ,qa,consonant,1,,,,,letter_qa.mp3,0,Glottal Stop. Silent letter. Series: A
-ា,aa,vowel_dependent,,,,vowel_sun_aa.mp3,vowel_moon_aa.mp3,vowel_name_aa.mp3,0,Long 'aa' (A-series) or 'ie' (O-series)
-ិ,i,vowel_dependent,,,,vowel_sun_i.mp3,vowel_moon_i.mp3,vowel_name_i.mp3,0,Short 'i' (A-series) or 'i' (O-series)
-ី,ei,vowel_dependent,,,,vowel_sun_ei.mp3,vowel_moon_ei.mp3,vowel_name_ei.mp3,0,Long 'ei' (A-series) or 'ii' (O-series)
-ឹ,oe,vowel_dependent,,,,vowel_sun_oe.mp3,vowel_moon_oe.mp3,vowel_name_oe.mp3,0,Short 'oe' (A-series) or 'ue' (O-series)
-ឺ,oeu,vowel_dependent,,,,vowel_sun_oeu.mp3,vowel_moon_oeu.mp3,vowel_name_oeu.mp3,0,Long 'oeu' (A-series) or 'ueu' (O-series)
-ុ,u,vowel_dependent,,,,vowel_sun_u.mp3,vowel_moon_u.mp3,vowel_name_u.mp3,0,Short 'u' (A-series) or 'u' (O-series)
-ូ,oo,vowel_dependent,,,,vowel_sun_oo.mp3,vowel_moon_oo.mp3,vowel_name_oo.mp3,0,Long 'oo' (A-series) or 'uu' (O-series)
-ួ,ua,vowel_dependent,,,,vowel_sun_ua.mp3,vowel_moon_ua.mp3,vowel_name_ua.mp3,0,Diphthong 'ua'. Same for both series.
-ើ,aeu,vowel_dependent,,,,vowel_sun_aeu.mp3,vowel_moon_aeu.mp3,vowel_name_aeu.mp3,0,Long 'aeu' (A-series) or 'oeu' (O-series)
-ឿ,oea,vowel_dependent,,,,vowel_sun_oea.mp3,vowel_moon_oea.mp3,vowel_name_oea.mp3,0,Diphthong 'oea'. Same for both series.
-ៀ,ie,vowel_dependent,,,,vowel_sun_ie.mp3,vowel_moon_ie.mp3,vowel_name_ie.mp3,0,Diphthong 'ie'. Same for both series.
-េ,e,vowel_dependent,,,,vowel_sun_e.mp3,vowel_moon_e.mp3,vowel_name_e.mp3,0,Short 'ei' (A-series) or 'ee' (O-series)
-ែ,ae,vowel_dependent,,,,vowel_sun_ae.mp3,vowel_moon_ae.mp3,vowel_name_ae.mp3,0,Long 'ae' (A-series) or 'ae' (O-series)
-ៃ,ai,vowel_dependent,,,,vowel_sun_ai.mp3,vowel_moon_ai.mp3,vowel_name_ai.mp3,0,Diphthong 'ai' (A-series) or 'ey' (O-series)
-ោ,ao,vowel_dependent,,,,vowel_sun_ao.mp3,vowel_moon_ao.mp3,vowel_name_ao.mp3,0,Diphthong 'ao' (A-series) or 'ou' (O-series)
-ៅ,au,vowel_dependent,,,,vowel_sun_au.mp3,vowel_moon_au.mp3,vowel_name_au.mp3,0,Diphthong 'au' (A-series) or 'ov' (O-series)
-ុំ,om,vowel_dependent,,,,vowel_sun_om.mp3,vowel_moon_om.mp3,vowel_name_om.mp3,0,Sound 'om' (A-series) or 'um' (O-series)
-ំ,am,vowel_dependent,,,,vowel_sun_am.mp3,vowel_moon_am.mp3,vowel_name_am.mp3,0,Sound 'am' (A-series) or 'um' (O-series)
-ាំ,aam,vowel_dependent,,,,vowel_sun_aam.mp3,vowel_moon_aam.mp3,vowel_name_aam.mp3,0,Sound 'aam' (A-series) or 'oam' (O-series)
-ះ,ah,vowel_dependent,,,,vowel_sun_ah.mp3,vowel_moon_ah.mp3,vowel_name_ah.mp3,0,Adds breathy 'h'. 'Ah' (A) or 'Eah' (O)
-ុះ,oh,vowel_dependent,,,,vowel_sun_oh.mp3,vowel_moon_oh.mp3,vowel_name_oh.mp3,0,Short 'oh' (A) or 'uh' (O)
-េះ,eh,vowel_dependent,,,,vowel_sun_eh.mp3,vowel_moon_eh.mp3,vowel_name_eh.mp3,0,Short 'eh' (A) or 'ih' (O)
-ោះ,oh_short,vowel_dependent,,,,vowel_sun_oh_short.mp3,vowel_moon_oh_short.mp3,vowel_name_oh_short.mp3,0,Short 'aoh' (A) or 'uoh' (O)
-ឥ,e_indep,vowel_independent,,,,,,vowel_independent_e_indep.mp3,0,Independent Vowel: E
-ឦ,ei_indep,vowel_independent,,,,,,vowel_independent_ei_indep.mp3,0,Independent Vowel: EI
-ឧ,u_indep,vowel_independent,,,,,,vowel_independent_u_indep.mp3,0,Independent Vowel: U
-ឪ,au_indep,vowel_independent,,,,,,vowel_independent_au_indep.mp3,0,Independent Vowel: AU/OV
-ឫ,ry,vowel_independent,,,,,,vowel_independent_ry.mp3,0,Independent Vowel: RY (short)
-ឬ,ryy,vowel_independent,,,,,,vowel_independent_ryy.mp3,0,Independent Vowel: RYY (long)
-ឭ,ly,vowel_independent,,,,,,vowel_independent_ly.mp3,0,Independent Vowel: LY (short)
-ឮ,lyy,vowel_independent,,,,,,vowel_independent_lyy.mp3,0,Independent Vowel: LYY (long)
-ឯ,ae_indep,vowel_independent,,,,,,vowel_independent_ae_indep.mp3,0,Independent Vowel: AE
-ឱ,ao_indep,vowel_independent,,,,,,vowel_independent_ao_indep.mp3,0,Independent Vowel: AO
-ឳ,au_ra_indep,vowel_independent,,,,,,vowel_independent_au_ra_indep.mp3,0,Independent Vowel: AU (Rare)
-់,bantoc,diacritic,,,,,,sign_bantoc.mp3,0,Bantoc. Shortens the vowel sound.
-៌,robabat,diacritic,,,,,,sign_robabat.mp3,0,Robabat. Used in Sanskrit words.
-៍,tantakheat,diacritic,,,,,,sign_tantakheat.mp3,0,Tantakheat (Silencer). Mutes the letter.
-៎,kakabat,diacritic,,,,,,sign_kakabat.mp3,0,Kakabat. Exclamation mark.
-៏,asda,diacritic,,,,,,sign_asda.mp3,0,Asda. Indicates number 8 or tone.
-័,samyok_sann,diacritic,,,,,,sign_samyok_sann.mp3,0,Samyok Sann. Sanskrit vowel changer.
-ំ,nikahit,diacritic,,,,,,sign_nikahit.mp3,0,Nikahit. Nasalizer (Am/Om).
+អ,qa,consonant,1,,,,,letter_qa.mp3,0,Glottal Stop. Series: A
+ា,aa,vowel_dependent,,,,vowel_sun_aa.mp3,vowel_moon_aa.mp3,vowel_name_aa.mp3,0,Long 'aa' (A) or 'ie' (O)
+ិ,i,vowel_dependent,,,,vowel_sun_i.mp3,vowel_moon_i.mp3,vowel_name_i.mp3,0,Short 'i' (A) or 'i' (O)
+ី,ei,vowel_dependent,,,,vowel_sun_ei.mp3,vowel_moon_ei.mp3,vowel_name_ei.mp3,0,Long 'ei' (A) or 'ii' (O)
+ឹ,oe,vowel_dependent,,,,vowel_sun_oe.mp3,vowel_moon_oe.mp3,vowel_name_oe.mp3,0,Short 'oe' (A) or 'ue' (O)
+ឺ,oeu,vowel_dependent,,,,vowel_sun_oeu.mp3,vowel_moon_oeu.mp3,vowel_name_oeu.mp3,0,Long 'oeu' (A) or 'ueu' (O)
+ុ,u,vowel_dependent,,,,vowel_sun_u.mp3,vowel_moon_u.mp3,vowel_name_u.mp3,0,Short 'u' (A) or 'u' (O)
+ូ,oo,vowel_dependent,,,,vowel_sun_oo.mp3,vowel_moon_oo.mp3,vowel_name_oo.mp3,0,Long 'oo' (A) or 'uu' (O)
+ួ,ua,vowel_dependent,,,,vowel_sun_ua.mp3,vowel_moon_ua.mp3,vowel_name_ua.mp3,0,Diphthong 'ua'
+ើ,aeu,vowel_dependent,,,,vowel_sun_aeu.mp3,vowel_moon_aeu.mp3,vowel_name_aeu.mp3,0,Long 'aeu' (A) or 'oeu' (O)
+ឿ,oea,vowel_dependent,,,,vowel_sun_oea.mp3,vowel_moon_oea.mp3,vowel_name_oea.mp3,0,Diphthong 'oea'
+ៀ,ie,vowel_dependent,,,,vowel_sun_ie.mp3,vowel_moon_ie.mp3,vowel_name_ie.mp3,0,Diphthong 'ie'
+េ,e,vowel_dependent,,,,vowel_sun_e.mp3,vowel_moon_e.mp3,vowel_name_e.mp3,0,Short 'ei' (A) or 'ee' (O)
+ែ,ae,vowel_dependent,,,,vowel_sun_ae.mp3,vowel_moon_ae.mp3,vowel_name_ae.mp3,0,Long 'ae' (A) or 'ae' (O)
+ៃ,ai,vowel_dependent,,,,vowel_sun_ai.mp3,vowel_moon_ai.mp3,vowel_name_ai.mp3,0,Diphthong 'ai' (A) or 'ey' (O)
+ោ,ao,vowel_dependent,,,,vowel_sun_ao.mp3,vowel_moon_ao.mp3,vowel_name_ao.mp3,0,Diphthong 'ao' (A) or 'ou' (O)
+ៅ,au,vowel_dependent,,,,vowel_sun_au.mp3,vowel_moon_au.mp3,vowel_name_au.mp3,0,Diphthong 'au' (A) or 'ov' (O)
+ុំ,om,vowel_dependent,,,,vowel_sun_om.mp3,vowel_moon_om.mp3,vowel_name_om.mp3,0,Sound 'om' (A) or 'um' (O)
+ំ,am,vowel_dependent,,,,vowel_sun_am.mp3,vowel_moon_am.mp3,vowel_name_am.mp3,0,Sound 'am' (A) or 'um' (O)
+ាំ,aam,vowel_dependent,,,,vowel_sun_aam.mp3,vowel_moon_aam.mp3,vowel_name_aam.mp3,0,Sound 'aam' (A) or 'oam' (O)
+ះ,ah,vowel_dependent,,,,vowel_sun_ah.mp3,vowel_moon_ah.mp3,vowel_name_ah.mp3,0,Aspirator 'Ah'
+ុះ,oh,vowel_dependent,,,,vowel_sun_oh.mp3,vowel_moon_oh.mp3,vowel_name_oh.mp3,0,Short 'oh'
+េះ,eh,vowel_dependent,,,,vowel_sun_eh.mp3,vowel_moon_eh.mp3,vowel_name_eh.mp3,0,Short 'eh'
+ោះ,oh_short,vowel_dependent,,,,vowel_sun_oh_short.mp3,vowel_moon_oh_short.mp3,vowel_name_oh_short.mp3,0,Short 'aoh'
+ឥ,e_indep,vowel_independent,,,,,,vowel_independent_e_indep.mp3,0,Independent: E
+ឦ,ei_indep,vowel_independent,,,,,,vowel_independent_ei_indep.mp3,0,Independent: EI
+ឧ,u_indep,vowel_independent,,,,,,vowel_independent_u_indep.mp3,0,Independent: U
+ឪ,au_indep,vowel_independent,,,,,,vowel_independent_au_indep.mp3,0,Independent: AU/OV
+ឫ,ry,vowel_independent,,,,,,vowel_independent_ry.mp3,0,Independent: RY
+ឬ,ryy,vowel_independent,,,,,,vowel_independent_ryy.mp3,0,Independent: RYY
+ឭ,ly,vowel_independent,,,,,,vowel_independent_ly.mp3,0,Independent: LY
+ឮ,lyy,vowel_independent,,,,,,vowel_independent_lyy.mp3,0,Independent: LYY
+ឯ,ae_indep,vowel_independent,,,,,,vowel_independent_ae_indep.mp3,0,Independent: AE
+ឱ,ao_indep,vowel_independent,,,,,,vowel_independent_ao_indep.mp3,0,Independent: AO
+ឳ,au_ra_indep,vowel_independent,,,,,,vowel_independent_au_ra_indep.mp3,0,Independent: AU (Rare)
+់,bantoc,diacritic,,,,,,sign_bantoc.mp3,0,Bantoc. Shortens vowel.
+៌,robabat,diacritic,,,,,,sign_robabat.mp3,0,Robabat. Used in Sanskrit.
+៍,tantakheat,diacritic,,,,,,sign_tantakheat.mp3,0,Silencer. Mutes letter.
+៎,kakabat,diacritic,,,,,,sign_kakabat.mp3,0,Kakabat. Exclamation.
+៏,asda,diacritic,,,,,,sign_asda.mp3,0,Asda. Number 8/Tone.
+័,samyok_sann,diacritic,,,,,,sign_samyok_sann.mp3,0,Samyok Sann. Vowel changer.
+ំ,nikahit,diacritic,,,,,,sign_nikahit.mp3,0,Nikahit. Nasalizer (Am).
 ះ,reahmuk,diacritic,,,,,,sign_reahmuk.mp3,0,Reahmuk. Aspirator (Ah).
 ៈ,yuukaleapintu,diacritic,,,,,,sign_yuukaleapintu.mp3,0,Yuukaleapintu. Glottal stop.
-៉,musakatoan,diacritic,,,,,,sign_musakatoan.mp3,0,Musakatoan (Mouse Teeth). Convert O -> A.
-៊,treisap,diacritic,,,,,,sign_treisap.mp3,0,Treisap (Fish Face). Convert A -> O.
-្,coeng,diacritic,,,,,,sign_coeng.mp3,0,Coeng (Foot). Prepares subscript.
+៉,musakatoan,diacritic,,,,,,sign_musakatoan.mp3,0,Musakatoan. O -> A shifter.
+៊,treisap,diacritic,,,,,,sign_treisap.mp3,0,Treisap. A -> O shifter.
+្,coeng,diacritic,,,,,,sign_coeng.mp3,0,Coeng. Subscript maker.
 ០,zero,number,,,,,,number_zero.mp3,0,Number 0
 ១,one,number,,,,,,number_one.mp3,0,Number 1
 ២,two,number,,,,,,number_two.mp3,0,Number 2
@@ -89,6 +89,6 @@ id,name_en,type,series,shape_group,subscript_form,sound_series_1,sound_series_2,
 ៨,eight,number,,,,,,number_eight.mp3,0,Number 8
 ៩,nine,number,,,,,,number_nine.mp3,0,Number 9
 ១០,ten,number,,,,,,number_ten.mp3,0,Number 10
-។,khan,symbol,,,,,,sign_khan.mp3,0,Khan. Full stop (Period).
-ៗ,lek_to,symbol,,,,,,sign_lek_to.mp3,0,Lek To. Repetition sign.
-៕,bariyour,symbol,,,,,,sign_bariyour.mp3,0,Bariyour. End of chapter.
+។,khan,symbol,,,,,,sign_khan.mp3,0,Full stop.
+ៗ,lek_to,symbol,,,,,,sign_lek_to.mp3,0,Repetition sign.
+៕,bariyour,symbol,,,,,,sign_bariyour.mp3,0,End of chapter.
