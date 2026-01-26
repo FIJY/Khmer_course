@@ -22,6 +22,7 @@ export default function useLessonPlayer() {
   const [lessonId, setLessonId] = useState(id);
   const audioRef = useRef(null);
   const audioTimeoutRef = useRef(null);
+
   const fallbackLesson = useRef({
     id: 10000,
     lesson_id: 10000,
@@ -87,13 +88,12 @@ export default function useLessonPlayer() {
       let rawItems = await fetchLessonItemsByLessonId(resolvedLessonId);
 
       // 3. ФОЛБЭК: Если таблица lesson_items пуста, ищем контент внутри самого урока (JSON)
-      // ЭТО РЕШИТ ПРОБЛЕМУ "LESSON ERROR"
       if ((!rawItems || rawItems.length === 0) && lesson.content && Array.isArray(lesson.content)) {
           console.log("Using fallback content from lesson table");
           rawItems = lesson.content.map((item, index) => ({
             ...item,
-            id: index, // генерируем временный ID
-            data: item.data || item // структура может отличаться
+            id: index,
+            data: item.data || item
           }));
       }
 
@@ -144,13 +144,12 @@ export default function useLessonPlayer() {
     } finally {
       setLoading(false);
     }
-  }, [id, normalizeItemData]);
+  }, [id, normalizeItemData, resolveLessonIdentifier]);
 
   useEffect(() => { fetchLessonData(); }, [fetchLessonData]);
 
-  // ✅ НОВОЕ (вставь в src/hooks/useLessonPlayer.js)
+  // Логика разблокировки кнопки "Далее"
   useEffect(() => {
-      // 1. Сбрасываем состояние при входе на слайд
       setCanAdvance(false);
       setSelectedOption(null);
       setIsFlipped(false);
@@ -158,13 +157,10 @@ export default function useLessonPlayer() {
 
       const currentType = items[step]?.type;
 
-      // 2. Список слайдов, где кнопка "Далее" должна быть активна СРАЗУ
-      // (потому что там нечего "решать", нужно просто прочитать)
       const autoUnlockTypes = [
         'theory',
         'learn_char',
         'word_breakdown',
-        // 👇 Добавили новые типы из Буткемпа:
         'title',
         'meet-teams',
         'rule',
@@ -205,10 +201,11 @@ export default function useLessonPlayer() {
     }
   };
 
-  const playLocalAudio = (file) => {
-    if (!file) {
-      console.warn("Audio file name is missing in lesson data");
-      return;
+  // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗВУКА ---
+  const playLocalAudio = (audioFile) => {
+    if (!audioFile) {
+        console.warn("Audio file name is missing");
+        return;
     }
 
     if (audioRef.current) {
@@ -216,16 +213,28 @@ export default function useLessonPlayer() {
       audioRef.current.currentTime = 0;
     }
 
-    // Явно указываем путь к папке sounds
-    const audioPath = `/sounds/${file}`;
-    console.log("Attempting to play:", audioPath); // Это поможет вам в консоли F12
+    // 1. Приводим к строке и чистим пробелы
+    let fileName = String(audioFile).trim();
+
+    // 2. ЯДЕРНОЕ РЕШЕНИЕ: Убираем ВСЕ .mp3 с конца строки (один или много раз)
+    // (\.mp3)+ означает "группа .mp3 повторяется 1 или более раз"
+    // Флаг 'i' делает поиск нечувствительным к регистру (.MP3 тоже уйдет)
+    fileName = fileName.replace(/(\.mp3)+$/i, '');
+
+    // 3. Теперь fileName гарантированно чистый (например "vowel_aa").
+    // Добавляем .mp3 ровно ОДИН раз.
+    const audioPath = `/sounds/${fileName}.mp3`;
+
+    console.log('Playing clean path:', audioPath);
 
     const audio = new Audio(audioPath);
     audioRef.current = audio;
+
     audio.play().catch((e) => {
       console.error(`Audio play failed for ${audioPath}:`, e);
     });
   };
+  // ------------------------------------------------
 
   const handleVocabCardFlip = (audioFile) => {
     if (!isFlipped) playLocalAudio(audioFile);
@@ -239,13 +248,9 @@ export default function useLessonPlayer() {
     setSelectedOption(option);
     setCanAdvance(true);
 
-    // --- ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ ДЛЯ КВИЗА ---
-    // Превращаем всё в строки и убираем пробелы перед сравнением
     const cleanOption = String(option).trim();
     const cleanCorrect = String(correctAnswer).trim();
-
     const correct = cleanOption === cleanCorrect;
-    // -----------------------------------------
 
     if (correct) setScore(s => s + 1);
     playLocalAudio(correct ? 'success.mp3' : 'error.mp3');

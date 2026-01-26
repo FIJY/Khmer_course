@@ -62,7 +62,7 @@ export default function VisualDecoder({ data, onLetterClick, onComplete }) {
               }}
               className="cursor-pointer group"
             >
-              <path d={glyph.d} stroke="transparent" strokeWidth="80" fill="none" />
+              <path d={glyph.d} stroke="transparent" strokeWidth="20" fill="none" />
               <path
                 d={glyph.d}
                 fill={isSelected ? "#22d3ee" : "white"}
