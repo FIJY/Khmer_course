@@ -173,3 +173,4 @@ main().catch((e) => {
   console.error("❌ gen:shapes failed:", e?.message || e);
   process.exit(1);
 });
+

@@ -1,54 +1,54 @@
-import React, { useState } from 'react';
-// Импортируем файл, который мы только что сгенерировали
-import shapedData from '../data/shaped-text.json';
+import React, { useMemo, useState } from "react";
+import shapedData from "../data/shaped-text.json";
 
 export default function KhmerEngineFinal({ text = "កាហ្វេ", onLetterClick }) {
-  // Ищем слово в файле данных
-  const glyphs = shapedData[text];
-  const [selectedId, setSelectedId] = useState(null);
+  const glyphs = shapedData?.[text] || [];
+  const [selected, setSelected] = useState(null);
 
-  // Если слова нет в файле (мы его не сгенерировали), показываем ошибку
-  if (!glyphs) {
+  const viewBox = useMemo(() => {
+    if (!glyphs.length) return "0 0 800 400";
+    const minX = Math.min(...glyphs.map((g) => g.bb.x1));
+    const maxX = Math.max(...glyphs.map((g) => g.bb.x2));
+    const minY = Math.min(...glyphs.map((g) => g.bb.y1));
+    const maxY = Math.max(...glyphs.map((g) => g.bb.y2));
+    const pad = 30;
+    return `${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`;
+  }, [glyphs]);
+
+  if (!glyphs.length) {
     return (
-      <div className="text-red-500 border border-red-500 p-4">
-        Ошибка: Слово "{text}" не найдено в shaped-text.json.
-        <br/>
-        Запустите: node scripts/generate-glyphs.cjs
+      <div className="text-red-400 text-sm font-mono">
+        Слово не сгенерировано: <b>{text}</b>
       </div>
     );
   }
 
-  // Вычисляем размеры SVG
-  const allX = glyphs.map(g => g.bb.x2);
-  const width = Math.max(...allX) + 50;
-
   return (
-    <div className="flex justify-center items-center bg-gray-900 p-6 rounded-xl">
-      <svg
-        viewBox={`0 -50 ${width} 300`}
-        className="max-h-[200px] w-full overflow-visible"
-      >
-        {glyphs.map((glyph, i) => {
-           const isSelected = selectedId === i;
-           return (
-            <g
-              key={i}
-              onClick={() => {
-                setSelectedId(i);
-                if (onLetterClick) onLetterClick(glyph.char);
-                console.log("Буква:", glyph.char);
+    <div className="w-full flex justify-center bg-black py-8 rounded-3xl border border-white/10">
+      <svg viewBox={viewBox} className="w-full max-h-[350px] overflow-visible">
+        {glyphs.map((g, idx) => {
+          const isSelected = selected === idx;
+          return (
+            <path
+              key={`${g.id ?? idx}`}
+              d={g.d}
+              fill={isSelected ? "#4ECDC4" : "white"}
+              className="cursor-pointer transition-all duration-150 hover:opacity-80"
+              style={{
+                pointerEvents: "all",
+                filter: isSelected ? "drop-shadow(0 0 10px #4ECDC4)" : "none",
               }}
-              className="cursor-pointer hover:opacity-80"
-            >
-              <path
-                d={glyph.d}
-                fill={isSelected ? "#22d3ee" : "white"} // Голубой при клике
-                stroke={isSelected ? "#22d3ee" : "none"}
-                strokeWidth="2"
-                style={{ transition: "all 0.2s" }}
-              />
-            </g>
-           );
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setSelected(idx);
+
+                const cluster = g.clusterIndex ?? 0;
+                const ch = text[cluster] ?? null;
+                if (ch && onLetterClick) onLetterClick(ch, { cluster, glyphIndex: idx, char: g.char });
+              }}
+            />
+          );
         })}
       </svg>
     </div>
