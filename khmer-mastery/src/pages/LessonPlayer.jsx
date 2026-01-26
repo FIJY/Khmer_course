@@ -209,7 +209,18 @@ export default function LessonPlayer() {
            <VisualDecoder
               key={step}
               data={current}
-              onComplete={() => setCanAdvance(true)}
+              // 1. ПЕРЕДАЕМ ЗВУК: Пытаемся играть файл "буква.mp3"
+              onLetterClick={(char) => {
+                  console.log("Play audio for:", char);
+                  // Если у тебя файлы называются 'k.mp3', 'a.mp3' - нужно маппинг.
+                  // Пока пробуем играть по самому символу (или добавь .mp3)
+                  playLocalAudio(`${char}.mp3`);
+
+                  // 2. РАЗБЛОКИРОВКА: Разрешаем идти дальше после первого клика
+                  setCanAdvance(true);
+              }}
+              // Или можно разблокировать сразу, если это просто демонстрация:
+              // onComplete={() => setCanAdvance(true)}
               hideDefaultButton={true}
            />
         )}
