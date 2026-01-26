@@ -15,7 +15,7 @@ export default function InventorySlide({ data, onPlayAudio }) {
       </div>
 
       {/* Главная карточка слова */}
-      <div className="bg-gray-900 border border-white/10 rounded-[2.5rem] p-8 w-full text-center relative overflow-hidden">
+      <div className="bg-gray-900 border border-white/10 rounded-[2.5rem] p-8 w-full text-center relative overflow-visible">
 
         <div className="flex flex-col items-center gap-3">
           <div className="min-h-[4rem] flex items-center justify-center">
@@ -53,7 +53,7 @@ export default function InventorySlide({ data, onPlayAudio }) {
 
         <div className="flex flex-wrap gap-3 justify-center">
           {(data.chars || []).map((char, idx) => (
-            <div key={idx} className="bg-gray-800 border border-white/10 rounded-2xl w-16 h-20 flex items-center justify-center shadow-lg relative overflow-hidden group hover:border-cyan-500/50 transition-colors">
+            <div key={idx} className="bg-gray-800 border border-white/10 rounded-2xl w-16 h-20 flex items-center justify-center shadow-lg relative overflow-visible group hover:border-cyan-500/50 transition-colors">
                <KhmerColoredText
                  text={char}
                  fontUrl={DEFAULT_KHMER_FONT_URL}

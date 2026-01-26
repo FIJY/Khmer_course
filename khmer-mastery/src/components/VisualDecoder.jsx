@@ -1,66 +1,129 @@
-import React, { useState, useRef } from 'react';
-import { Sun, Moon, Volume2 } from 'lucide-react';
+import React, { useMemo, useState } from "react";
+import { Volume2 } from "lucide-react";
+import KhmerEngineFinal from "./KhmerEngineFinal";
 
-// ИМПОРТИРУЕМ ФИНАЛЬНЫЙ ДВИЖОК
-import KhmerEngineFinal from './KhmerEngineFinal';
+const DEFAULT_KHMER_FONT_URL =
+  import.meta.env.VITE_KHMER_FONT_URL ?? "/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf";
 
-const DEFAULT_KHMER_FONT_URL = '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
+export default function VisualDecoder({ data, onComplete, hideDefaultButton = true }) {
+  const [picked, setPicked] = useState(null); // { gid, index } from engine
 
-export default function VisualDecoder({ data, onComplete }) {
-  const {
-    word, hint, english_translation,
-    pronunciation, letter_series, word_audio
-  } = data;
+  const word = data?.word ?? data?.khmer ?? data?.khmerText ?? data?.text ?? "";
+  const translation = data?.english_translation ?? data?.translation ?? data?.meaning ?? "";
+  const pronunciation = data?.pronunciation ?? "";
+  const hint = data?.hint ?? data?.task ?? "";
 
-  const [status, setStatus] = useState('searching');
-  const audioRef = useRef(null);
+  const audioFile = data?.word_audio ?? data?.audio ?? null;
 
-  const getTheme = () => {
-    if (letter_series === 1) return { badge: <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-400 px-3 py-1 rounded-full text-[10px] font-black uppercase"><Sun size={12}/> A-Series</div> };
-    if (letter_series === 2) return { badge: <div className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-[10px] font-black uppercase"><Moon size={12}/> O-Series</div> };
-    return { badge: null };
-  };
-  const theme = getTheme();
+  const canComplete = useMemo(() => !!picked, [picked]);
 
   const playAudio = (file) => {
     if (!file) return;
-    const path = file.startsWith('/') ? file : `/sounds/${file}`;
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    const audio = new Audio(path);
-    audioRef.current = audio;
-    audio.play().catch(() => {});
+    const src = file.startsWith("/") ? file : `/sounds/${file}`;
+    const a = new Audio(src);
+    a.play().catch(() => {});
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center min-h-[60vh] py-4 relative">
-
-      {/* Метка v7.0 */}
-      <div className="absolute top-0 right-0 text-[9px] text-green-500 opacity-50 font-mono border border-green-500 px-1 rounded">
-        ENGINE: v7.0 (FINAL)
-      </div>
-
-      <div className={`mb-12 w-full flex justify-center transition-all duration-700 ${status === 'success' ? 'scale-110' : ''}`}>
-         {status === 'success' && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl animate-pulse rounded-full"/>}
-
-         <KhmerEngineFinal
-            text={word}
-            fontSize={140}
-         />
-
-         <div className="absolute -bottom-16 opacity-50 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => playAudio(word_audio)}>
-            <div className="bg-white/5 border border-white/10 rounded-full p-3 hover:bg-cyan-500/20 hover:text-cyan-400">
-                <Volume2 size={24} />
+    <div className="w-full flex flex-col items-center justify-center py-6">
+      {/* Главная карточка */}
+      <div className="w-full max-w-[420px] bg-gray-900/60 border border-white/10 rounded-[2rem] p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-cyan-400">
+              Visual Decoder
             </div>
-         </div>
-      </div>
+            {hint && (
+              <div className="mt-2 text-xs text-gray-300 font-semibold">
+                {hint}
+              </div>
+            )}
+          </div>
 
-      <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 mt-10">
-         {pronunciation && <p className="text-cyan-300 font-mono text-xl tracking-widest">/{pronunciation}/</p>}
-         <h3 className="text-4xl font-black text-white uppercase italic tracking-tighter">{english_translation}</h3>
-         <div className="pt-6 flex justify-center gap-3">
-             {theme.badge}
-             <span className="text-slate-400 text-xs font-bold uppercase tracking-widest bg-gray-900 px-4 py-2 rounded-xl border border-white/10">Task: {hint}</span>
-         </div>
+          {audioFile && (
+            <button
+              type="button"
+              onClick={() => playAudio(audioFile)}
+              className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-400/30 transition"
+              title="Play audio"
+            >
+              <Volume2 size={18} />
+            </button>
+          )}
+        </div>
+
+        {/* Глифовый движок */}
+        <div className="flex justify-center">
+          <KhmerEngineFinal
+            text={word}
+            fontUrl={DEFAULT_KHMER_FONT_URL}
+            fontSize={130}
+            padding={40}
+            height={260}
+            onSelect={(payload) => {
+              // payload: { gid, index } (см. патч ниже)
+              setPicked(payload);
+              // если хочешь авто-разблок при первом выборе:
+              // onComplete?.();
+            }}
+          />
+        </div>
+
+        {/* Инфо про выбранный глиф */}
+        <div className="mt-4 p-4 rounded-2xl bg-black/40 border border-white/10">
+          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
+            Selected glyph
+          </div>
+
+          {picked ? (
+            <div className="flex flex-col gap-2">
+              <div className="text-sm text-white font-bold">
+                glyph_id: <span className="text-cyan-300">{picked.gid}</span>{" "}
+                <span className="text-gray-500 font-semibold">#{picked.index}</span>
+              </div>
+              <div className="text-xs text-gray-300">
+                Теперь ты можешь привязывать этот glyph_id к “типу” (согласная/гласная/подписная/диакритика)
+                и сохранять в свою базу.
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-400">
+              Нажми на любой глиф, чтобы выбрать.
+            </div>
+          )}
+        </div>
+
+        {/* Переводы */}
+        {(translation || pronunciation) && (
+          <div className="mt-4 text-center space-y-2">
+            {pronunciation && (
+              <div className="text-cyan-200 font-mono text-lg tracking-widest">
+                /{pronunciation}/
+              </div>
+            )}
+            {translation && (
+              <div className="text-white text-2xl font-black italic uppercase">
+                {translation}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Кнопка завершения (если надо) */}
+        {!hideDefaultButton && (
+          <button
+            type="button"
+            disabled={!canComplete}
+            onClick={() => onComplete?.()}
+            className={`mt-5 w-full py-4 rounded-2xl font-black uppercase tracking-widest transition border
+              ${canComplete
+                ? "bg-cyan-500/20 border-cyan-400/30 text-cyan-200 hover:bg-cyan-500/30"
+                : "bg-white/5 border-white/10 text-gray-500 cursor-not-allowed"
+              }`}
+          >
+            Continue
+          </button>
+        )}
       </div>
     </div>
   );

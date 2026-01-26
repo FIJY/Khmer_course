@@ -39,7 +39,7 @@ const SessionFrame = ({
           )}
         </div>
       </header>
-      <main className="flex-1 flex flex-col items-center justify-center p-6 overflow-y-auto">
+      <main className="flex-1 flex flex-col items-center justify-center p-6 overflow-visible">
         {children}
       </main>
     </MobileLayout>

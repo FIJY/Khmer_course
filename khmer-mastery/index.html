@@ -1,30 +1,42 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8"/>
+    <link rel="icon" type="image/svg+xml" href="/vite.svg"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Khmer Mastery</title>
 
+    <!-- 1) Подключаем MODULARIZE-версию hb.js -->
+    <script src="/vendor/hbjs.js"></script>
     <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-            console.log('Service Worker удален');
+        if (!window.HBReady) {
+          if (typeof window.hbjs !== "function") {
+            console.error("hbjs.js loaded, but window.hbjs is not a function");
+          } else {
+            window.HBReady = window.hbjs({
+              locateFile(path) {
+                if (path.endsWith(".wasm")) return "/vendor/hb.wasm";
+                return "/vendor/" + path;
+              },
+            });
           }
-        });
-        if ('caches' in window) {
-           caches.keys().then((names) => {
-             names.forEach((name) => caches.delete(name));
-           });
         }
-      }
     </script>
 
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+    <script>
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function (registrations) {
+            for (let registration of registrations) registration.unregister();
+          });
+          if ("caches" in window) {
+            caches.keys().then((names) => names.forEach((name) => caches.delete(name)));
+          }
+        }
+    </script>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/main.jsx"></script>
+</body>
 </html>

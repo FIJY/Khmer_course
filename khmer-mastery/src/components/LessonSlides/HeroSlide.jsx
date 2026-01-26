@@ -13,7 +13,7 @@ export default function HeroSlide({ data, onPlayAudio }) {
     <div className="w-full flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
 
       {/* Карточка Героя */}
-      <div className="bg-gray-900 border-2 border-cyan-500/20 rounded-[3rem] p-10 w-full relative overflow-hidden mb-6">
+      <div className="bg-gray-900 border-2 border-cyan-500/20 rounded-[3rem] p-10 w-full relative overflow-visible mb-6">
 
         {/* Фоновый эффект свечения */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50" />
