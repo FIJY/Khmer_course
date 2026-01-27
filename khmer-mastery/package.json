@@ -4,9 +4,9 @@
   "version": "1.0.5",
   "type": "module",
   "scripts": {
-    "gen:shapes": "node scripts/generate-shaped-json.cjs",
-    "dev": "vite",
-    "build": "vite build",
+    "gen:shapes": "node scripts/generate-shaped-from-content.cjs",
+    "dev": "npm run gen:shapes && vite",
+    "build": "npm run gen:shapes && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -16,6 +16,9 @@
     "@supabase/supabase-js": "^2.90.1",
     "canvaskit-wasm": "^0.40.0",
     "clsx": "^2.1.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "fontkit": "^2.0.4",
     "framer-motion": "^12.25.0",
     "grapheme-splitter": "^1.0.4",
     "harfbuzzjs": "^0.5.0",

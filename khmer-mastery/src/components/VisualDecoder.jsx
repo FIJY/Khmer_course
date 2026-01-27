@@ -1,80 +1,158 @@
-import React, { useState } from 'react';
-import shapedData from '../data/shaped-text.json';
+import React, { useMemo, useRef, useState, useEffect } from "react";
+// Убедись, что путь правильный
+import { getSoundFileForChar } from "../data/audioMap";
 
-// === ПОЛНЫЙ СЛОВАРЬ ЗВУКОВ ===
-const AUDIO_MAP = {
-  // --- Согласные ---
-  "ក": "letter_ka.mp3", "ខ": "letter_kha.mp3", "គ": "letter_ko.mp3", "ឃ": "letter_kho.mp3", "ង": "letter_ngo.mp3",
-  "ច": "letter_cha.mp3", "ឆ": "letter_chha.mp3", "ជ": "letter_cho.mp3", "ឈ": "letter_chho.mp3", "ញ": "letter_nyo.mp3",
-  "ដ": "letter_da.mp3", "ឋ": "letter_tha_retro.mp3", "ឌ": "letter_do.mp3", "ឍ": "letter_tho_retro.mp3", "ណ": "letter_na.mp3",
-  "ត": "letter_ta.mp3", "ថ": "letter_tha.mp3", "ទ": "letter_to.mp3", "ធ": "letter_tho.mp3", "ន": "letter_no.mp3",
-  "ប": "letter_ba.mp3", "ផ": "letter_pha.mp3", "ព": "letter_po.mp3", "ភ": "letter_pho.mp3", "ម": "letter_mo.mp3",
-  "យ": "letter_yo.mp3", "រ": "letter_ro.mp3", "ល": "letter_lo.mp3", "វ": "letter_vo.mp3",
-  "ស": "letter_sa.mp3", "ហ": "letter_ha.mp3", "ឡ": "letter_la.mp3", "អ": "letter_qa.mp3",
+function bboxArea(bb) {
+  const w = (bb?.x2 ?? 0) - (bb?.x1 ?? 0);
+  const h = (bb?.y2 ?? 0) - (bb?.y1 ?? 0);
+  return Math.max(0, w) * Math.max(0, h);
+}
 
-  // --- Гласные (Sra ...) ---
-  "ា": "vowel_aa.mp3", "ិ": "vowel_i.mp3", "ី": "vowel_ei.mp3", "ឹ": "vowel_oe.mp3",
-  "ឺ": "vowel_oeu.mp3", "ុ": "vowel_u.mp3", "ូ": "vowel_oo.mp3", "ួ": "vowel_ua.mp3",
-  "ើ": "vowel_aeu.mp3", "ឿ": "vowel_oea.mp3", "ៀ": "vowel_ie.mp3", "េ": "vowel_e.mp3",
-  "ែ": "vowel_ae.mp3", "ៃ": "vowel_ai.mp3", "ោ": "vowel_ao.mp3", "ៅ": "vowel_au.mp3",
-  "ុំ": "vowel_om.mp3", "ំ": "vowel_am.mp3", "ាំ": "vowel_aam.mp3", "ះ": "vowel_ah.mp3",
-  "ុះ": "vowel_oh.mp3", "េះ": "vowel_eh.mp3", "ោះ": "vowel_oh_short.mp3",
+function makeViewBoxFromGlyphs(glyphs, pad = 60) {
+  const xs1 = glyphs.map((g) => g.bb?.x1 ?? 0);
+  const xs2 = glyphs.map((g) => g.bb?.x2 ?? 0);
+  const ys1 = glyphs.map((g) => g.bb?.y1 ?? 0);
+  const ys2 = glyphs.map((g) => g.bb?.y2 ?? 0);
 
-  // --- Независимые гласные ---
-  "ឥ": "indep_e.mp3", "ឦ": "indep_ei.mp3", "ឧ": "indep_o.mp3", "ឨ": "indep_ok.mp3",
-  "ឪ": "indep_au.mp3", "ឫ": "indep_rue.mp3", "ឬ": "indep_rue_long.mp3", "ឭ": "indep_lue.mp3",
-  "ឮ": "indep_lue_long.mp3", "ឯ": "indep_ae.mp3", "ឱ": "indep_ao.mp3", "ឳ": "indep_au_ra.mp3"
-};
+  const minX = Math.min(...xs1) - pad;
+  const maxX = Math.max(...xs2) + pad;
+  const minY = Math.min(...ys1) - pad;
+  const maxY = Math.max(...ys2) + pad;
 
-export default function VisualDecoder({ data, onLetterClick, onComplete }) {
-  const text = data?.word || data?.khmerText || "កាហ្វេ";
-  const glyphs = shapedData[text];
+  return { minX, minY, w: Math.max(10, maxX - minX), h: Math.max(10, maxY - minY) };
+}
+
+export default function VisualDecoder({ data, text: propText, onLetterClick, onComplete, hideDefaultButton }) {
+  const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
+
+  const [glyphs, setGlyphs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
 
-  if (!glyphs) return null;
+  const svgRef = useRef(null);
+  const hitRefs = useRef([]);
+  hitRefs.current = [];
 
-  const allX = glyphs.map(g => g.bb.x2);
-  const width = Math.max(...allX) + 50;
+  useEffect(() => {
+    let active = true;
+    if (!text) return;
+
+    setLoading(true);
+    // Обращаемся к твоему Python-серверу
+    fetch(`http://localhost:3001/api/shape?text=${encodeURIComponent(text)}`)
+      .then(res => {
+        if (!res.ok) throw new Error("Server error");
+        return res.json();
+      })
+      .then(json => {
+        if (active) {
+           setGlyphs(json);
+           setLoading(false);
+        }
+      })
+      .catch(err => {
+        console.error("Decoder error:", err);
+        if (active) {
+            setError(err.message);
+            setLoading(false);
+        }
+      });
+
+    return () => { active = false; };
+  }, [text]);
+
+  const vb = useMemo(() => {
+    if (glyphs.length === 0) return { minX: 0, minY: 0, w: 300, h: 300 };
+    return makeViewBoxFromGlyphs(glyphs, 70);
+  }, [glyphs]);
+
+  const hitOrder = useMemo(() => {
+    return glyphs
+      .map((g, idx) => ({ g, idx, area: bboxArea(g.bb) }))
+      .sort((a, b) => a.area - b.area);
+  }, [glyphs]);
+
+  function svgPointFromEvent(evt) {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX;
+    pt.y = evt.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    return pt.matrixTransform(ctm.inverse());
+  }
+
+  function pickGlyphAtPoint(p) {
+    if (!p) return null;
+    for (const item of hitOrder) {
+      const pathEl = hitRefs.current[item.idx];
+      if (!pathEl) continue;
+      try {
+        if (pathEl.isPointInFill?.(p) || pathEl.isPointInStroke?.(p)) return item.g;
+      } catch {}
+    }
+    return null;
+  }
+
+  const handlePointerDown = (e) => {
+    e.preventDefault();
+    const p = svgPointFromEvent(e);
+    const hit = pickGlyphAtPoint(p);
+    if (!hit) return;
+
+    setSelectedId(hit.id);
+
+    // --- ИСПРАВЛЕНИЕ: Получаем имя файла из мапа ---
+    // hit.char может быть "ក" или "្" (U+17D2)
+    const soundFile = getSoundFileForChar(hit.char);
+
+    console.log(`Clicked: ${hit.char}, Playing: ${soundFile}`);
+
+    // Если файла нет в мапе (например, для U+17D2), soundFile будет undefined
+    // и мы НЕ вызовем ошибку.
+    if (soundFile && onLetterClick) {
+      onLetterClick(soundFile);
+    }
+
+    if (onComplete) onComplete();
+  };
+
+  if (loading) return <div className="text-white animate-pulse text-center p-10">Deciphering...</div>;
+  if (error || glyphs.length === 0) return <div className="text-red-400 text-center p-10">Error loading glyphs</div>;
 
   return (
-    <div className="w-full flex justify-center items-center py-8 animate-in fade-in zoom-in duration-500">
+    <div className="w-full flex justify-center items-center py-8">
       <svg
-         viewBox={`0 -80 ${width} 300`}
-         className="max-h-[250px] w-full overflow-visible select-none"
-         style={{ touchAction: 'manipulation' }}
+        ref={svgRef}
+        viewBox={`${vb.minX} ${vb.minY} ${vb.w} ${vb.h}`}
+        className="max-h-[250px] w-full overflow-visible select-none"
+        style={{ touchAction: "manipulation" }}
+        onPointerDown={handlePointerDown}
       >
         {glyphs.map((glyph, i) => {
-           const isSelected = selectedId === i;
-           return (
-            <g
-              key={i}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedId(i);
-
-                const soundFile = AUDIO_MAP[glyph.char];
-
-                if (onLetterClick && soundFile) {
-                    onLetterClick(soundFile);
-                }
-
-                if (onComplete) onComplete();
-              }}
-              className="cursor-pointer group"
-            >
-              <path d={glyph.d} stroke="transparent" strokeWidth="20" fill="none" />
+          const isSelected = selectedId === glyph.id;
+          return (
+            <g key={glyph.id}>
+              <title>{glyph.char}</title>
+              <path
+                ref={(el) => (hitRefs.current[i] = el)}
+                d={glyph.d}
+                fill="transparent"
+                stroke="transparent"
+                strokeWidth="10"
+                pointerEvents="none"
+              />
               <path
                 d={glyph.d}
                 fill={isSelected ? "#22d3ee" : "white"}
-                className="transition-all duration-300 ease-out"
-                style={{
-                   filter: isSelected
-                     ? "drop-shadow(0 0 15px #22d3ee) drop-shadow(0 0 30px #22d3ee)"
-                     : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))"
-                }}
+                pointerEvents="none"
+                className="transition-all duration-300"
+                style={{ filter: isSelected ? "drop-shadow(0 0 15px #22d3ee)" : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))" }}
               />
             </g>
-           );
+          );
         })}
       </svg>
     </div>

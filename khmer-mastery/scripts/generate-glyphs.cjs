@@ -11,43 +11,40 @@ const WORDS = [
 
 const FONT_SIZE = 120;
 const FONT_PATH = path.join(__dirname, '../public/fonts/NotoSansKhmer-Regular.ttf');
-const OUTPUT_FILE = path.join(__dirname, '../data/shaped-text.json');
+// НОВАЯ ВЕРСИЯ ФАЙЛА - v5
+const OUTPUT_FILE = path.join(__dirname, '../src/data/shaped-text-v5.json');
 
-// Код знака Coeng (лапка для подстрочных)
-const COENG = 0x17D2;
+const COENG = 0x17D2; // Знак лапки
+
+// Проверка на зависимую гласную (исключая Coeng)
+function isDependentVowel(char) {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  if (code === 0x17D2) return false;
+  return (code >= 0x17B4 && code <= 0x17D3);
+}
 
 async function main() {
-  console.log("🚀 ВОССТАНОВЛЕНИЕ: Генерация глифов с умным маппингом...");
+  console.log("🚀 ГЕНЕРАЦИЯ v5: Force Split + Smart Mapping...");
 
-  // 1. Загрузка Harfbuzz
   let hbjs;
   try {
     const lib = require('harfbuzzjs');
     if (lib instanceof Promise) hbjs = (await lib).default || (await lib);
     else hbjs = lib.default || lib;
-  } catch (e) {
-    console.error("❌ Ошибка загрузки harfbuzzjs:", e);
-    process.exit(1);
-  }
+  } catch (e) { process.exit(1); }
 
-  // 2. Инициализация Harfbuzz
   let hb;
   if (typeof hbjs === 'function') {
       const wasmPath = path.join(__dirname, '../node_modules/harfbuzzjs/hb-subset.wasm');
-      if (!fs.existsSync(wasmPath)) {
-         console.error("❌ Не найден hb-subset.wasm по пути:", wasmPath);
-         process.exit(1);
-      }
       const wasmBuffer = fs.readFileSync(wasmPath);
       hb = await hbjs(wasmBuffer);
-  } else if (typeof hbjs === 'object') {
-      hb = hbjs;
-  }
+  } else if (typeof hbjs === 'object') hb = hbjs;
 
-  // 3. Загрузка шрифта
-  if (!fs.existsSync(FONT_PATH)) { console.error("❌ НЕТ ШРИФТА:", FONT_PATH); process.exit(1); }
+  if (!fs.existsSync(FONT_PATH)) { console.error("❌ НЕТ ШРИФТА!"); process.exit(1); }
   const fontBuffer = fs.readFileSync(FONT_PATH);
-  const font = opentype.parse(fontBuffer.buffer); // Для проверки глифов
+  const font = opentype.parse(fontBuffer.buffer);
+
   const blob = hb.createBlob(fontBuffer);
   const face = hb.createFace(blob, 0);
   const hbFont = hb.createFont(face);
@@ -59,20 +56,59 @@ async function main() {
     const buffer = hb.createBuffer();
     buffer.addText(text);
     buffer.guessSegmentProperties();
-    hb.shape(hbFont, buffer, "ccmp=1"); // Обязательно включаем ccmp для кхмерского
+    hb.shape(hbFont, buffer, "ccmp=1");
 
     const result = buffer.json();
     const scale = FONT_SIZE / face.upem;
     let cursorX = 50;
     const glyphsData = [];
-
-    // Группируем глифы по кластерам для анализа
-    // Harfbuzz возвращает result, где каждый элемент имеет .cl (индекс начала кластера в строке)
+    let skipClusterIndex = -1;
 
     for (let i = 0; i < result.length; i++) {
       const g = result[i];
 
-      // Получаем глиф из шрифта для отрисовки
+      // 1. Пропускаем, если уже нарисовали этот кластер вручную
+      if (g.cl === skipClusterIndex) continue;
+
+      const char = text[g.cl];
+      const nextChar = text[g.cl + 1];
+
+      // 2. FORCE SPLIT: Если это простая пара "Согласная + Гласная" (как в Ka)
+      // Мы рисуем их сами, чтобы они визуально разделились
+      if (nextChar && isDependentVowel(nextChar)) {
+          // А. Согласная
+          const baseGlyph = font.charToGlyph(char);
+          const basePath = baseGlyph.getPath(cursorX, 200, FONT_SIZE);
+          const baseAdvance = baseGlyph.advanceWidth * scale;
+
+          glyphsData.push({
+             id: glyphsData.length,
+             char: char,
+             clusterIndex: g.cl,
+             d: basePath.toPathData(3),
+             bb: basePath.getBoundingBox()
+          });
+
+          // Б. Гласная
+          const vowelGlyph = font.charToGlyph(nextChar);
+          const vowelPath = vowelGlyph.getPath(cursorX + baseAdvance, 200, FONT_SIZE);
+          const vowelAdvance = vowelGlyph.advanceWidth * scale;
+
+          glyphsData.push({
+             id: glyphsData.length,
+             char: nextChar,
+             clusterIndex: g.cl + 1,
+             d: vowelPath.toPathData(3),
+             bb: vowelPath.getBoundingBox()
+          });
+
+          cursorX += (baseAdvance + vowelAdvance);
+          skipClusterIndex = g.cl;
+          continue;
+      }
+
+      // 3. ОБЫЧНЫЙ РЕЖИМ + SMART MAPPING (Детектив)
+      // Сюда попадают сложные слова типа "Кофе" (Ho + Coeng + Vo + E)
       const glyph = font.glyphs.get(g.g);
       if (!glyph.getPath) { cursorX += (g.ax * scale); continue; }
 
@@ -81,66 +117,63 @@ async function main() {
       const path = glyph.getPath(x, y, FONT_SIZE);
       const pathData = path.toPathData(3);
 
-      // --- ЛОГИКА УМНОГО МАППИНГА (Smart Mapping) ---
-      // По умолчанию берем символ, на который указывает кластер
-      let assignedChar = text[g.cl];
+      // --- Детектив: Чей это глиф? ---
+      let realChar = text[g.cl]; // По умолчанию верим Harfbuzz (часто врет для подстрочных)
 
-      // Определяем границы кластера (от g.cl до следующего кластера или конца строки)
-      let nextClusterIndex = text.length;
+      // Ищем границы текущего кластера
+      let nextClusterIdx = text.length;
       for(let j = i + 1; j < result.length; j++) {
-          if (result[j].cl !== g.cl) {
-              nextClusterIndex = result[j].cl;
-              break;
-          }
+         if (result[j].cl !== g.cl) { nextClusterIdx = result[j].cl; break; }
       }
-
-      // Если в кластере больше 1 символа, пытаемся найти точное совпадение
-      const clusterText = text.slice(g.cl, nextClusterIndex);
+      const clusterText = text.slice(g.cl, nextClusterIdx);
 
       if (clusterText.length > 1) {
-          let foundMatch = false;
-
-          // 1. Попытка прямого совпадения:
-          // Проверяем каждый символ в кластере: "А не этот ли символ дает такой глиф?"
-          for (const char of clusterText) {
-              const standardGlyphIndex = font.charToGlyph(char).index;
-              if (standardGlyphIndex === g.g) {
-                  assignedChar = char;
-                  foundMatch = true;
+          let found = false;
+          // А. Точное совпадение (например для гласной E)
+          for (const ch of clusterText) {
+              if (font.charToGlyph(ch).index === g.g) {
+                  realChar = ch;
+                  found = true;
                   break;
               }
           }
-
-          // 2. Если прямого совпадения нет (это подстрочная буква/Coeng),
-          // ищем "скрытый" символ.
-          if (!foundMatch) {
-             // Обычно подстрочная буква идет после знака 0x17D2 (COENG)
-             for (let k = 0; k < clusterText.length - 1; k++) {
-                 if (clusterText.charCodeAt(k) === COENG) {
-                     // Если мы нашли COENG, то скорее всего этот "неопознанный" глиф
-                     // относится к следующей за ним букве (подстрочной)
-                     const subChar = clusterText[k+1];
-                     // Дополнительная проверка: основной символ кластера (первый) обычно
-                     // имеет свой нормальный глиф. Если текущий глиф НЕ совпадает с первым,
-                     // это сильный сигнал, что это подстрочная.
-                     const mainCharGlyph = font.charToGlyph(clusterText[0]).index;
-                     if (g.g !== mainCharGlyph) {
-                         assignedChar = subChar;
-                         foundMatch = true;
-                     }
-                     break;
-                 }
-             }
+          // Б. Если не нашли, и есть лапка (Coeng) -> значит это подстрочная
+          if (!found) {
+              for (let k = 0; k < clusterText.length - 1; k++) {
+                  if (clusterText.charCodeAt(k) === COENG) {
+                      const subChar = clusterText[k+1];
+                      // Проверяем, что это не основная буква
+                      if (g.g !== font.charToGlyph(clusterText[0]).index) {
+                          realChar = subChar;
+                      }
+                      break;
+                  }
+              }
           }
       }
-      // ---------------------------------------------
 
       if (pathData && pathData.length > 5) {
           glyphsData.push({
             id: glyphsData.length,
-            char: assignedChar, // Используем найденный "умный" символ
+            char: realChar, // <-- Теперь здесь правильная буква!
             clusterIndex: g.cl,
             d: pathData,
             bb: path.getBoundingBox()
           });
       }
+
+      cursorX += (g.ax * scale);
+    }
+
+    output[text] = glyphsData;
+    buffer.destroy();
+  }
+
+  const dataDir = path.dirname(OUTPUT_FILE);
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(output, null, 2));
+  console.log(`✅ ГОТОВО: Файл ${path.basename(OUTPUT_FILE)} создан.`);
+
+  hbFont.destroy(); face.destroy(); blob.destroy();
+}
+main().catch(console.error);

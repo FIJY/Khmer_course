@@ -47,30 +47,27 @@ export default function LessonPlayer() {
   } = useLessonPlayer();
 
   const safeItems = Array.isArray(items) ? items : [];
-  const audioRef = useRef(null); // Локальный реф для звука, если в хуке его нет
+  const audioRef = useRef(null);
 
   // --- ЛОГИКА ДЛЯ МАТРИЦЫ (No Spaces) ---
   const [revealedConsonants, setRevealedConsonants] = useState(new Set());
 
   // --- УПРАВЛЕНИЕ БЛОКИРОВКОЙ КНОПКИ "ДАЛЕЕ" ---
   useEffect(() => {
-    // 1. Сбрасываем состояние при входе на новый слайд
     setCanAdvance(false);
     setRevealedConsonants(new Set());
 
-    // 2. Определяем тип текущего слайда
     const currentType = safeItems[step]?.type;
 
-    // 3. БЕЛЫЙ СПИСОК: Слайды, где кнопка "Далее" активна сразу
     const autoUnlockTypes = [
       'theory',
       'learn_char',
       'word_breakdown',
-      'title',            // Новый
-      'meet-teams',       // Новый
-      'rule',             // Новый
-      'reading-algorithm',// Новый
-      'ready'             // Новый
+      'title',
+      'meet-teams',
+      'rule',
+      'reading-algorithm',
+      'ready'
     ];
 
     if (autoUnlockTypes.includes(currentType)) {
@@ -79,26 +76,21 @@ export default function LessonPlayer() {
 
   }, [step, safeItems, setCanAdvance]);
 
-  // Данные текущего слайда
   const current = safeItems[step]?.data;
   const type = safeItems[step]?.type;
 
-  // --- ОБРАБОТЧИК ДЛЯ МАТРИЦЫ (Слайд 3) ---
   const handleConsonantClick = (index, char) => {
     setRevealedConsonants((prev) => {
       const next = new Set(prev);
       next.add(index);
 
-      // Проверка победы (нашли все согласные)
       if (current?.khmerText) {
          const totalConsonants = Array.from(current.khmerText).filter(c => c.match(/[\u1780-\u17A2]/)).length;
 
-         // Если нашли все — победа
          if (next.size >= totalConsonants) {
             playLocalAudio('success.mp3');
             setCanAdvance(true);
          } else {
-            // Иначе играем звук буквы (если есть) или клик
             const soundFile = current.consonantAudioMap?.[char];
             if (soundFile) playLocalAudio(soundFile);
             else playLocalAudio('click.mp3');
@@ -108,7 +100,6 @@ export default function LessonPlayer() {
     });
   };
 
-  // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ QUIZ ---
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
     safeItems.forEach(item => {
@@ -136,7 +127,6 @@ export default function LessonPlayer() {
     return { text: opt, pronunciation: pronunciationMap?.[opt] ?? lessonPronunciations?.[opt] ?? '', audio: null };
   };
 
-  // --- РЕНДЕРИНГ ОШИБОК И ЗАГРУЗКИ ---
   if (loading) return <LoadingState label={t('loading.lesson')} />;
   if (error) return <ErrorState title={t('errors.lesson')} message={error} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
 
@@ -162,7 +152,6 @@ export default function LessonPlayer() {
 
   if (!safeItems.length || !safeItems[step]) return <ErrorState title={t('errors.lessonEmpty')} message={t('empty.lessonContent')} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
 
-  // --- ПОДГОТОВКА ДАННЫХ ДЛЯ VOCAB CARD ---
   const frontText = current?.front ?? '';
   const backText = current?.back ?? '';
   const frontHasKhmer = KHMER_PATTERN.test(frontText);
@@ -185,7 +174,6 @@ export default function LessonPlayer() {
             <button onClick={goBack} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`} type="button">
               <ChevronLeft size={24} />
             </button>
-            {/* Для типа 'ready' меняем текст кнопки */}
             <Button onClick={handleNext} disabled={!canAdvance} className="flex-1">
               {current?.type === 'ready' ? 'FINISH' : t('actions.continue')} <ArrowRight size={20} />
             </Button>
@@ -194,38 +182,30 @@ export default function LessonPlayer() {
         </footer>
       )}
     >
-        {/* 1. БУКВА-ГЕРОЙ (Старый) */}
         {type === 'learn_char' && (
           <HeroSlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
-        {/* 2. РАЗБОР СЛОВА (Старый) */}
         {type === 'word_breakdown' && (
           <InventorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
-        {/* 3. ВИЗУАЛЬНЫЙ ДЕКОДЕР (Слайд 4 - Кофе) */}
+        {/* --- ИЗМЕНЕНИЕ ЗДЕСЬ (VISUAL DECODER) --- */}
         {type === 'visual_decoder' && (
            <VisualDecoder
               key={step}
               data={current}
-              // 1. ПЕРЕДАЕМ ЗВУК: Пытаемся играть файл "буква.mp3"
-              onLetterClick={(char) => {
-                  console.log("Play audio for:", char);
-                  // Если у тебя файлы называются 'k.mp3', 'a.mp3' - нужно маппинг.
-                  // Пока пробуем играть по самому символу (или добавь .mp3)
-                  playLocalAudio(`${char}.mp3`);
-
-                  // 2. РАЗБЛОКИРОВКА: Разрешаем идти дальше после первого клика
+              onLetterClick={(fileName) => {
+                  console.log("Playing audio file:", fileName);
+                  // Теперь fileName — это уже 'letter_ka.mp3', ничего добавлять не надо
+                  playLocalAudio(fileName);
                   setCanAdvance(true);
               }}
-              // Или можно разблокировать сразу, если это просто демонстрация:
-              // onComplete={() => setCanAdvance(true)}
               hideDefaultButton={true}
            />
         )}
+        {/* -------------------------------------- */}
 
-        {/* 4. КАРТОЧКА СЛОВА (Старый) */}
         {type === 'vocab_card' && (
           <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
             <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
@@ -259,7 +239,6 @@ export default function LessonPlayer() {
           </div>
         )}
 
-        {/* 5. КВИЗ (Старый) */}
         {type === 'quiz' && (
           <div className="w-full space-y-3">
              <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
@@ -292,12 +271,10 @@ export default function LessonPlayer() {
           </div>
         )}
 
-        {/* 6. УНИВЕРСАЛЬНАЯ ТЕОРИЯ (Заголовки, Команды, Правила) */}
         {(type === 'theory' || type === 'title' || type === 'meet-teams' || type === 'rule' || type === 'reading-algorithm' || type === 'ready') && (
           <UniversalTheorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
-        {/* 7. ИНТЕРАКТИВНЫЙ ДРИЛЛ NO-SPACES (Слайд 3) */}
         {type === 'no-spaces' && (
            <div className="w-full flex flex-col items-center">
               <h2 className="text-3xl font-black text-white mb-2 text-center uppercase italic">{current.title}</h2>
