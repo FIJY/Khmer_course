@@ -1,7 +1,37 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import { getSoundFileForChar } from "../data/audioMap";
 
-// --- ХЕЛПЕРЫ ГЕОМЕТРИИ ---
+const COENG_CHAR = "្";
+
+function codepointsForChar(ch) {
+  return Array.from(ch || "").map((c) => `U+${c.codePointAt(0).toString(16).toUpperCase()}`);
+}
+
+function isKhmerConsonant(ch) {
+  if (!ch) return false;
+  const cp = ch.codePointAt(0);
+  return cp >= 0x1780 && cp <= 0x17A2;
+}
+
+function findNextConsonantAfterCoeng(textChars, startIndex) {
+  let coengIndex = -1;
+  for (let i = startIndex; i < textChars.length; i++) {
+    if (textChars[i] === COENG_CHAR) {
+      coengIndex = i;
+      break;
+    }
+  }
+
+  const searchStart = coengIndex >= 0 ? coengIndex + 1 : startIndex;
+  for (let i = searchStart; i < textChars.length; i++) {
+    if (isKhmerConsonant(textChars[i])) {
+      return { char: textChars[i], index: i };
+    }
+  }
+
+  return { char: "", index: -1 };
+}
+
 function bboxArea(bb) {
   const w = (bb?.x2 ?? 0) - (bb?.x1 ?? 0);
   const h = (bb?.y2 ?? 0) - (bb?.y1 ?? 0);
@@ -22,6 +52,7 @@ function makeViewBoxFromGlyphs(glyphs, pad = 60) {
   return { minX, minY, w: Math.max(10, maxX - minX), h: Math.max(10, maxY - minY) };
 }
 
+// ВАЖНО: здесь должно быть слово 'default'
 export default function VisualDecoder({ data, text: propText, onLetterClick, onComplete, hideDefaultButton }) {
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
@@ -29,18 +60,11 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  const [glyphSoundMap, setGlyphSoundMap] = useState({});
-
+  
   const svgRef = useRef(null);
   const hitRefs = useRef([]);
+  hitRefs.current = [];
 
-  // --- БЕЗОПАСНАЯ ОЧИСТКА ---
-  // Сбрасываем ссылки только когда меняется само СЛОВО.
-  useEffect(() => {
-    hitRefs.current = [];
-  }, [text]);
-
-  // 1. ЗАГРУЗКА SVG
   useEffect(() => {
     let active = true;
     if (!text) return;
@@ -68,57 +92,6 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
     return () => { active = false; };
   }, [text]);
 
-  // 2. КАРТА ЗВУКОВ (ЛОГИКА ОЧЕРЕДИ)
-  useEffect(() => {
-    if (!glyphs.length || !data?.char_split) return;
-
-    const audioMap = data.char_audio_map || {};
-    const soundQueues = {};
-    const isConsonant = (char) => /[\u1780-\u17A2]/.test(char);
-
-    data.char_split.forEach(token => {
-        const cleanToken = token ? token.trim() : "";
-        let groupSound = audioMap[token] || audioMap[cleanToken];
-
-        if (!groupSound) groupSound = getSoundFileForChar(cleanToken);
-        if (groupSound && groupSound.startsWith("sub_")) {
-            groupSound = groupSound.replace("sub_", "letter_");
-        }
-
-        for (const char of cleanToken) {
-            if (!soundQueues[char]) soundQueues[char] = [];
-
-            const isModifierSound = groupSound && (
-                groupSound.includes("sign_") ||
-                groupSound.includes("vowel_") ||
-                groupSound.includes("diacritic")
-            );
-
-            if (isConsonant(char) && isModifierSound) {
-                const nativeSound = getSoundFileForChar(char);
-                soundQueues[char].push(nativeSound);
-            } else {
-                soundQueues[char].push(groupSound);
-            }
-        }
-    });
-
-    const newMap = {};
-    const queuesCopy = JSON.parse(JSON.stringify(soundQueues));
-
-    glyphs.forEach((glyph, idx) => {
-        const char = glyph.char;
-        if (queuesCopy[char] && queuesCopy[char].length > 0) {
-            newMap[idx] = queuesCopy[char].shift();
-        } else {
-            newMap[idx] = getSoundFileForChar(char);
-        }
-    });
-
-    setGlyphSoundMap(newMap);
-  }, [glyphs, data]);
-
-  // --- ГЕОМЕТРИЯ И КЛИКИ ---
   const vb = useMemo(() => {
     if (glyphs.length === 0) return { minX: 0, minY: 0, w: 300, h: 300 };
     return makeViewBoxFromGlyphs(glyphs, 70);
@@ -129,6 +102,27 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
       .map((g, idx) => ({ g, idx, area: bboxArea(g.bb) }))
       .sort((a, b) => a.area - b.area);
   }, [glyphs]);
+
+  const resolvedGlyphChars = useMemo(() => {
+    const textChars = Array.from(text || "");
+    let textIndex = 0;
+    return glyphs.map((glyph) => {
+      let resolvedChar = glyph.char || "";
+      if (resolvedChar === COENG_CHAR) {
+        const { char, index } = findNextConsonantAfterCoeng(textChars, textIndex);
+        if (char) {
+          resolvedChar = char;
+          textIndex = index + 1;
+        }
+      } else if (resolvedChar) {
+        const nextIndex = textChars.indexOf(resolvedChar, textIndex);
+        if (nextIndex !== -1) {
+          textIndex = nextIndex + 1;
+        }
+      }
+      return resolvedChar || glyph.char || "";
+    });
+  }, [glyphs, text]);
 
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
@@ -143,35 +137,50 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
 
   function pickGlyphAtPoint(p) {
     if (!p) return null;
+    const hits = [];
     for (const item of hitOrder) {
       const pathEl = hitRefs.current[item.idx];
-      // Пропускаем, если ссылка потерялась
       if (!pathEl) continue;
-
       try {
-        // Проверяем попадание в заливку ИЛИ в обводку
         if (pathEl.isPointInFill?.(p) || pathEl.isPointInStroke?.(p)) {
-          return { glyph: item.g, index: item.idx };
+          hits.push(item);
         }
       } catch {}
     }
-    return null;
+
+    if (hits.length === 0) return null;
+
+    const consonantHits = hits.filter((item) => isKhmerConsonant(item.g.char));
+    if (consonantHits.length > 0) return consonantHits[0].g;
+
+    const nonCoengHits = hits.filter((item) => item.g.char !== COENG_CHAR);
+    if (nonCoengHits.length > 0) return nonCoengHits[0].g;
+
+    return hits[0].g;
   }
 
   const handlePointerDown = (e) => {
     e.preventDefault();
     const p = svgPointFromEvent(e);
     const hit = pickGlyphAtPoint(p);
-
     if (!hit) return;
 
-    const { glyph, index } = hit;
-    setSelectedId(glyph.id);
+    setSelectedId(hit.id);
 
-    const soundFile = glyphSoundMap[index];
-    console.log(`Clicked #${index} ("${glyph.char}") -> ${soundFile}`);
+    const resolvedChar = resolvedGlyphChars[hit.id] || hit.char;
+    const soundFile = getSoundFileForChar(resolvedChar);
 
-    if (onLetterClick) onLetterClick(soundFile);
+    console.log("VisualDecoder hit char:", hit.char);
+    console.log("VisualDecoder resolved char:", resolvedChar);
+    console.log("VisualDecoder hit codepoints:", codepointsForChar(hit.char));
+    console.log("VisualDecoder resolved codepoints:", codepointsForChar(resolvedChar));
+    console.log("VisualDecoder resolved sound file:", soundFile);
+
+    // ВАЖНО: Вызываем клик ВСЕГДА, даже если soundFile === null
+    if (onLetterClick) {
+      onLetterClick(soundFile); 
+    }
+    
     if (onComplete) onComplete();
   };
 
@@ -192,19 +201,14 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
           return (
             <g key={glyph.id}>
               <title>{glyph.char}</title>
-
-              {/* ХИТ-БОКС (НЕВИДИМЫЙ) */}
-              {/* Уменьшили strokeWidth до 55, чтобы не перекрывать соседей */}
               <path
                 ref={(el) => (hitRefs.current[i] = el)}
                 d={glyph.d}
                 fill="transparent"
                 stroke="transparent"
-                strokeWidth="55"
+                strokeWidth="10"
                 pointerEvents="none"
               />
-
-              {/* ВИДИМАЯ БУКВА */}
               <path
                 d={glyph.d}
                 fill={isSelected ? "#22d3ee" : "white"}
