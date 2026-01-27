@@ -14,6 +14,8 @@ const PORT = 3001;
 const FONT_PATH = path.join(__dirname, 'public/fonts/NotoSansKhmer-Regular.ttf');
 const FONT_SIZE = 120;
 const COENG = 0x17d2;
+const KHMER_CONSONANT_START = 0x1780;
+const KHMER_CONSONANT_END = 0x17A2;
 
 // Какие гласные мы хотим отрывать "с мясом" (Force Split)
 function shouldForceSplit(char) {
@@ -21,6 +23,41 @@ function shouldForceSplit(char) {
   const code = char.charCodeAt(0);
   const splitList = [0x17B6, 0x17C1, 0x17C2, 0x17C3, 0x17C4, 0x17C5];
   return splitList.includes(code);
+}
+
+function isKhmerConsonantCodePoint(cp) {
+  return cp >= KHMER_CONSONANT_START && cp <= KHMER_CONSONANT_END;
+}
+
+function resolveCharFromCodePoints(codePoints = []) {
+  if (!Array.isArray(codePoints) || codePoints.length === 0) return "";
+
+  const consonant = codePoints.find((cp) => isKhmerConsonantCodePoint(cp));
+  if (consonant) return String.fromCodePoint(consonant);
+
+  const nonCoeng = codePoints.find((cp) => cp !== COENG);
+  if (nonCoeng) return String.fromCodePoint(nonCoeng);
+
+  return String.fromCodePoint(codePoints[0]);
+}
+
+function findNextConsonantAfterCoeng(textChars, startIndex) {
+  let coengIndex = -1;
+  for (let i = startIndex; i < textChars.length; i++) {
+    if (textChars[i].codePointAt(0) === COENG) {
+      coengIndex = i;
+      break;
+    }
+  }
+
+  const searchStart = coengIndex >= 0 ? coengIndex + 1 : startIndex;
+  for (let i = searchStart; i < textChars.length; i++) {
+    if (isKhmerConsonantCodePoint(textChars[i].codePointAt(0))) {
+      return { char: textChars[i], index: i };
+    }
+  }
+
+  return { char: "", index: -1 };
 }
 
 let fkFont = null;       // Fontkit instance
@@ -63,7 +100,8 @@ app.get('/api/shape', (req, res) => {
     // Fontkit хранит привязку глифов к индексам строки в glyph.codePoints (примерно)
     // Но проще идти параллельно, используя логику "Force Split"
 
-    let processedCharIndex = -1;
+    const textChars = Array.from(text);
+    let textIndex = 0;
 
     for (let i = 0; i < run.glyphs.length; i++) {
       const fkGlyph = run.glyphs[i];
@@ -100,8 +138,19 @@ app.get('/api/shape', (req, res) => {
 
       // Определяем, какой это символ для звука
       // Fontkit дает нам codePoints, берем первый, если есть
-      let charCode = codePoints[0];
-      let char = String.fromCharCode(charCode);
+      let char = resolveCharFromCodePoints(codePoints);
+      if (char === String.fromCodePoint(COENG)) {
+        const { char: fallbackChar, index } = findNextConsonantAfterCoeng(textChars, textIndex);
+        if (fallbackChar) {
+          char = fallbackChar;
+          textIndex = index + 1;
+        }
+      } else if (char) {
+        const nextIndex = textChars.indexOf(char, textIndex);
+        if (nextIndex !== -1) {
+          textIndex = nextIndex + 1;
+        }
+      }
 
       // --- DETECTIVE (Исправление "ножек") ---
       // Если глиф похож на Coeng (или это часть сложного кластера),

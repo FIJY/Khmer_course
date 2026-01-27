@@ -1,6 +1,37 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import { getSoundFileForChar } from "../data/audioMap";
 
+const COENG_CHAR = "្";
+
+function codepointsForChar(ch) {
+  return Array.from(ch || "").map((c) => `U+${c.codePointAt(0).toString(16).toUpperCase()}`);
+}
+
+function isKhmerConsonant(ch) {
+  if (!ch) return false;
+  const cp = ch.codePointAt(0);
+  return cp >= 0x1780 && cp <= 0x17A2;
+}
+
+function findNextConsonantAfterCoeng(textChars, startIndex) {
+  let coengIndex = -1;
+  for (let i = startIndex; i < textChars.length; i++) {
+    if (textChars[i] === COENG_CHAR) {
+      coengIndex = i;
+      break;
+    }
+  }
+
+  const searchStart = coengIndex >= 0 ? coengIndex + 1 : startIndex;
+  for (let i = searchStart; i < textChars.length; i++) {
+    if (isKhmerConsonant(textChars[i])) {
+      return { char: textChars[i], index: i };
+    }
+  }
+
+  return { char: "", index: -1 };
+}
+
 function bboxArea(bb) {
   const w = (bb?.x2 ?? 0) - (bb?.x1 ?? 0);
   const h = (bb?.y2 ?? 0) - (bb?.y1 ?? 0);
@@ -71,6 +102,27 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
       .sort((a, b) => a.area - b.area);
   }, [glyphs]);
 
+  const resolvedGlyphChars = useMemo(() => {
+    const textChars = Array.from(text || "");
+    let textIndex = 0;
+    return glyphs.map((glyph) => {
+      let resolvedChar = glyph.char || "";
+      if (resolvedChar === COENG_CHAR) {
+        const { char, index } = findNextConsonantAfterCoeng(textChars, textIndex);
+        if (char) {
+          resolvedChar = char;
+          textIndex = index + 1;
+        }
+      } else if (resolvedChar) {
+        const nextIndex = textChars.indexOf(resolvedChar, textIndex);
+        if (nextIndex !== -1) {
+          textIndex = nextIndex + 1;
+        }
+      }
+      return resolvedChar || glyph.char || "";
+    });
+  }, [glyphs, text]);
+
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
     if (!svg) return null;
@@ -84,14 +136,26 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
 
   function pickGlyphAtPoint(p) {
     if (!p) return null;
+    const hits = [];
     for (const item of hitOrder) {
       const pathEl = hitRefs.current[item.idx];
       if (!pathEl) continue;
       try {
-        if (pathEl.isPointInFill?.(p) || pathEl.isPointInStroke?.(p)) return item.g;
+        if (pathEl.isPointInFill?.(p) || pathEl.isPointInStroke?.(p)) {
+          hits.push(item);
+        }
       } catch {}
     }
-    return null;
+
+    if (hits.length === 0) return null;
+
+    const consonantHits = hits.filter((item) => isKhmerConsonant(item.g.char));
+    if (consonantHits.length > 0) return consonantHits[0].g;
+
+    const nonCoengHits = hits.filter((item) => item.g.char !== COENG_CHAR);
+    if (nonCoengHits.length > 0) return nonCoengHits[0].g;
+
+    return hits[0].g;
   }
 
   const handlePointerDown = (e) => {
@@ -102,8 +166,14 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
 
     setSelectedId(hit.id);
 
-    // Получаем имя файла (или null, если его нет)
-    const soundFile = getSoundFileForChar(hit.char);
+    const resolvedChar = resolvedGlyphChars[hit.id] || hit.char;
+    const soundFile = getSoundFileForChar(resolvedChar);
+
+    console.log("VisualDecoder hit char:", hit.char);
+    console.log("VisualDecoder resolved char:", resolvedChar);
+    console.log("VisualDecoder hit codepoints:", codepointsForChar(hit.char));
+    console.log("VisualDecoder resolved codepoints:", codepointsForChar(resolvedChar));
+    console.log("VisualDecoder resolved sound file:", soundFile);
 
     // ВАЖНО: Вызываем клик ВСЕГДА, даже если soundFile === null
     if (onLetterClick) {
