@@ -72,7 +72,6 @@ export default function VisualDecoder({
   const [glyphs, setGlyphs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedId, setSelectedId] = useState(null);
 
   const svgRef = useRef(null);
   const hitRefs = useRef([]);
@@ -197,8 +196,6 @@ export default function VisualDecoder({
     const hit = pickGlyphAtPoint(p);
     if (!hit) return;
 
-    setSelectedId(hit.g.id);
-
     // ВАЖНО: idx, а не hit.g.id
     const resolvedChar = resolvedGlyphChars[hit.idx] || hit.g.char;
     const soundFile = getSoundFileForChar(resolvedChar);
@@ -233,7 +230,6 @@ export default function VisualDecoder({
         onPointerDown={handlePointerDown}
       >
         {glyphs.map((glyph, i) => {
-          const isSelected = selectedId === glyph.id;
           return (
             <g key={glyph.id}>
               <title>{glyph.char}</title>
@@ -251,14 +247,9 @@ export default function VisualDecoder({
               {/* видимый слой */}
               <path
                 d={glyph.d}
-                fill={isSelected ? "#22d3ee" : "white"}
+                fill="white"
                 pointerEvents="none"
-                className="transition-all duration-300"
-                style={{
-                  filter: isSelected
-                    ? "drop-shadow(0 0 15px #22d3ee)"
-                    : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
-                }}
+                style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.5))" }}
               />
             </g>
           );

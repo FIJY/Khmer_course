@@ -240,7 +240,6 @@ export default function LessonPlayer() {
                     />
                   </div>
                   <p className="text-base text-cyan-100 font-semibold tracking-wide">
-                    <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
                     {current.pronunciation || '—'}
                   </p>
                 </div>
