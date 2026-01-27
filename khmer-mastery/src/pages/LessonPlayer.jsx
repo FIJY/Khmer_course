@@ -11,7 +11,7 @@ import { t } from '../i18n';
 import SessionCompletion from '../components/Session/SessionCompletion';
 import SessionFrame from '../components/Session/SessionFrame';
 
-// --- ИМПОРТ НОВЫХ КОМПОНЕНТОВ ---
+// --- ИМПОРТ КОМПОНЕНТОВ (БЕЗ ЛИШНИХ ПАПОК) ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
 import InventorySlide from '../components/LessonSlides/InventorySlide';
 import UniversalTheorySlide from '../components/LessonSlides/UniversalTheorySlide';
@@ -57,7 +57,9 @@ export default function LessonPlayer() {
     setCanAdvance(false);
     setRevealedConsonants(new Set());
 
-    const currentType = safeItems[step]?.type;
+    const rawType = safeItems[step]?.type;
+    // 1. ИСПРАВЛЕНИЕ: Приводим тип к нижнему регистру (Theory -> theory)
+    const currentType = rawType ? rawType.toLowerCase() : '';
 
     const autoUnlockTypes = [
       'theory',
@@ -67,7 +69,8 @@ export default function LessonPlayer() {
       'meet-teams',
       'rule',
       'reading-algorithm',
-      'ready'
+      'ready',
+      'intro'
     ];
 
     if (autoUnlockTypes.includes(currentType)) {
@@ -77,7 +80,10 @@ export default function LessonPlayer() {
   }, [step, safeItems, setCanAdvance]);
 
   const current = safeItems[step]?.data;
-  const type = safeItems[step]?.type;
+
+  // 2. Получаем тип и нормализуем его для рендера
+  const rawType = safeItems[step]?.type;
+  const type = rawType ? rawType.toLowerCase() : '';
 
   const handleConsonantClick = (index, char) => {
     setRevealedConsonants((prev) => {
@@ -190,21 +196,25 @@ export default function LessonPlayer() {
           <InventorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
-        {/* --- ИЗМЕНЕНИЕ ЗДЕСЬ (VISUAL DECODER) --- */}
+        {/* --- ВИЗУАЛЬНЫЙ ДЕКОДЕР --- */}
         {type === 'visual_decoder' && (
            <VisualDecoder
               key={step}
               data={current}
               onLetterClick={(fileName) => {
-                  console.log("Playing audio file:", fileName);
-                  // Теперь fileName — это уже 'letter_ka.mp3', ничего добавлять не надо
-                  playLocalAudio(fileName);
+                  // БЕЗОПАСНЫЙ КЛИК: Проверка на наличие звука
+                  if (fileName) {
+                      console.log("Playing audio file:", fileName);
+                      playLocalAudio(fileName);
+                  } else {
+                      console.log("Silent character selected (no audio)");
+                  }
+                  // Всегда разрешаем идти дальше
                   setCanAdvance(true);
               }}
               hideDefaultButton={true}
            />
         )}
-        {/* -------------------------------------- */}
 
         {type === 'vocab_card' && (
           <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
@@ -271,8 +281,13 @@ export default function LessonPlayer() {
           </div>
         )}
 
-        {(type === 'theory' || type === 'title' || type === 'meet-teams' || type === 'rule' || type === 'reading-algorithm' || type === 'ready') && (
-          <UniversalTheorySlide data={current} onPlayAudio={playLocalAudio} />
+        {/* УНИВЕРСАЛЬНАЯ ТЕОРИЯ */}
+        {(type === 'theory' || type === 'title' || type === 'meet-teams' || type === 'rule' || type === 'reading-algorithm' || type === 'ready' || type === 'intro') && (
+          <UniversalTheorySlide
+             type={type}
+             data={current}
+             onPlayAudio={playLocalAudio}
+          />
         )}
 
         {type === 'no-spaces' && (

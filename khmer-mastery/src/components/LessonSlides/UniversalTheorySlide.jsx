@@ -1,23 +1,32 @@
 import React from 'react';
-import { Volume2, Sun, Moon } from 'lucide-react';
+import { Volume2, Sun, Moon, BookOpen, Lightbulb, Zap, ListOrdered } from 'lucide-react';
 
-export default function UniversalTheorySlide({ data, onPlayAudio }) {
-  // Хелпер для безопасного воспроизведения
+export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
+  // 1. Нормализация типа: пропс > данные > пусто
+  const effectiveType = type || data?.type || '';
+  const mode = effectiveType.toLowerCase();
+
+  // Хелпер для звука
   const play = (file) => {
     if (onPlayAudio && file) onPlayAudio(file);
   };
 
-  switch (data.type) {
+  switch (mode) {
     case 'title':
       return (
         <div className="w-full flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-[50vh]">
-          <div className="text-8xl mb-6 animate-pulse">{data.icon}</div>
+          <div className="text-8xl mb-6 animate-pulse">
+             {/* Если icon строка (эмодзи) - выводим как текст, иначе как компонент */}
+             {typeof data.icon === 'string' ? data.icon : <Zap size={80} className="text-amber-400" />}
+          </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-4 uppercase tracking-tighter leading-tight">
             {data.title}
           </h1>
-          <p className="text-xl md:text-2xl text-amber-400 mb-8 font-mono bg-amber-900/20 px-4 py-2 rounded-lg border border-amber-500/20">
-            {data.subtitle}
-          </p>
+          {data.subtitle && (
+            <p className="text-xl md:text-2xl text-amber-400 mb-8 font-mono bg-amber-900/20 px-4 py-2 rounded-lg border border-amber-500/20">
+              {data.subtitle}
+            </p>
+          )}
           <p className="text-lg text-slate-300 max-w-lg mx-auto leading-relaxed">
             {data.description}
           </p>
@@ -26,71 +35,85 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
 
     case 'meet-teams':
       return (
-        <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8">
-          <h2 className="text-3xl font-black text-white mb-8 text-center italic uppercase tracking-tighter">
-            {data.title}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* SUN TEAM */}
-            <div className="bg-gradient-to-b from-amber-500/10 to-transparent border border-amber-500/20 rounded-[2.5rem] p-6 text-center relative overflow-hidden">
-                <div className="text-5xl mb-4">☀️</div>
-                <h3 className="text-amber-400 font-black uppercase text-sm tracking-[0.2em] mb-4">Sun Team</h3>
-                <div className="flex flex-col gap-3">
-                    {data.pairs.map((pair, i) => (
-                        <button
-                            key={i}
-                            type="button"
-                            onClick={() => play(data.consonantAudioMap?.[pair.sun])}
-                            className="bg-gray-900 border border-white/5 hover:border-amber-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all active:scale-95 cursor-pointer w-full"
-                        >
-                            <span className="text-3xl font-khmer text-white">{pair.sun}</span>
-                            <span className="text-xs text-gray-500 font-bold group-hover:text-amber-400">{pair.sunRead}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* MOON TEAM */}
-            <div className="bg-gradient-to-b from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-[2.5rem] p-6 text-center relative overflow-hidden">
-                <div className="text-5xl mb-4">🌑</div>
-                <h3 className="text-indigo-400 font-black uppercase text-sm tracking-[0.2em] mb-4">Moon Team</h3>
-                <div className="flex flex-col gap-3">
-                    {data.pairs.map((pair, i) => (
-                        <button
-                            key={i}
-                            type="button"
-                            onClick={() => play(data.consonantAudioMap?.[pair.moon])}
-                            className="bg-gray-900 border border-white/5 hover:border-indigo-500/50 p-4 rounded-2xl flex items-center justify-between group transition-all active:scale-95 cursor-pointer w-full"
-                        >
-                            <span className="text-3xl font-khmer text-white">{pair.moon}</span>
-                            <span className="text-xs text-gray-500 font-bold group-hover:text-indigo-400">{pair.moonRead}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-          </div>
+        <div className="w-full flex flex-col items-center text-center animate-in zoom-in duration-500">
+           <h2 className="text-3xl font-black text-white mb-8 uppercase italic">{data.title || 'Meet the Teams'}</h2>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+              {/* Команда Солнца */}
+              <div className="bg-gradient-to-br from-amber-500/20 to-orange-900/20 border border-amber-500/30 p-6 rounded-3xl">
+                 <Sun size={48} className="text-amber-400 mx-auto mb-4" />
+                 <h3 className="text-xl font-bold text-amber-200 mb-2">Solar Team (A-Series)</h3>
+                 <p className="text-sm text-amber-100/80">Open mouth, natural voice. Like saying "Ahhh"</p>
+              </div>
+              {/* Команда Луны */}
+              <div className="bg-gradient-to-br from-indigo-500/20 to-blue-900/20 border border-indigo-500/30 p-6 rounded-3xl">
+                 <Moon size={48} className="text-indigo-400 mx-auto mb-4" />
+                 <h3 className="text-xl font-bold text-indigo-200 mb-2">Lunar Team (O-Series)</h3>
+                 <p className="text-sm text-indigo-100/80">Round mouth, deeper voice. Like saying "Ohhh"</p>
+              </div>
+           </div>
         </div>
       );
 
+    // --- ВАЖНО: Обработка Theory и Rule в одном блоке ---
+    case 'theory':
     case 'rule':
       return (
-        <div className="w-full max-w-xl text-center animate-in fade-in zoom-in">
-            <h2 className="text-4xl font-black text-white mb-6 uppercase italic">{data.title}</h2>
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-800 p-8 rounded-[3rem] mb-8 shadow-2xl border border-white/10">
-                <p className="text-2xl font-bold text-white leading-snug">{data.rule80}</p>
+        <div className="w-full bg-gray-900 border border-white/10 p-8 rounded-[3.5rem] text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="flex justify-center mb-6">
+                <div className="p-4 bg-cyan-500/10 rounded-full">
+                    {mode === 'rule' ? <Lightbulb className="text-amber-400" size={40} /> : <BookOpen className="text-cyan-400" size={40} />}
+                </div>
             </div>
-             <div className="flex flex-wrap justify-center gap-3 mb-8">
-                {data.examples?.map((ex, i) => (
-                    <div key={i} className="flex items-center gap-3 px-5 py-3 rounded-full bg-gray-900 border border-white/10">
-                        <span className="text-2xl font-khmer text-white">{ex.letter}</span>
-                        <span className={`text-xs font-black uppercase tracking-wider ${ex.team === 'Sun' ? 'text-amber-400' : 'text-indigo-400'}`}>
-                            {ex.team}
-                        </span>
+
+            <h2 className="text-2xl font-black italic uppercase text-white mb-6 tracking-wide">
+                {data.title || 'Theory Block'}
+            </h2>
+
+            <div className="text-lg text-gray-300 leading-relaxed space-y-4 font-medium text-left md:text-center">
+                {Array.isArray(data.description)
+                    ? data.description.map((line, i) => <p key={i}>{line}</p>)
+                    : <p>{data.description}</p>
+                }
+
+                {data.examples && (
+                  <div className="flex flex-wrap justify-center gap-3 mt-6">
+                    {data.examples.map((ex, i) => (
+                      <div key={i} className="px-4 py-2 bg-black/40 rounded-xl border border-white/5 text-cyan-200 font-khmer">
+                        {typeof ex === 'string' ? ex : ex.letter}
+                      </div>
+                    ))}
+                  </div>
+                )}
+            </div>
+
+            {data.audio && (
+                <button
+                    onClick={() => play(data.audio)}
+                    className="mt-8 flex items-center gap-3 px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-full text-cyan-400 font-bold transition-all mx-auto border border-white/5"
+                >
+                    <Volume2 size={20} />
+                    <span>Listen</span>
+                </button>
+            )}
+        </div>
+      );
+
+    case 'reading-algorithm':
+      return (
+        <div className="w-full animate-in fade-in duration-500">
+            <div className="flex justify-center mb-6">
+                <ListOrdered size={40} className="text-emerald-400" />
+            </div>
+            <h2 className="text-2xl font-black text-white mb-6 text-center uppercase">{data.title || 'How to read'}</h2>
+            <div className="space-y-3">
+                {(data.steps || []).map((step, idx) => (
+                    <div key={idx} className="flex items-start gap-4 bg-gray-800/50 p-4 rounded-2xl border border-white/5">
+                        <div className="h-6 w-6 rounded-full bg-emerald-900 text-emerald-400 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
+                            {idx + 1}
+                        </div>
+                        <p className="text-gray-200 font-medium text-sm text-left">{step}</p>
                     </div>
                 ))}
-            </div>
-            <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl">
-                <p className="text-amber-200 text-sm font-medium">💡 Tip: {data.tip}</p>
             </div>
         </div>
       );
@@ -104,10 +127,21 @@ export default function UniversalTheorySlide({ data, onPlayAudio }) {
             </div>
         );
 
+    case 'intro':
+         return (
+            <div className="w-full flex flex-col items-center justify-center text-center animate-in fade-in duration-700">
+                <h2 className="text-3xl font-black text-white mb-6">{data.title}</h2>
+                <p className="text-xl text-gray-300">{data.text || data.description}</p>
+            </div>
+         );
+
     default:
       return (
-        <div className="p-10 text-center text-red-500 bg-gray-900 rounded-2xl">
-           UniversalSlide: Unknown type "{data.type}"
+        <div className="w-full flex flex-col items-center justify-center p-10 text-center text-white">
+           <p className="text-red-400 font-bold mb-4">Unknown Slide Type: "{mode}"</p>
+           <div className="bg-gray-900 p-4 rounded text-left overflow-auto max-w-sm max-h-40">
+             <pre className="text-xs text-green-400">{JSON.stringify(data, null, 2)}</pre>
+           </div>
         </div>
       );
   }

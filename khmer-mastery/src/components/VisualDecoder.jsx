@@ -1,5 +1,4 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
-// Убедись, что путь правильный
 import { getSoundFileForChar } from "../data/audioMap";
 
 function bboxArea(bb) {
@@ -39,7 +38,6 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
     if (!text) return;
 
     setLoading(true);
-    // Обращаемся к твоему Python-серверу
     fetch(`http://localhost:3001/api/shape?text=${encodeURIComponent(text)}`)
       .then(res => {
         if (!res.ok) throw new Error("Server error");
@@ -104,15 +102,11 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
 
     setSelectedId(hit.id);
 
-    // --- ИСПРАВЛЕНИЕ: Получаем имя файла из мапа ---
-    // hit.char может быть "ក" или "្" (U+17D2)
+    // Получаем имя файла (или null, если его нет)
     const soundFile = getSoundFileForChar(hit.char);
 
-    console.log(`Clicked: ${hit.char}, Playing: ${soundFile}`);
-
-    // Если файла нет в мапе (например, для U+17D2), soundFile будет undefined
-    // и мы НЕ вызовем ошибку.
-    if (soundFile && onLetterClick) {
+    // ВАЖНО: Вызываем клик ВСЕГДА, даже если soundFile === null
+    if (onLetterClick) {
       onLetterClick(soundFile);
     }
 
