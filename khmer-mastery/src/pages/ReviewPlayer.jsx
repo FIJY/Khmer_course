@@ -39,6 +39,8 @@ export default function ReviewPlayer() {
     currentIndex,
     selectedOption,
     isFinished,
+    incorrectItems,
+    hasRepeated,
     showSettings,
     settings,
     setSettings,
@@ -49,6 +51,7 @@ export default function ReviewPlayer() {
     handleAnswer,
     nextCard,
     getCardMode,
+    repeatIncorrect,
     refresh
   } = useReviewSession();
 
@@ -91,7 +94,14 @@ export default function ReviewPlayer() {
       <MobileLayout withNav={false} className="justify-center items-center text-center p-6">
         <CheckCircle2 size={64} className="text-emerald-500 mb-6 mx-auto" />
         <h1 className="text-3xl font-black text-white italic uppercase mb-2">{t('review.sessionComplete')}</h1>
-        <Button onClick={() => navigate('/review')} className="mt-8">{t('actions.backToHub')}</Button>
+        <div className="mt-8 flex flex-col gap-3 w-full max-w-xs">
+          {incorrectItems.length > 0 && !hasRepeated && (
+            <Button onClick={repeatIncorrect} variant="secondary">
+              Repeat mistakes ({incorrectItems.length})
+            </Button>
+          )}
+          <Button onClick={() => navigate('/review')}>{t('actions.backToHub')}</Button>
+        </div>
       </MobileLayout>
     );
   }

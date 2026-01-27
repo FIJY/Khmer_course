@@ -8,6 +8,7 @@ import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
+import { isLessonLocked } from '../lib/access';
 
 // --- ИМПОРТИРУЕМ НОВЫЕ СЛАЙДЫ ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
@@ -59,6 +60,14 @@ export default function LessonPlayer() {
     });
     return map;
   }, [safeItems]);
+
+  React.useEffect(() => {
+    if (!lessonInfo) return;
+    const resolvedLessonId = lessonInfo?.lesson_id ?? lessonInfo?.id ?? id;
+    if (isLessonLocked(resolvedLessonId)) {
+      navigate('/paywall', { state: { from: `/lesson/${resolvedLessonId}/preview` } });
+    }
+  }, [id, lessonInfo, navigate]);
 
   // ... (Оставляем проверки loading, error, isFinished без изменений) ...
   if (loading) return <LoadingState label={t('loading.lesson')} />;

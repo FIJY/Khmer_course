@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { User, Trophy, Zap, Target, Flame, Trash2, LogOut } from 'lucide-react';
+import { User, Trophy, Zap, Target, Flame, Trash2, LogOut, Gem } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
@@ -16,6 +16,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState({ email: '', joined: '' });
   const [stats, setStats] = useState({ lessons: 0, words: 0, gems: 0 });
+  const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -30,9 +31,26 @@ export default function Profile() {
 
       const lessonsCompleted = await fetchCompletedLessonCount(user.id);
       const wordsLearned = await fetchUserSrsCount(user.id);
+      const username = user.email ? user.email.split('@')[0] : 'Learner';
+
+      const baselineLeaders = [
+        { name: 'sokha', gems: 2100 },
+        { name: 'dara', gems: 1850 },
+        { name: 'maly', gems: 1600 },
+        { name: 'nika', gems: 1200 }
+      ];
+      const currentEntry = {
+        name: username,
+        gems: lessonsCompleted * 50,
+        isCurrent: true
+      };
+      const merged = [currentEntry, ...baselineLeaders]
+        .sort((a, b) => b.gems - a.gems)
+        .slice(0, 5);
 
       setProfile({ email: user.email, joined: new Date(user.created_at).toLocaleDateString() });
       setStats({ lessons: lessonsCompleted, words: wordsLearned, gems: lessonsCompleted * 50 });
+      setLeaderboard(merged);
     } catch (err) {
       console.error(err);
       setError('Unable to load your profile.');
@@ -113,6 +131,40 @@ export default function Profile() {
              <h3 className="text-2xl font-black text-white">{stats.words}</h3>
              <p className="text-gray-500 text-[10px] font-bold uppercase">Words</p>
           </div>
+        </div>
+
+        <div className="bg-gray-900/50 p-5 rounded-[2rem] border border-white/5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Rating</p>
+              <h3 className="text-lg font-black text-white uppercase tracking-widest">Top Gems</h3>
+            </div>
+            <Gem size={18} className="text-emerald-400" />
+          </div>
+          <div className="space-y-2">
+            {leaderboard.map((entry, index) => (
+              <div
+                key={`${entry.name}-${index}`}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl border ${
+                  entry.isCurrent
+                    ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
+                    : 'border-white/5 bg-black/40 text-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black text-gray-500">#{index + 1}</span>
+                  <span className="text-xs font-black uppercase tracking-widest">{entry.name}</span>
+                </div>
+                <span className="text-xs font-black flex items-center gap-2">
+                  <Gem size={14} className="text-emerald-400" />
+                  {entry.gems}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[9px] text-gray-600 uppercase tracking-[0.3em] text-center">
+            Gems = completed lessons × 50
+          </p>
         </div>
 
         {/* SETTINGS AREA */}

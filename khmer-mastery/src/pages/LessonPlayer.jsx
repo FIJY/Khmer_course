@@ -10,6 +10,7 @@ import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
 import SessionCompletion from '../components/Session/SessionCompletion';
 import SessionFrame from '../components/Session/SessionFrame';
+import { isLessonLocked } from '../lib/access';
 
 // --- ИМПОРТ КОМПОНЕНТОВ (БЕЗ ЛИШНИХ ПАПОК) ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
@@ -120,6 +121,14 @@ export default function LessonPlayer() {
     });
     return map;
   }, [safeItems]);
+
+  React.useEffect(() => {
+    if (!lessonInfo) return;
+    const resolvedLessonId = lessonInfo?.lesson_id ?? lessonInfo?.id ?? id;
+    if (isLessonLocked(resolvedLessonId)) {
+      navigate('/paywall', { state: { from: `/lesson/${resolvedLessonId}` } });
+    }
+  }, [id, lessonInfo, navigate]);
 
   const getQuizOption = (opt) => {
     if (opt && typeof opt === 'object') {

@@ -17,6 +17,8 @@ export default function useReviewSession() {
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isFinished, setIsFinished] = useState(false);
+  const [incorrectItems, setIncorrectItems] = useState([]);
+  const [hasRepeated, setHasRepeated] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [error, setError] = useState(null);
@@ -77,6 +79,8 @@ export default function useReviewSession() {
       }).filter(Boolean);
 
       setSessionData(session);
+      setIncorrectItems([]);
+      setHasRepeated(false);
     } catch (e) {
       console.error(e);
       setError('Unable to start a review session right now.');
@@ -106,6 +110,12 @@ export default function useReviewSession() {
     const isCorrect = optionEng === targetEng;
 
     playAudio(isCorrect ? 'success.mp3' : 'error.mp3');
+    if (!isCorrect && current) {
+      setIncorrectItems((prev) => {
+        if (prev.some((item) => item.srs_id === current.srs_id)) return prev;
+        return [...prev, current];
+      });
+    }
     await updateSRSItem((await supabase.auth.getUser()).data.user.id, current.srs_id, isCorrect ? 4 : 1);
   };
 
@@ -126,12 +136,28 @@ export default function useReviewSession() {
     return settings.mode;
   };
 
+  const repeatIncorrect = () => {
+    if (!incorrectItems.length) return;
+    const unique = incorrectItems.reduce((acc, item) => {
+      if (!acc.some((existing) => existing.srs_id === item.srs_id)) acc.push(item);
+      return acc;
+    }, []);
+    setSessionData(unique);
+    setIncorrectItems([]);
+    setCurrentIndex(0);
+    setSelectedOption(null);
+    setIsFinished(false);
+    setHasRepeated(true);
+  };
+
   return {
     loading,
     sessionData,
     currentIndex,
     selectedOption,
     isFinished,
+    incorrectItems,
+    hasRepeated,
     showSettings,
     settings,
     setSettings,
@@ -142,6 +168,7 @@ export default function useReviewSession() {
     handleAnswer,
     nextCard,
     getCardMode,
+    repeatIncorrect,
     refresh: initSession
   };
 }

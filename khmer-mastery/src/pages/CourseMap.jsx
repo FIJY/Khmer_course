@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight, ChevronDown, ChevronUp
+  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight, ChevronDown, ChevronUp, Lock
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import ErrorState from '../components/UI/ErrorState';
@@ -9,6 +9,7 @@ import EmptyState from '../components/UI/EmptyState';
 import useCourseMap from '../hooks/useCourseMap';
 import { t } from '../i18n';
 import { updateLastOpenedProgress } from '../data/progress';
+import { hasPaidAccess, isLessonLocked, subscribeAccessUpdates } from '../lib/access';
 
 // МЫ ОСТАВИЛИ ТОЛЬКО ОДИН БЛОК, ЧТОБЫ БЫЛО КРАСИВО И НЕ ПУСТО
 const COURSE_LEVELS = [
@@ -111,6 +112,7 @@ export default function CourseMap() {
   const [openLevels, setOpenLevels] = useState(() => COURSE_LEVELS.map(() => true));
   const [hasScrolledToLast, setHasScrolledToLast] = useState(false);
   const [hasRestoredState, setHasRestoredState] = useState(false);
+  const [hasAccess, setHasAccess] = useState(() => hasPaidAccess());
 
   const mapStorageKey = useMemo(
     () => (userId ? `courseMapState:${userId}` : 'courseMapState'),
@@ -145,6 +147,10 @@ export default function CourseMap() {
   };
 
   const handleBootcampNavigate = async (blockId, lessonId, target) => {
+    if (isLessonLocked(lessonId) && !hasAccess) {
+      navigate('/paywall', { state: { from: '/map' } });
+      return;
+    }
     if (userId) {
       try {
         await updateLastOpenedProgress(userId, blockId, lessonId);
@@ -170,6 +176,10 @@ export default function CourseMap() {
   };
 
   const handleChapterNavigate = async (blockId, lessonId, target) => {
+    if (isLessonLocked(lessonId) && !hasAccess) {
+      navigate('/paywall', { state: { from: '/map' } });
+      return;
+    }
     if (userId) {
       try {
         await updateLastOpenedProgress(userId, blockId, lessonId);
@@ -207,6 +217,13 @@ export default function CourseMap() {
     }
     setHasRestoredState(true);
   }, [hasRestoredState, mapStorageKey, userId]);
+
+  useEffect(() => {
+    const updateAccess = () => setHasAccess(hasPaidAccess());
+    const unsubscribe = subscribeAccessUpdates(updateAccess);
+    updateAccess();
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (!userId || !hasRestoredState) return;
@@ -347,6 +364,7 @@ export default function CourseMap() {
                   const isChapterFullDone = subLessonIds.length > 0
                     && subLessonIds.every(id => completedLessons.includes(id));
                   const lessonCount = chapter.subLessons.length;
+                  const isPreviewLocked = isLessonLocked(chapter.id);
 
                   return (
                     <div key={chapter.id} id={`lesson-${chapter.id}`} className="relative pl-4 border-l-2 border-white/5">
@@ -375,10 +393,14 @@ export default function CourseMap() {
                             <button
                               onClick={() => handleBootcampNavigate(chapter.id, chapter.id, `/lesson/${chapter.id}/preview`)}
                               className={`p-3 rounded-2xl border transition-all active:scale-90
-                                ${isChapterFullDone ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-500/30'}`}
+                                ${isPreviewLocked && !hasAccess
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 hover:text-amber-200'
+                                  : isChapterFullDone
+                                    ? 'bg-emerald-500 text-black border-emerald-400'
+                                    : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-500/30'}`}
                               type="button"
                             >
-                              <BookOpen size={20} />
+                              {isPreviewLocked && !hasAccess ? <Lock size={20} /> : <BookOpen size={20} />}
                             </button>
 
                             <button
@@ -396,13 +418,16 @@ export default function CourseMap() {
                             <div className="space-y-2">
                               {chapter.subLessons.map((sub) => {
                                 const isDone = completedLessons.includes(Number(sub.id));
+                                const isLocked = isLessonLocked(sub.id);
                                 return (
                                   <button
                                     key={sub.id}
                                     id={`lesson-${sub.id}`}
                                     onClick={() => handleBootcampNavigate(chapter.id, Number(sub.id), `/lesson/${sub.id}`)}
                                     className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border text-left group
-                                      ${isDone
+                                      ${isLocked && !hasAccess
+                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+                                        : isDone
                                         ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
                                         : 'bg-black/20 border-white/5 text-gray-400 hover:bg-white/5'}`}
                                     type="button"
@@ -436,6 +461,7 @@ export default function CourseMap() {
                     && subLessonIds.every(id => completedLessons.includes(id));
                   const isOpen = openChapterId === chapter.id;
                   const lessonCount = chapter.subLessons.length;
+                  const isPreviewLocked = isLessonLocked(chapter.id);
 
                   return (
                     <div key={chapter.id} id={`lesson-${chapter.id}`} className="relative pl-4 border-l-2 border-white/5">
@@ -464,10 +490,14 @@ export default function CourseMap() {
                             <button
                               onClick={() => handleChapterNavigate(chapter.id, chapter.id, `/lesson/${chapter.id}/preview`)}
                               className={`p-3 rounded-2xl border transition-all active:scale-90
-                                ${isChapterFullDone ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-500/30'}`}
+                                ${isPreviewLocked && !hasAccess
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 hover:text-amber-200'
+                                  : isChapterFullDone
+                                    ? 'bg-emerald-500 text-black border-emerald-400'
+                                    : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-500/30'}`}
                               type="button"
                             >
-                              <BookOpen size={20} />
+                              {isPreviewLocked && !hasAccess ? <Lock size={20} /> : <BookOpen size={20} />}
                             </button>
                             <button
                               onClick={() => handleChapterToggle(chapter.id)}
@@ -484,13 +514,16 @@ export default function CourseMap() {
                             <div className="space-y-2">
                               {chapter.subLessons.map((sub) => {
                                 const isDone = completedLessons.includes(Number(sub.id));
+                                const isLocked = isLessonLocked(sub.id);
                                 return (
                                   <button
                                     key={sub.id}
                                     id={`lesson-${sub.id}`}
                                     onClick={() => handleChapterNavigate(chapter.id, Number(sub.id), `/lesson/${sub.id}`)}
                                     className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border text-left group
-                                      ${isDone
+                                      ${isLocked && !hasAccess
+                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+                                        : isDone
                                         ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
                                         : 'bg-black/20 border-white/5 text-gray-400 hover:bg-white/5'}`}
                                     type="button"

@@ -10,6 +10,7 @@ import LessonPlayer from './pages/LessonPlayer';
 import Vocab from './pages/Vocab';
 import Profile from './pages/Profile';
 import KhmerGlyphLab from './pages/KhmerGlyphLab';
+import Paywall from './pages/Paywall';
 
 // 👇 ВОТ ЭТИ ДВА ФАЙЛА МЫ ДОБАВИЛИ, ПРОВЕРЬ ЧТО ОНИ ТУТ ЕСТЬ
 import ReviewHub from './pages/ReviewHub';
@@ -49,6 +50,7 @@ export default function App() {
         {/* УРОКИ */}
         <Route path="/lesson/:id/preview" element={session ? <LessonPreview /> : <Navigate to="/login" />} />
         <Route path="/lesson/:id" element={session ? <LessonPlayer /> : <Navigate to="/login" />} />
+        <Route path="/paywall" element={session ? <Paywall /> : <Navigate to="/login" />} />
 
         {/* 👇 НОВЫЕ МАРШРУТЫ ДЛЯ REVIEW (БЕЗ НИХ БУДЕТ ЧЕРНЫЙ ЭКРАН) */}
         <Route path="/review" element={session ? <ReviewHub /> : <Navigate to="/login" />} />
