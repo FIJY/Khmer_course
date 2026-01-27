@@ -153,7 +153,6 @@ export default function LessonPlayer() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
                 <KhmerColoredText text={khmerText} fontUrl={DEFAULT_KHMER_FONT_URL} fontSize={72} className="text-4xl font-black mb-2" />
                 <p className="text-base text-cyan-100 font-semibold tracking-wide mb-4">
-                  <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
                   {current.pronunciation || '—'}
                 </p>
                 {current.audio ? (
