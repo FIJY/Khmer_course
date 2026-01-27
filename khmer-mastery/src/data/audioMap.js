@@ -1,3 +1,5 @@
+console.log("audioMap module loaded", new Date().toISOString());
+
 // 1. Helper: генерирует имя файла по Unicode-коду (например, "U+17D2.mp3")
 // Используется как запасной вариант, если файла нет в базе.
 const U = (cp) => `U+${cp.toString(16).toUpperCase().padStart(4, "0")}.mp3`;
