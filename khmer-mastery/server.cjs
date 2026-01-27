@@ -14,6 +14,8 @@ const PORT = 3001;
 const FONT_PATH = path.join(__dirname, 'public/fonts/NotoSansKhmer-Regular.ttf');
 const FONT_SIZE = 120;
 const COENG = 0x17d2;
+const KHMER_CONSONANT_START = 0x1780;
+const KHMER_CONSONANT_END = 0x17A2;
 
 // Какие гласные мы хотим отрывать "с мясом" (Force Split)
 function shouldForceSplit(char) {
@@ -21,6 +23,22 @@ function shouldForceSplit(char) {
   const code = char.charCodeAt(0);
   const splitList = [0x17B6, 0x17C1, 0x17C2, 0x17C3, 0x17C4, 0x17C5];
   return splitList.includes(code);
+}
+
+function isKhmerConsonantCodePoint(cp) {
+  return cp >= KHMER_CONSONANT_START && cp <= KHMER_CONSONANT_END;
+}
+
+function resolveCharFromCodePoints(codePoints = []) {
+  if (!Array.isArray(codePoints) || codePoints.length === 0) return "";
+
+  const consonant = codePoints.find((cp) => isKhmerConsonantCodePoint(cp));
+  if (consonant) return String.fromCodePoint(consonant);
+
+  const nonCoeng = codePoints.find((cp) => cp !== COENG);
+  if (nonCoeng) return String.fromCodePoint(nonCoeng);
+
+  return String.fromCodePoint(codePoints[0]);
 }
 
 let fkFont = null;       // Fontkit instance
@@ -100,8 +118,7 @@ app.get('/api/shape', (req, res) => {
 
       // Определяем, какой это символ для звука
       // Fontkit дает нам codePoints, берем первый, если есть
-      let charCode = codePoints[0];
-      let char = String.fromCharCode(charCode);
+      const char = resolveCharFromCodePoints(codePoints);
 
       // --- DETECTIVE (Исправление "ножек") ---
       // Если глиф похож на Coeng (или это часть сложного кластера),

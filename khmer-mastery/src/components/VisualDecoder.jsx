@@ -1,6 +1,18 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import { getSoundFileForChar } from "../data/audioMap";
 
+const COENG_CHAR = "្";
+
+function codepointsForChar(ch) {
+  return Array.from(ch || "").map((c) => `U+${c.codePointAt(0).toString(16).toUpperCase()}`);
+}
+
+function isKhmerConsonant(ch) {
+  if (!ch) return false;
+  const cp = ch.codePointAt(0);
+  return cp >= 0x1780 && cp <= 0x17A2;
+}
+
 function bboxArea(bb) {
   const w = (bb?.x2 ?? 0) - (bb?.x1 ?? 0);
   const h = (bb?.y2 ?? 0) - (bb?.y1 ?? 0);
@@ -84,14 +96,26 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
 
   function pickGlyphAtPoint(p) {
     if (!p) return null;
+    const hits = [];
     for (const item of hitOrder) {
       const pathEl = hitRefs.current[item.idx];
       if (!pathEl) continue;
       try {
-        if (pathEl.isPointInFill?.(p) || pathEl.isPointInStroke?.(p)) return item.g;
+        if (pathEl.isPointInFill?.(p) || pathEl.isPointInStroke?.(p)) {
+          hits.push(item);
+        }
       } catch {}
     }
-    return null;
+
+    if (hits.length === 0) return null;
+
+    const consonantHits = hits.filter((item) => isKhmerConsonant(item.g.char));
+    if (consonantHits.length > 0) return consonantHits[0].g;
+
+    const nonCoengHits = hits.filter((item) => item.g.char !== COENG_CHAR);
+    if (nonCoengHits.length > 0) return nonCoengHits[0].g;
+
+    return hits[0].g;
   }
 
   const handlePointerDown = (e) => {
@@ -104,6 +128,10 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
 
     // Получаем имя файла (или null, если его нет)
     const soundFile = getSoundFileForChar(hit.char);
+
+    console.log("VisualDecoder hit char:", hit.char);
+    console.log("VisualDecoder hit codepoints:", codepointsForChar(hit.char));
+    console.log("VisualDecoder resolved sound file:", soundFile);
 
     // ВАЖНО: Вызываем клик ВСЕГДА, даже если soundFile === null
     if (onLetterClick) {
