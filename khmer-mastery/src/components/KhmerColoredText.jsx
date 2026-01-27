@@ -3,7 +3,7 @@ import { renderColoredKhmerToSvg, khmerGlyphDefaults } from '../lib/khmerGlyphRe
 
 const KHMER_PATTERN = /[\u1780-\u17ff]/;
 
-const DEFAULT_COLORS = {
+export const DEFAULT_COLORS = {
   CONSONANT_A: '#ffb020',
   CONSONANT_O: '#6b5cff',
   SUBSCRIPT: '#6a7b9c',
