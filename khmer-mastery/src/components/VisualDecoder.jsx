@@ -52,6 +52,7 @@ function makeViewBoxFromGlyphs(glyphs, pad = 60) {
   return { minX, minY, w: Math.max(10, maxX - minX), h: Math.max(10, maxY - minY) };
 }
 
+// ВАЖНО: здесь должно быть слово 'default'
 export default function VisualDecoder({ data, text: propText, onLetterClick, onComplete, hideDefaultButton }) {
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
@@ -59,7 +60,7 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-
+  
   const svgRef = useRef(null);
   const hitRefs = useRef([]);
   hitRefs.current = [];
@@ -177,9 +178,9 @@ export default function VisualDecoder({ data, text: propText, onLetterClick, onC
 
     // ВАЖНО: Вызываем клик ВСЕГДА, даже если soundFile === null
     if (onLetterClick) {
-      onLetterClick(soundFile);
+      onLetterClick(soundFile); 
     }
-
+    
     if (onComplete) onComplete();
   };
 
