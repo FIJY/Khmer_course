@@ -3,6 +3,7 @@ import { getSoundFileForChar } from "../data/audioMap";
 
 const COENG_CHAR = "្";
 
+// --- ХЕЛПЕРЫ (Оставляем твои, они хорошие) ---
 function codepointsForChar(ch) {
   return Array.from(ch || "").map(
     (c) => `U+${c.codePointAt(0).toString(16).toUpperCase()}`
@@ -59,7 +60,6 @@ function makeViewBoxFromGlyphs(glyphs, pad = 60) {
   };
 }
 
-// ВАЖНО: здесь должно быть слово 'default'
 export default function VisualDecoder({
   data,
   text: propText,
@@ -74,10 +74,19 @@ export default function VisualDecoder({
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
 
+  // Добавляем карту звуков для поддержки кастомных файлов из БД
+  const [glyphSoundMap, setGlyphSoundMap] = useState({});
+
   const svgRef = useRef(null);
   const hitRefs = useRef([]);
-  hitRefs.current = [];
+  // УБРАЛИ hitRefs.current = [] отсюда, чтобы не ломать клики при перерисовке!
 
+  // --- 1. СБРОС ССЫЛОК (Безопасный) ---
+  useEffect(() => {
+    hitRefs.current = [];
+  }, [text]);
+
+  // --- 2. ЗАГРУЗКА SVG ---
   useEffect(() => {
     let active = true;
     if (!text) return;
@@ -109,6 +118,66 @@ export default function VisualDecoder({
     };
   }, [text]);
 
+  // --- 3. ГЕНЕРАЦИЯ КАРТЫ ЗВУКОВ (Queue Method) ---
+  // Это позволяет использовать 'sub_co.mp3' из базы данных,
+  // вместо того чтобы гадать по тексту.
+  useEffect(() => {
+    if (!glyphs.length || !data?.char_split) return;
+
+    const audioMap = data.char_audio_map || {};
+    const soundQueues = {};
+    const isConsonant = (char) => /[\u1780-\u17A2]/.test(char);
+
+    // Заполняем очереди звуков на основе char_split из БД
+    data.char_split.forEach(token => {
+        const cleanToken = token ? token.trim() : "";
+        let groupSound = audioMap[token] || audioMap[cleanToken];
+
+        // Фолбэк на стандартный звук, если в карте нет
+        if (!groupSound) groupSound = getSoundFileForChar(cleanToken);
+
+        // Авто-замена имен (sub_ -> letter_)
+        if (groupSound && groupSound.startsWith("sub_")) {
+            groupSound = groupSound.replace("sub_", "letter_");
+        }
+
+        for (const char of cleanToken) {
+            if (!soundQueues[char]) soundQueues[char] = [];
+
+            // Защита согласных: если звук для знака/гласной, а символ - согласная,
+            // даем согласной её родной звук.
+            const isModifierSound = groupSound && (
+                groupSound.includes("sign_") ||
+                groupSound.includes("vowel_") ||
+                groupSound.includes("diacritic")
+            );
+
+            if (isConsonant(char) && isModifierSound) {
+                const nativeSound = getSoundFileForChar(char);
+                soundQueues[char].push(nativeSound);
+            } else {
+                soundQueues[char].push(groupSound);
+            }
+        }
+    });
+
+    const newMap = {};
+    const queuesCopy = JSON.parse(JSON.stringify(soundQueues));
+
+    // Раздаем звуки глифам
+    glyphs.forEach((glyph, idx) => {
+        const char = glyph.char;
+        if (queuesCopy[char] && queuesCopy[char].length > 0) {
+            newMap[idx] = queuesCopy[char].shift();
+        }
+        // Если в очереди пусто, мы используем фолбэк в handlePointerDown
+    });
+
+    setGlyphSoundMap(newMap);
+  }, [glyphs, data]);
+
+
+  // --- ВЫЧИСЛЕНИЯ ---
   const vb = useMemo(() => {
     if (!glyphs || glyphs.length === 0) return { minX: 0, minY: 0, w: 300, h: 300 };
     return makeViewBoxFromGlyphs(glyphs, 70);
@@ -121,9 +190,7 @@ export default function VisualDecoder({
       .sort((a, b) => a.area - b.area);
   }, [glyphs]);
 
-  // ВАЖНО:
-  // resolvedGlyphChars — массив по ИНДЕКСАМ glyphs (0..glyphs.length-1)
-  // поэтому обращаться к нему нужно по idx, а НЕ по glyph.id
+  // Запасная логика резолвинга (из твоего кода) - пригодится, если нет данных в БД
   const resolvedGlyphChars = useMemo(() => {
     const textChars = Array.from(text || "");
     let textIndex = 0;
@@ -134,7 +201,7 @@ export default function VisualDecoder({
       if (resolvedChar === COENG_CHAR) {
         const { char, index } = findNextConsonantAfterCoeng(textChars, textIndex);
         if (char) {
-          resolvedChar = char;       // канон: возвращаем БАЗОВУЮ согласную
+          resolvedChar = char;
           textIndex = index + 1;
         }
       } else if (resolvedChar) {
@@ -143,11 +210,11 @@ export default function VisualDecoder({
           textIndex = nextIndex + 1;
         }
       }
-
       return resolvedChar || glyph.char || "";
     });
   }, [glyphs, text]);
 
+  // --- ОБРАБОТЧИКИ ---
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
     if (!svg) return null;
@@ -159,7 +226,6 @@ export default function VisualDecoder({
     return pt.matrixTransform(ctm.inverse());
   }
 
-  // Возвращаем { g, idx }, чтобы НЕ путать glyph.id с индексом
   function pickGlyphAtPoint(p) {
     if (!p) return null;
 
@@ -169,16 +235,13 @@ export default function VisualDecoder({
       if (!pathEl) continue;
       try {
         if (pathEl.isPointInFill?.(p) || pathEl.isPointInStroke?.(p)) {
-          hits.push(item); // { g, idx, area }
+          hits.push(item);
         }
       } catch {}
     }
 
     if (hits.length === 0) return null;
 
-    // Лучше приоритетить "буквы", но:
-    // поскольку у тебя сабскрипты резолвятся в базовую согласную,
-    // при желании можно приоритетить по resolvedGlyphChars[item.idx]
     const consonantHits = hits.filter((item) => {
       const resolved = resolvedGlyphChars[item.idx] || item.g.char;
       return isKhmerConsonant(resolved);
@@ -199,17 +262,18 @@ export default function VisualDecoder({
 
     setSelectedId(hit.g.id);
 
-    // ВАЖНО: idx, а не hit.g.id
-    const resolvedChar = resolvedGlyphChars[hit.idx] || hit.g.char;
-    const soundFile = getSoundFileForChar(resolvedChar);
+    // 1. Сначала пробуем взять звук из Карты Очереди (из базы)
+    let soundFile = glyphSoundMap[hit.idx];
 
-    console.log("VisualDecoder hit char:", hit.g.char);
-    console.log("VisualDecoder resolved char:", resolvedChar);
-    console.log("VisualDecoder hit codepoints:", codepointsForChar(hit.g.char));
-    console.log("VisualDecoder resolved codepoints:", codepointsForChar(resolvedChar));
-    console.log("VisualDecoder resolved sound file:", soundFile);
+    // 2. Если карты нет (или в базе ошибка), используем твой метод резолвинга
+    if (!soundFile) {
+        const resolvedChar = resolvedGlyphChars[hit.idx] || hit.g.char;
+        soundFile = getSoundFileForChar(resolvedChar);
+        console.log("Fallback audio logic used");
+    }
 
-    // ВАЖНО: Вызываем клик ВСЕГДА, даже если soundFile === null
+    console.log(`VisualDecoder Click: Glyph "${hit.g.char}" -> Sound: ${soundFile}`);
+
     if (onLetterClick) {
       onLetterClick(soundFile);
     }
@@ -238,17 +302,17 @@ export default function VisualDecoder({
             <g key={glyph.id}>
               <title>{glyph.char}</title>
 
-              {/* hit-слой (прозрачный, но участвует в проверке isPointInFill) */}
+              {/* ХИТ-БОКС (Уменьшили strokeWidth до 55, чтобы не перекрывать соседей) */}
               <path
                 ref={(el) => (hitRefs.current[i] = el)}
                 d={glyph.d}
                 fill="transparent"
                 stroke="transparent"
-                strokeWidth="10"
+                strokeWidth="55"
                 pointerEvents="none"
               />
 
-              {/* видимый слой */}
+              {/* Видимый слой */}
               <path
                 d={glyph.d}
                 fill={isSelected ? "#22d3ee" : "white"}
