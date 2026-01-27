@@ -100,28 +100,48 @@ export default function useLessonPlayer() {
       // 4. Нормализуем данные
       const normalizedItems = (Array.isArray(rawItems) ? rawItems : []).map(item => {
         const itemContent = item.data ? normalizeItemData(item.data) : item;
-        const type = item.type || itemContent.type;
+        const rawType = item.type || itemContent.type;
+        const type = rawType ? String(rawType).toLowerCase() : rawType;
 
         if (type !== 'quiz') {
             return { type, data: itemContent };
         }
 
+        const normalizeQuizOption = (option) => {
+          if (option && typeof option === 'object') {
+            const value = option.value ?? option.text ?? option.answer ?? option.label ?? '';
+            return {
+              value: String(value).trim(),
+              text: option.text ?? option.label ?? option.value ?? option.answer ?? '',
+              audio: option.audio ?? null,
+              pronunciation: option.pronunciation ?? ''
+            };
+          }
+          const value = option ?? '';
+          return { value: String(value).trim(), text: String(value), audio: null, pronunciation: '' };
+        };
+
         const options = Array.isArray(itemContent.options) ? itemContent.options.filter(Boolean) : [];
         const correctAnswer = itemContent.correct_answer;
-        const mergedOptions = [...options];
-
-        if (correctAnswer && !mergedOptions.includes(correctAnswer)) {
-          mergedOptions.push(correctAnswer);
-        }
-
-        const uniqueOptions = [...new Set(mergedOptions)];
-        const shuffledOptions = shuffleArray(uniqueOptions);
+        const normalizedOptions = options.map(normalizeQuizOption);
+        const normalizedCorrect = correctAnswer ? normalizeQuizOption(correctAnswer) : null;
+        const mergedOptions = normalizedCorrect
+          ? [...normalizedOptions, normalizedCorrect]
+          : normalizedOptions;
+        const uniqueOptionsMap = new Map();
+        mergedOptions.forEach((option) => {
+          if (!uniqueOptionsMap.has(option.value)) {
+            uniqueOptionsMap.set(option.value, option);
+          }
+        });
+        const shuffledOptions = shuffleArray(Array.from(uniqueOptionsMap.values()));
 
         return {
           type,
           data: {
             ...itemContent,
-            options: shuffledOptions
+            options: shuffledOptions,
+            correct_answer: normalizedCorrect?.value ?? normalizedCorrect?.text ?? ''
           }
         };
       });
@@ -137,7 +157,7 @@ export default function useLessonPlayer() {
         : normalizedItems;
 
       setItems(fallbackItems);
-      setQuizCount(fallbackItems.filter(i => i.type === 'quiz').length || 0);
+      setQuizCount(fallbackItems.filter(i => String(i.type).toLowerCase() === 'quiz').length || 0);
     } catch (err) {
       console.error(err);
       setError('Unable to load this lesson.');
@@ -155,7 +175,7 @@ export default function useLessonPlayer() {
       setIsFlipped(false);
       if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
 
-      const currentType = items[step]?.type;
+      const currentType = items[step]?.type ? String(items[step]?.type).toLowerCase() : '';
 
       const autoUnlockTypes = [
         'theory',
@@ -248,11 +268,16 @@ export default function useLessonPlayer() {
   const handleQuizAnswer = (option, correctAnswer, selectedAudio) => {
     if (selectedOption) return;
 
-    setSelectedOption(option);
+    const optionValue = option && typeof option === 'object' ? option.value ?? option.text ?? option.answer ?? '' : option;
+    const correctValue = correctAnswer && typeof correctAnswer === 'object'
+      ? correctAnswer.value ?? correctAnswer.text ?? correctAnswer.answer ?? ''
+      : correctAnswer;
+
+    setSelectedOption(optionValue);
     setCanAdvance(true);
 
-    const cleanOption = String(option).trim();
-    const cleanCorrect = String(correctAnswer).trim();
+    const cleanOption = String(optionValue).trim();
+    const cleanCorrect = String(correctValue).trim();
     const correct = cleanOption === cleanCorrect;
 
     if (correct) setScore(s => s + 1);
