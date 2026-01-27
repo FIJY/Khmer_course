@@ -123,14 +123,19 @@ export default function LessonPlayer() {
 
   const getQuizOption = (opt) => {
     if (opt && typeof opt === 'object') {
-      return { text: opt.text ?? opt.value ?? opt.label ?? opt.answer ?? '', pronunciation: opt.pronunciation ?? '', audio: opt.audio ?? null };
+      return {
+        value: opt.value ?? opt.text ?? opt.label ?? opt.answer ?? '',
+        text: opt.text ?? opt.value ?? opt.label ?? opt.answer ?? '',
+        pronunciation: opt.pronunciation ?? '',
+        audio: opt.audio ?? null
+      };
     }
     const metadata = current?.options_metadata?.[opt];
     if (metadata) {
-      return { text: opt, pronunciation: metadata.pronunciation, audio: metadata.audio };
+      return { value: opt, text: opt, pronunciation: metadata.pronunciation, audio: metadata.audio };
     }
     const pronunciationMap = current?.option_pronunciations || current?.pronunciations || {};
-    return { text: opt, pronunciation: pronunciationMap?.[opt] ?? lessonPronunciations?.[opt] ?? '', audio: null };
+    return { value: opt, text: opt, pronunciation: pronunciationMap?.[opt] ?? lessonPronunciations?.[opt] ?? '', audio: null };
   };
 
   if (loading) return <LoadingState label={t('loading.lesson')} />;
@@ -253,8 +258,8 @@ export default function LessonPlayer() {
           <div className="w-full space-y-3">
              <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
              {quizOptions.map((opt, i) => {
-               const { text, pronunciation, audio: optionAudio } = getQuizOption(opt);
-               const rawValue = (typeof opt === 'object' && opt !== null) ? (opt.value || opt.text || opt.answer) : opt;
+               const { value, text, pronunciation, audio: optionAudio } = getQuizOption(opt);
+               const rawValue = value;
 
                let buttonClass = 'bg-gray-900 border-white/5 text-white';
                if (selectedOption === rawValue) {
