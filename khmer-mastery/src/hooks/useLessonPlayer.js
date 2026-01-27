@@ -208,6 +208,9 @@ export default function useLessonPlayer() {
         return;
     }
 
+    console.log("playLocalAudio received filename:", audioFile);
+    console.trace("playLocalAudio call stack");
+
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
