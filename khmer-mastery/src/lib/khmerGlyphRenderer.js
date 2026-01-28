@@ -1,6 +1,5 @@
 const DEFAULT_MODULE_URLS = {
   harfbuzz: '/vendor/harfbuzzjs.js',
-  harfbuzzWasm: '/vendor/harfbuzzjs.wasm',
   opentype: '/vendor/opentype.module.js',
 };
 
@@ -39,17 +38,9 @@ export async function getKhmerGlyphData({
     // 2. Загружаем HarfBuzz через import (это лечит ошибку 'export')
     const hbModule = await import(/* @vite-ignore */ moduleUrls.harfbuzz);
     const hbFactory = hbModule.default || hbModule;
+    const hb = await hbFactory();
 
-    // 3. Грузим WASM
-    const wasmResponse = await fetch(moduleUrls.harfbuzzWasm);
-    if (!wasmResponse.ok) throw new Error("WASM not found");
-    const wasmBuffer = await wasmResponse.arrayBuffer();
-
-    // 4. Инициализируем WASM (лечит ошибку 'Imports argument')
-    const { instance } = await WebAssembly.instantiate(wasmBuffer, {});
-    const hb = hbFactory(instance);
-
-    // 5. Грузим шрифт
+    // 4. Грузим шрифт
     const fontRes = await fetch(fontUrl);
     const fontBuffer = await fontRes.arrayBuffer();
     const font = opentype.parse(fontBuffer);
