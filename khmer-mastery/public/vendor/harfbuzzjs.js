@@ -10,27 +10,26 @@ function loadScriptOnce(src) {
     s.async = true;
     s.dataset.hb = src;
     s.onload = () => resolve();
-    s.onerror = () => reject(new Error("Failed to load HarfBuzz UMD"));
+    s.onerror = () => reject(new Error(`Failed to load ${src}`));
     document.head.appendChild(s);
   });
 }
 
 export default async function harfbuzzjs(options = {}) {
-  await loadScriptOnce("/vendor/harfbuzzjs.umd.js");
+  await loadScriptOnce("/vendor/hb.js");
+  await loadScriptOnce("/vendor/hbjs.js");
 
-  const factory =
-    window.hbjs ||
-    window.harfbuzzjs ||
-    window.Module;
+  const hbModuleFactory = window.Module;
+  const hbjsFactory = window.hbjs || window.harfbuzzjs;
 
-  if (typeof factory !== "function") {
-    throw new Error(
-      "HarfBuzz loaded but did not expose a factory function on window"
-    );
+  if (typeof hbModuleFactory !== "function" || typeof hbjsFactory !== "function") {
+    throw new Error("HarfBuzz scripts loaded but factories are missing on window");
   }
 
-  return factory({
+  const hbModule = await hbModuleFactory({
     ...options,
     locateFile: (path) => `/vendor/${path}`,
   });
+
+  return hbjsFactory(hbModule);
 }
