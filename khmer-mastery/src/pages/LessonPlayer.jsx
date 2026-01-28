@@ -19,7 +19,7 @@ import ConsonantStreamDrill from '../components/Drills/ConsonantStreamDrill';
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
 const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
-  ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
+  ?? '/fonts/KhmerOS_siemreap.ttf';
 
 export default function LessonPlayer() {
   const {

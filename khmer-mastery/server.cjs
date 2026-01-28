@@ -11,7 +11,7 @@ app.use(cors());
 const PORT = 3001;
 
 // Путь к шрифту
-const FONT_PATH = path.join(__dirname, 'public/fonts/NotoSansKhmer-Regular.ttf');
+const FONT_PATH = path.join(__dirname, 'public/fonts/KhmerOS_siemreap.ttf');
 const FONT_SIZE = 120;
 const COENG = 0x17d2;
 const KHMER_CONSONANT_START = 0x1780;
