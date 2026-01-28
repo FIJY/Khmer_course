@@ -85,7 +85,7 @@ export default function VisualDecoder({
     setLoading(true);
     setError(null);
 
-    fetch(`http://localhost:3001/api/shape?text=${encodeURIComponent(text)}`)
+    fetch(`/api/shape?text=${encodeURIComponent(text)}`)
       .then((res) => {
         if (!res.ok) throw new Error("Server error");
         return res.json();
