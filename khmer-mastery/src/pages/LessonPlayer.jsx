@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, ArrowRight, X, CheckCircle2, ChevronLeft } from 'lucide-react';
-import VisualDecoder from '../components/VisualDecoder';
+import VisualDecoder, { HIGHLIGHT_MODES } from '../components/VisualDecoder';
 import KhmerColoredText from '../components/KhmerColoredText';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
@@ -52,13 +52,15 @@ export default function LessonPlayer() {
   // --- ЛОГИКА ДЛЯ МАТРИЦЫ (No Spaces) ---
   const [revealedConsonants, setRevealedConsonants] = useState(new Set());
 
+  // --- ВРЕМЕННЫЕ РЕЖИМЫ ПОДСВЕТКИ ДЛЯ DECODER ---
+  const [highlightMode, setHighlightMode] = useState(HIGHLIGHT_MODES.ALL);
+
   // --- УПРАВЛЕНИЕ БЛОКИРОВКОЙ КНОПКИ "ДАЛЕЕ" ---
   useEffect(() => {
     setCanAdvance(false);
     setRevealedConsonants(new Set());
 
     const rawType = safeItems[step]?.type;
-    // 1. ИСПРАВЛЕНИЕ: Приводим тип к нижнему регистру (Theory -> theory)
     const currentType = rawType ? rawType.toLowerCase() : '';
 
     const autoUnlockTypes = [
@@ -74,14 +76,16 @@ export default function LessonPlayer() {
     ];
 
     if (autoUnlockTypes.includes(currentType)) {
-        setCanAdvance(true);
+      setCanAdvance(true);
     }
+
+    // сбрасываем режим подсветки при переходе (можно потом убрать)
+    setHighlightMode(HIGHLIGHT_MODES.ALL);
 
   }, [step, safeItems, setCanAdvance]);
 
   const current = safeItems[step]?.data;
 
-  // 2. Получаем тип и нормализуем его для рендера
   const rawType = safeItems[step]?.type;
   const type = rawType ? rawType.toLowerCase() : '';
 
@@ -91,16 +95,16 @@ export default function LessonPlayer() {
       next.add(index);
 
       if (current?.khmerText) {
-         const totalConsonants = Array.from(current.khmerText).filter(c => c.match(/[\u1780-\u17A2]/)).length;
+        const totalConsonants = Array.from(current.khmerText).filter(c => c.match(/[\u1780-\u17A2]/)).length;
 
-         if (next.size >= totalConsonants) {
-            playLocalAudio('success.mp3');
-            setCanAdvance(true);
-         } else {
-            const soundFile = current.consonantAudioMap?.[char];
-            if (soundFile) playLocalAudio(soundFile);
-            else playLocalAudio('click.mp3');
-         }
+        if (next.size >= totalConsonants) {
+          playLocalAudio('success.mp3');
+          setCanAdvance(true);
+        } else {
+          const soundFile = current.consonantAudioMap?.[char];
+          if (soundFile) playLocalAudio(soundFile);
+          else playLocalAudio('click.mp3');
+        }
       }
       return next;
     });
@@ -193,127 +197,164 @@ export default function LessonPlayer() {
         </footer>
       )}
     >
-        {type === 'learn_char' && (
-          <HeroSlide data={current} onPlayAudio={playLocalAudio} />
-        )}
+      {type === 'learn_char' && (
+        <HeroSlide data={current} onPlayAudio={playLocalAudio} />
+      )}
 
-        {type === 'word_breakdown' && (
-          <InventorySlide data={current} onPlayAudio={playLocalAudio} />
-        )}
+      {type === 'word_breakdown' && (
+        <InventorySlide data={current} onPlayAudio={playLocalAudio} />
+      )}
 
-        {/* --- ВИЗУАЛЬНЫЙ ДЕКОДЕР --- */}
-        {type === 'visual_decoder' && (
-           <VisualDecoder
-              key={step}
-              data={current}
-              onLetterClick={(fileName) => {
-                  // БЕЗОПАСНЫЙ КЛИК: Проверка на наличие звука
-                  if (fileName) {
-                      console.log("Playing audio file:", fileName);
-                      playLocalAudio(fileName);
-                  } else {
-                      console.log("Silent character selected (no audio)");
-                  }
-                  // Всегда разрешаем идти дальше
-                  setCanAdvance(true);
-              }}
-              hideDefaultButton={true}
-           />
-        )}
+      {/* --- ВИЗУАЛЬНЫЙ ДЕКОДЕР --- */}
+      {type === 'visual_decoder' && (
+        <div className="w-full">
+          {/* ВРЕМЕННЫЕ ТАБЫ РЕЖИМОВ */}
+          <div className="flex justify-center gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setHighlightMode(HIGHLIGHT_MODES.ALL)}
+              className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                highlightMode === HIGHLIGHT_MODES.ALL
+                  ? 'bg-cyan-500 text-black border-cyan-300'
+                  : 'bg-gray-900 text-white border-white/10'
+              }`}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => setHighlightMode(HIGHLIGHT_MODES.CONSONANTS)}
+              className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                highlightMode === HIGHLIGHT_MODES.CONSONANTS
+                  ? 'bg-cyan-500 text-black border-cyan-300'
+                  : 'bg-gray-900 text-white border-white/10'
+              }`}
+            >
+              Consonants
+            </button>
+            <button
+              type="button"
+              onClick={() => setHighlightMode(HIGHLIGHT_MODES.OFF)}
+              className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                highlightMode === HIGHLIGHT_MODES.OFF
+                  ? 'bg-cyan-500 text-black border-cyan-300'
+                  : 'bg-gray-900 text-white border-white/10'
+              }`}
+            >
+              Off
+            </button>
+          </div>
 
-        {type === 'vocab_card' && (
-          <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
-            <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
-              <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
-                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardEnglish')}</p>
-                <h2 className="text-3xl font-black italic text-white">{englishText}</h2>
-              </div>
-              <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
-                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
-                <div className="flex flex-col items-center gap-3 w-full">
-                  <div className="min-h-[4.5rem] flex items-center justify-center">
-                    <KhmerColoredText
-                      text={khmerText}
-                      fontUrl={DEFAULT_KHMER_FONT_URL}
-                      fontSize={72}
-                      className="text-4xl font-black leading-[1.2]"
-                    />
-                  </div>
-                  <p className="text-base text-cyan-100 font-semibold tracking-wide">
-                    <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
-                    {current.pronunciation || '—'}
-                  </p>
+          <VisualDecoder
+            key={step}
+            data={current}
+            highlightMode={highlightMode}
+            onLetterClick={(fileName) => {
+              if (fileName) {
+                console.log("Playing audio file:", fileName);
+                playLocalAudio(fileName);
+              } else {
+                console.log("Silent character selected (no audio)");
+              }
+              setCanAdvance(true);
+            }}
+            hideDefaultButton={true}
+          />
+        </div>
+      )}
+
+      {type === 'vocab_card' && (
+        <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
+          <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+            <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardEnglish')}</p>
+              <h2 className="text-3xl font-black italic text-white">{englishText}</h2>
+            </div>
+            <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
+              <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
+              <div className="flex flex-col items-center gap-3 w-full">
+                <div className="min-h-[4.5rem] flex items-center justify-center">
+                  <KhmerColoredText
+                    text={khmerText}
+                    fontUrl={DEFAULT_KHMER_FONT_URL}
+                    fontSize={72}
+                    className="text-4xl font-black leading-[1.2]"
+                  />
                 </div>
-                {current.audio ? (
-                  <div onClick={(e) => { e.stopPropagation(); playLocalAudio(current.audio); }} className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg">
-                    <Volume2 size={28} />
-                  </div>
-                ) : <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{t('lesson.audioUnavailable')}</p>}
+                <p className="text-base text-cyan-100 font-semibold tracking-wide">
+                  <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
+                  {current.pronunciation || '—'}
+                </p>
               </div>
+              {current.audio ? (
+                <div onClick={(e) => { e.stopPropagation(); playLocalAudio(current.audio); }} className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg">
+                  <Volume2 size={28} />
+                </div>
+              ) : <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{t('lesson.audioUnavailable')}</p>}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {type === 'quiz' && (
-          <div className="w-full space-y-3">
-             <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
-             {quizOptions.map((opt, i) => {
-               const { value, text, pronunciation, audio: optionAudio } = getQuizOption(opt);
-               const rawValue = value;
+      {type === 'quiz' && (
+        <div className="w-full space-y-3">
+          <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
+          {quizOptions.map((opt, i) => {
+            const { value, text, pronunciation, audio: optionAudio } = getQuizOption(opt);
+            const rawValue = value;
 
-               let buttonClass = 'bg-gray-900 border-white/5 text-white';
-               if (selectedOption === rawValue) {
-                  const isCorrect = String(rawValue).trim() === String(current.correct_answer).trim();
-                  buttonClass = isCorrect
-                    ? 'bg-emerald-600 border-emerald-400 text-white'
-                    : 'bg-red-600 border-red-400 text-white';
-               }
+            let buttonClass = 'bg-gray-900 border-white/5 text-white';
+            if (selectedOption === rawValue) {
+              const isCorrect = String(rawValue).trim() === String(current.correct_answer).trim();
+              buttonClass = isCorrect
+                ? 'bg-emerald-600 border-emerald-400 text-white'
+                : 'bg-red-600 border-red-400 text-white';
+            }
 
-               return (
-               <button
-                 key={i}
-                 disabled={!!selectedOption}
-                 onClick={() => handleQuizAnswer(rawValue, current.correct_answer, optionAudio || current.audio)}
-                 className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${buttonClass}`}
-               >
-                 <div className="flex flex-col gap-1">
-                   <span className="text-2xl font-black">{text}</span>
-                   {pronunciation && <span className="text-xl font-semibold text-cyan-100 tracking-wide">{pronunciation}</span>}
-                 </div>
-               </button>
-               );
-             })}
-          </div>
-        )}
+            return (
+              <button
+                key={i}
+                disabled={!!selectedOption}
+                onClick={() => handleQuizAnswer(rawValue, current.correct_answer, optionAudio || current.audio)}
+                className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${buttonClass}`}
+              >
+                <div className="flex flex-col gap-1">
+                  <span className="text-2xl font-black">{text}</span>
+                  {pronunciation && <span className="text-xl font-semibold text-cyan-100 tracking-wide">{pronunciation}</span>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-        {/* УНИВЕРСАЛЬНАЯ ТЕОРИЯ */}
-        {(type === 'theory' || type === 'title' || type === 'meet-teams' || type === 'rule' || type === 'reading-algorithm' || type === 'ready' || type === 'intro') && (
-          <UniversalTheorySlide
-             type={type}
-             data={current}
-             onPlayAudio={playLocalAudio}
+      {/* УНИВЕРСАЛЬНАЯ ТЕОРИЯ */}
+      {(type === 'theory' || type === 'title' || type === 'meet-teams' || type === 'rule' || type === 'reading-algorithm' || type === 'ready' || type === 'intro') && (
+        <UniversalTheorySlide
+          type={type}
+          data={current}
+          onPlayAudio={playLocalAudio}
+        />
+      )}
+
+      {type === 'no-spaces' && (
+        <div className="w-full flex flex-col items-center">
+          <h2 className="text-3xl font-black text-white mb-2 text-center uppercase italic">{current.title}</h2>
+          <p className="text-gray-400 mb-6 text-center text-sm font-medium">{current.subtitle}</p>
+
+          <ConsonantStreamDrill
+            text={current.khmerText}
+            revealedSet={revealedConsonants}
+            onConsonantClick={handleConsonantClick}
+            onNonConsonantClick={() => playLocalAudio('error.mp3')}
           />
-        )}
 
-        {type === 'no-spaces' && (
-           <div className="w-full flex flex-col items-center">
-              <h2 className="text-3xl font-black text-white mb-2 text-center uppercase italic">{current.title}</h2>
-              <p className="text-gray-400 mb-6 text-center text-sm font-medium">{current.subtitle}</p>
-
-              <ConsonantStreamDrill
-                 text={current.khmerText}
-                 revealedSet={revealedConsonants}
-                 onConsonantClick={handleConsonantClick}
-                 onNonConsonantClick={() => playLocalAudio('error.mp3')}
-              />
-
-              <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-white/10 text-xs text-gray-400 w-full text-center">
-                 <span className="text-emerald-400 font-bold uppercase tracking-widest mr-2">Goal:</span>
-                 Find all {Array.from(current.khmerText || '').filter(c => c.match(/[\u1780-\u17A2]/)).length} commanders
-              </div>
-           </div>
-        )}
-
+          <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-white/10 text-xs text-gray-400 w-full text-center">
+            <span className="text-emerald-400 font-bold uppercase tracking-widest mr-2">Goal:</span>
+            Find all {Array.from(current.khmerText || '').filter(c => c.match(/[\u1780-\u17A2]/)).length} commanders
+          </div>
+        </div>
+      )}
     </SessionFrame>
   );
 }

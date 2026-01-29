@@ -1,154 +1,132 @@
-import React from 'react';
-import { renderColoredKhmerToSvg, khmerGlyphDefaults } from '../lib/khmerGlyphRenderer';
+import React, { useEffect, useState, useMemo } from "react";
+import { GLYPH_COLORS, getKhmerGlyphStyle } from "../lib/khmerGlyphRenderer";
 
-const KHMER_PATTERN = /[\u1780-\u17ff]/;
+const API_URL = "https://khmer-course.onrender.com";
 
-const DEFAULT_COLORS = {
-  CONSONANT_A: '#ffb020',
-  CONSONANT_O: '#6b5cff',
-  SUBSCRIPT: '#6a7b9c',
-  VOWEL_DEP: '#ff4081',
-  VOWEL_IND: '#ffd54a',
-  DIACRITIC_BANTOC: '#ffffff',
-  DIACRITIC_SERIES_SWITCH: '#ffffff',
-  DIACRITIC_OTHER: '#ffffff',
-  NUMERAL: '#38d6d6',
-  PUNCT: '#6a7b9c',
-  REPEAT: '#6a7b9c',
-  OTHER: '#ffffff',
-};
+const makeViewBoxFromGlyphs = (glyphs, padding = 60) => {
+  if (!glyphs || glyphs.length === 0) return "0 0 100 100";
 
-const fontFaceCache = new Map();
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
-function hashString(value) {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash << 5) - hash + value.charCodeAt(i);
-    hash |= 0;
+  for (const g of glyphs) {
+    if (!g.bb) continue;
+    minX = Math.min(minX, g.bb.x1);
+    minY = Math.min(minY, g.bb.y1);
+    maxX = Math.max(maxX, g.bb.x2);
+    maxY = Math.max(maxY, g.bb.y2);
   }
-  return Math.abs(hash).toString(36);
-}
 
-function getFontFamilyName(url) {
-  return `KhmerGlyphFallback-${hashString(url)}`;
-}
+  minX -= padding;
+  minY -= padding;
+  maxX += padding;
+  maxY += padding;
+
+  return `${minX} ${minY} ${Math.max(1, maxX - minX)} ${Math.max(1, maxY - minY)}`;
+};
 
 export default function KhmerColoredText({
   text,
-  fontUrl = '',
   fontSize = 96,
-  colors,
-  className,
-  seriesOverrides = khmerGlyphDefaults.DEFAULT_SERIES_OVERRIDES,
-  diacriticOverrides = khmerGlyphDefaults.DEFAULT_DIACRITIC_GROUPS,
-  moduleUrls = khmerGlyphDefaults.DEFAULT_MODULE_URLS,
-  onStatus,
+  highlightMode = "series",
+  frequencyByChar = null,
+  selectionStyle = "outline", // "outline" | "glow"
 }) {
-  const [svgMarkup, setSvgMarkup] = React.useState('');
-  // ИСПРАВЛЕНИЕ: Добавлено правильное объявление стейта
-  const [fallbackFontFamily, setFallbackFontFamily] = React.useState('');
+  const [glyphs, setGlyphs] = useState([]);
+  const [error, setError] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
 
-  const cacheRef = React.useRef(new Map());
+  useEffect(() => {
+    let isMounted = true;
 
-  React.useEffect(() => {
-    let active = true;
+    const fetchGlyphs = async () => {
+      if (!text) {
+        setGlyphs([]);
+        return;
+      }
 
-    if (!fontUrl || typeof FontFace === 'undefined' || typeof document === 'undefined') {
-      setFallbackFontFamily('');
-      return () => { active = false; };
-    }
+      try {
+        setError(null);
+        const response = await fetch(`${API_URL}/shape`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
 
-    const family = getFontFamilyName(fontUrl);
-    const cached = fontFaceCache.get(fontUrl);
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
-    const loadPromise = cached?.promise ?? (() => {
-      const fontFace = new FontFace(family, `url("${fontUrl}")`);
-      const promise = fontFace.load().then((loadedFace) => {
-        document.fonts.add(loadedFace);
-        return loadedFace;
-      });
-      fontFaceCache.set(fontUrl, { family, promise });
-      return promise;
-    })();
+        const data = await response.json();
 
-    loadPromise
-      .then(() => {
-        if (!active) return;
-        setFallbackFontFamily(family);
-      })
-      .catch(() => {
-        if (!active) return;
-        setFallbackFontFamily('');
-      });
-
-    return () => { active = false; };
-  }, [fontUrl]);
-
-  React.useEffect(() => {
-    let cancelled = false;
-
-    if (!text || !fontUrl || !KHMER_PATTERN.test(text)) {
-      setSvgMarkup('');
-      if (onStatus) onStatus({ state: 'fallback', reason: 'missing-input' });
-      return () => { cancelled = true; };
-    }
-
-    const mergedColors = { ...DEFAULT_COLORS, ...(colors ?? {}) };
-    const cacheKey = `${fontUrl}|${fontSize}|${text}|${JSON.stringify(mergedColors)}`;
-
-    if (cacheRef.current.has(cacheKey)) {
-      setSvgMarkup(cacheRef.current.get(cacheKey));
-      if (onStatus) onStatus({ state: 'rendered', reason: 'cache' });
-      return () => { cancelled = true; };
-    }
-
-    if (onStatus) onStatus({ state: 'loading' });
-
-    renderColoredKhmerToSvg({
-      text,
-      fontUrl,
-      fontSize,
-      colors: mergedColors,
-      seriesOverrides,
-      diacriticOverrides,
-      moduleUrls,
-    })
-      .then((svg) => {
-        if (cancelled) return;
-        if (!svg) {
-          setSvgMarkup('');
-          if (onStatus) onStatus({ state: 'fallback', reason: 'empty-svg' });
-          return;
+        if (isMounted) {
+          setGlyphs(data.glyphs || []);
         }
-        cacheRef.current.set(cacheKey, svg);
-        setSvgMarkup(svg);
-        if (onStatus) onStatus({ state: 'rendered' });
-      })
-      .catch((error) => {
-        console.error('Khmer colored rendering failed:', error);
-        if (!cancelled) {
-          setSvgMarkup('');
-          if (onStatus) onStatus({ state: 'error', reason: error?.message ?? 'render-failed' });
+      } catch (e) {
+        console.error("KhmerColoredText fetch error:", e);
+        if (isMounted) {
+          setError(e.message);
+          setGlyphs([]);
         }
-      });
+      }
+    };
 
-    return () => { cancelled = true; };
-  }, [text, fontUrl, fontSize, colors]);
+    fetchGlyphs();
+    return () => {
+      isMounted = false;
+    };
+  }, [text]);
 
-  if (!svgMarkup) {
-    return (
-      <span className={className} style={{ fontSize, fontFamily: fallbackFontFamily }}>
-        {text}
-      </span>
-    );
+  const viewBox = useMemo(() => makeViewBoxFromGlyphs(glyphs, 80), [glyphs]);
+
+  if (error) {
+    return <div style={{ color: "red" }}>Error: {error}</div>;
   }
 
   return (
-    <span
-      className={className}
-      role="img"
-      aria-label={text}
-      dangerouslySetInnerHTML={{ __html: svgMarkup }}
-    />
+    <div style={{ width: "100%", height: "200px" }}>
+      <svg
+        width="100%"
+        height="100%"
+        viewBox={viewBox}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {glyphs.map((glyph) => {
+          const isSelected = selectedId === glyph.id;
+
+          const style = getKhmerGlyphStyle(glyph.char, {
+            mode: highlightMode,
+            frequencyByChar,
+          });
+
+          const selectedOutline =
+            isSelected && selectionStyle === "outline"
+              ? {
+                  stroke: GLYPH_COLORS.SELECTED,
+                  strokeWidth: 55,
+                  paintOrder: "stroke",
+                }
+              : {};
+
+          const filter =
+            isSelected && selectionStyle === "glow"
+              ? `drop-shadow(0 0 14px ${GLYPH_COLORS.SELECTED})`
+              : "drop-shadow(0 2px 4px rgba(0,0,0,0.35))";
+
+          return (
+            <g
+              key={glyph.id}
+              onClick={() => setSelectedId(glyph.id)}
+              style={{ cursor: "pointer" }}
+            >
+              <path
+                d={glyph.d}
+                fill={style.fill}
+                opacity={style.opacity}
+                {...selectedOutline}
+                style={{ filter, transition: "filter 150ms ease, opacity 150ms ease" }}
+              />
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
