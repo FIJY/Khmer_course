@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "start": "node server.cjs",
-    // <--- ДОБАВИТЬ ЭТУ СТРОКУ
     "gen:shapes": "node scripts/generate-shaped-from-content.cjs",
     "dev": "npm run gen:shapes && vite",
     "build": "npm run gen:shapes && vite build",
