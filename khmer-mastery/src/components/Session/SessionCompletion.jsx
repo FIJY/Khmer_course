@@ -24,7 +24,7 @@ const SessionCompletion = ({
     <MobileLayout withNav={!isFailure}>
       <div className={`${isFailure ? 'fixed inset-0' : 'flex-1'} flex flex-col items-center justify-center p-8 text-center`}>
         {icon}
-        <h1 className={`text-4xl font-black italic uppercase mb-2 ${isSuccess ? 'text-white' : 'text-white'}`}>{title}</h1>
+        <h1 className={`text-4xl font-black italic uppercase tracking-widest mb-2 ${isSuccess ? 'text-white' : 'text-white'}`}>{title}</h1>
         {typeof score === 'number' && typeof total === 'number' && (
           <p className="text-gray-400 mb-8 text-xl font-bold">
             {description ?? `${score} / ${total}`}

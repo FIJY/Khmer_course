@@ -251,14 +251,12 @@ export default function VisualDecoder({
               {/* видимый слой */}
               <path
                 d={glyph.d}
-                fill={isSelected ? "#22d3ee" : "white"}
+                fill="white"
                 pointerEvents="none"
+                stroke={isSelected ? "#22d3ee" : "transparent"}
+                strokeWidth={isSelected ? 6 : 0}
                 className="transition-all duration-300"
-                style={{
-                  filter: isSelected
-                    ? "drop-shadow(0 0 15px #22d3ee)"
-                    : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
-                }}
+                style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.5))" }}
               />
             </g>
           );
