@@ -6,9 +6,9 @@ import {
   GLYPH_COLORS,
   isKhmerConsonantChar,
 } from "../lib/khmerGlyphRenderer";
+import { buildShapeApiUrl } from "../lib/apiConfig";
 
 const COENG_CHAR = "្";
-const API_URL = "https://khmer-course.onrender.com";
 
 // Режимы подсветки (временно, пока не задашь жестко по урокам)
 export const HIGHLIGHT_MODES = {
@@ -117,7 +117,7 @@ export default function VisualDecoder({
     setLoading(true);
     setError(null);
 
-    fetch(`${API_URL}/api/shape?text=${encodeURIComponent(text)}`)
+    fetch(`${buildShapeApiUrl("/api/shape")}?text=${encodeURIComponent(text)}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         return res.json();
