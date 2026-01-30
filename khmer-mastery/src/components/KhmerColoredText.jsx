@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { GLYPH_COLORS, getKhmerGlyphStyle } from "../lib/khmerGlyphRenderer";
-
-const API_URL = "https://khmer-course.onrender.com";
+import { buildShapeApiUrl } from "../lib/apiConfig";
 
 const makeViewBoxFromGlyphs = (glyphs, padding = 60) => {
   if (!glyphs || glyphs.length === 0) return "0 0 100 100";
@@ -46,18 +45,16 @@ export default function KhmerColoredText({
 
       try {
         setError(null);
-        const response = await fetch(`${API_URL}/shape`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
-        });
+        const response = await fetch(
+          `${buildShapeApiUrl("/api/shape")}?text=${encodeURIComponent(text)}`
+        );
 
         if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
         const data = await response.json();
 
         if (isMounted) {
-          setGlyphs(data.glyphs || []);
+          setGlyphs(Array.isArray(data) ? data : data.glyphs || []);
         }
       } catch (e) {
         console.error("KhmerColoredText fetch error:", e);
