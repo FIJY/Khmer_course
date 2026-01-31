@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Check, Gem, Layers, BookOpen, RefreshCw, ChevronRight, ChevronDown, ChevronUp
+  Check, Gem, Layers, BookOpen, RefreshCw
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import ErrorState from '../components/UI/ErrorState';
@@ -330,11 +330,11 @@ export default function CourseMap() {
                   </div>
                   <button
                     onClick={() => handleLevelToggle(levelIndex)}
-                    className="p-2 rounded-xl border bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                    className="px-3 py-1.5 rounded-full border bg-black/40 border-white/10 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:border-white/30 transition-colors"
                     type="button"
                     aria-label={isLevelOpen ? 'Collapse section' : 'Expand section'}
                   >
-                    {isLevelOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    {isLevelOpen ? 'Collapse' : 'Expand'}
                   </button>
                 </div>
               </div>
@@ -349,13 +349,13 @@ export default function CourseMap() {
                   const lessonCount = chapter.subLessons.length;
 
                   return (
-                    <div key={chapter.id} id={`lesson-${chapter.id}`} className="relative pl-4 border-l-2 border-white/5">
-                      <div className={`absolute -left-[9px] top-10 w-4 h-4 rounded-full border-4 bg-black transition-colors ${isChapterFullDone ? 'border-emerald-500' : 'border-gray-800'}`} />
+                    <div key={chapter.id} id={`lesson-${chapter.id}`} className="relative pl-3 border-l border-white/5">
+                      <div className={`absolute -left-[7px] top-9 w-3.5 h-3.5 rounded-full border-[3px] bg-black transition-colors ${isChapterFullDone ? 'border-emerald-500' : 'border-gray-800'}`} />
 
-                      <div className={`bg-gray-900/40 border rounded-[2.5rem] p-6 transition-all duration-500
+                      <div className={`bg-gray-900/40 border rounded-[2rem] p-5 transition-all duration-500
                         ${isChapterFullDone ? 'border-emerald-500/30' : 'border-white/5'}`}>
 
-                        <div className="flex justify-between items-start mb-6">
+                        <div className="flex justify-between items-start mb-5">
                           <div className="max-w-[70%] text-white">
                             <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1 block">
                               Unit {chapter.displayId ?? chapter.id}
@@ -383,10 +383,10 @@ export default function CourseMap() {
 
                             <button
                               onClick={() => handleBootcampToggle(chapter.id)}
-                              className="p-3 rounded-2xl border bg-black border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                              className="px-3 py-2 rounded-full border bg-black border-white/10 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:border-white/30 transition-colors"
                               type="button"
                             >
-                              {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                              {isOpen ? 'Hide' : 'Show'}
                             </button>
                           </div>
                         </div>
@@ -416,7 +416,6 @@ export default function CourseMap() {
                                         {sub.title}
                                       </span>
                                     </div>
-                                    <ChevronRight size={14} className={isDone ? 'text-emerald-500' : 'text-gray-700'} />
                                   </button>
                                 );
                               })}
@@ -438,13 +437,13 @@ export default function CourseMap() {
                   const lessonCount = chapter.subLessons.length;
 
                   return (
-                    <div key={chapter.id} id={`lesson-${chapter.id}`} className="relative pl-4 border-l-2 border-white/5">
-                      <div className={`absolute -left-[9px] top-10 w-4 h-4 rounded-full border-4 bg-black transition-colors ${isChapterFullDone ? 'border-emerald-500' : 'border-gray-800'}`} />
+                    <div key={chapter.id} id={`lesson-${chapter.id}`} className="relative pl-3 border-l border-white/5">
+                      <div className={`absolute -left-[7px] top-9 w-3.5 h-3.5 rounded-full border-[3px] bg-black transition-colors ${isChapterFullDone ? 'border-emerald-500' : 'border-gray-800'}`} />
 
-                      <div className={`bg-gray-900/40 border rounded-[2.5rem] p-6 transition-all duration-500
+                      <div className={`bg-gray-900/40 border rounded-[2rem] p-5 transition-all duration-500
                         ${isChapterFullDone ? 'border-emerald-500/30' : 'border-white/5'}`}>
 
-                        <div className="flex justify-between items-start mb-6">
+                        <div className="flex justify-between items-start mb-5">
                           <div className="max-w-[70%] text-white">
                             <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest mb-1 block">
                               Unit {chapter.displayId ?? chapter.id}
@@ -471,10 +470,10 @@ export default function CourseMap() {
                             </button>
                             <button
                               onClick={() => handleChapterToggle(chapter.id)}
-                              className="p-3 rounded-2xl border bg-black border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                              className="px-3 py-2 rounded-full border bg-black border-white/10 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:border-white/30 transition-colors"
                               type="button"
                             >
-                              {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                              {isOpen ? 'Hide' : 'Show'}
                             </button>
                           </div>
                         </div>
@@ -504,7 +503,6 @@ export default function CourseMap() {
                                         {sub.title}
                                       </span>
                                     </div>
-                                    <ChevronRight size={14} className={isDone ? 'text-emerald-500' : 'text-gray-700'} />
                                   </button>
                                 );
                               })}
