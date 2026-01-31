@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Check, Gem, Layers, BookOpen, RefreshCw
+  Check, Gem, Layers, BookOpen, RefreshCw, ChevronDown, ChevronUp
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import ErrorState from '../components/UI/ErrorState';
@@ -330,11 +330,11 @@ export default function CourseMap() {
                   </div>
                   <button
                     onClick={() => handleLevelToggle(levelIndex)}
-                    className="px-3 py-1.5 rounded-full border bg-black/40 border-white/10 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                    className="p-2 rounded-xl border bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-colors"
                     type="button"
                     aria-label={isLevelOpen ? 'Collapse section' : 'Expand section'}
                   >
-                    {isLevelOpen ? 'Collapse' : 'Expand'}
+                    {isLevelOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </button>
                 </div>
               </div>
@@ -383,10 +383,10 @@ export default function CourseMap() {
 
                             <button
                               onClick={() => handleBootcampToggle(chapter.id)}
-                              className="px-3 py-2 rounded-full border bg-black border-white/10 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                              className="p-3 rounded-2xl border bg-black border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-colors"
                               type="button"
                             >
-                              {isOpen ? 'Hide' : 'Show'}
+                              {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                             </button>
                           </div>
                         </div>
@@ -470,10 +470,10 @@ export default function CourseMap() {
                             </button>
                             <button
                               onClick={() => handleChapterToggle(chapter.id)}
-                              className="px-3 py-2 rounded-full border bg-black border-white/10 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                              className="p-3 rounded-2xl border bg-black border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition-colors"
                               type="button"
                             >
-                              {isOpen ? 'Hide' : 'Show'}
+                              {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                             </button>
                           </div>
                         </div>
