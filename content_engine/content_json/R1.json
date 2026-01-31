@@ -4,8 +4,8 @@
   "lessons": [
     {
       "lesson_id": 10101,
-      "title": "UNIT R1: THE FOUNDATION (K-Group + Right-side vowels)",
-      "desc": "Master the Sun vs Moon classification system, learn K-group consonants (ក ខ គ ឃ ង), and read right-side vowels (-ា, -ះ, -ាំ). Real-world win: read the first syllable of 'coffee' (កាហ្វេ) and recognize signs like ហាង (shop).",
+      "title": "UNIT R1.1 — Orientation & Heroes",
+      "desc": "Text looks like chaos. Learn the single rule: every block has one main consonant (the hero).",
       "module_id": 10000,
       "order_index": 0,
       "content": [
@@ -14,8 +14,7 @@
           "data": {
             "title": "Why Khmer looks like chaos (but it's not)",
             "text": "In Khmer, there are no spaces between words.\n\nSo the text looks like this:\n\nលាឈានឆាប់លឿងរហូតដល់ថ្ងៃ\n\nCompletely unreadable, right?\n\n(This is completely normal. You're not broken.)\n\nBut here's the secret: Inside this chaos is a strict structure.\n\nThink of it like:\n- A skeleton (consonant) = the main part\n- Everything else = decorations hanging on the skeleton\n\nOnce you know the skeleton, the whole thing becomes readable.",
-            "sublesson_title": "Orientation & Foundation",
-            "screen_id": "R1.auto.01"
+            "sublesson_title": "Orientation & Foundation"
           }
         },
         {
@@ -23,12 +22,11 @@
           "data": {
             "title": "Your first tool: The Consonant (The Hero)",
             "text": "In every Khmer syllable, there is ONE main letter.\n\nThis is always a consonant.\n\nEverything else just hangs around it.\n\nMicroRule:\nWhen in doubt, look for what sits on the baseline. That's your hero.",
-            "sublesson_title": "Consonant First",
-            "screen_id": "R1.auto.02"
+            "sublesson_title": "Consonant First"
           }
         },
         {
-          "type": "ready",
+          "type": "drill_choice",
           "data": {
             "title": "TEST: Choose Sun Team",
             "subtitle": "drill_choice (strict A)",
@@ -76,14 +74,11 @@
             "success_text": "✅ Correct. Smooth = Sun.",
             "fail_text": "❌ Not exact. Try again.",
             "check_button_text": "Check",
-            "reset_button_text": "Reset",
-            "screen_id": "R1.auto.03",
-            "original_type": "drill_choice",
-            "render_hint": "drill_choice"
+            "reset_button_text": "Reset"
           }
         },
         {
-          "type": "analysis",
+          "type": "comparison_audio",
           "data": {
             "title": "TEST: Sun vs Moon (same vowel)",
             "pairs": [
@@ -114,10 +109,7 @@
                 }
               }
             ],
-            "note": "If you hear an extra E/O at the start — that's Moon behavior.",
-            "screen_id": "R1.auto.04",
-            "original_type": "comparison_audio",
-            "render_hint": "comparison_audio"
+            "note": "If you hear an extra E/O at the start — that's Moon behavior."
           }
         },
         {
@@ -127,12 +119,11 @@
             "subtitle": "Tap a word. See glyph breakdown.",
             "text": "កាហ្វេ នៅ ហាង",
             "translation": "Coffee is at the shop.",
-            "audio": "phrase_coffee_shop",
-            "screen_id": "R1.auto.05"
+            "audio": "phrase_coffee_shop"
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "កា",
             "target_char": "ក",
@@ -144,14 +135,11 @@
             "english_translation": "ក = hero (consonant), ា = vowel mark",
             "letter_series": 1,
             "word_audio": "",
-            "char_audio_map": {},
-            "screen_id": "R1.auto.06",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            "char_audio_map": {}
           }
         },
         {
-          "type": "analysis",
+          "type": "quiz",
           "data": {
             "question": "Find the Hero: In the syllable គី, which letter is the main consonant (the hero)?",
             "options": [
@@ -163,23 +151,28 @@
             "pronunciation_map": {
               "គ": "ko (main consonant)",
               "ី": "vowel mark"
-            },
-            "screen_id": "R1.auto.07",
-            "original_type": "quiz",
-            "render_hint": "quiz"
+            }
           }
-        },
+        }
+      ]
+    },
+    {
+      "lesson_id": 10102,
+      "title": "UNIT R1.2 — Sun vs Moon (Visual Teams)",
+      "desc": "Learn to spot the two visual teams (Sun vs Moon) and meet the K‑group letters.",
+      "module_id": 10000,
+      "order_index": 1,
+      "content": [
         {
           "type": "theory",
           "data": {
             "title": "The Two Teams: Sun ☀️ vs Moon 🌑",
             "text": "All consonants are divided into two teams:\n\n☀️ SUN TEAM\n- Smoother, rounder shapes\n- Simpler appearance\n- Light, open sound from the front teeth\n\n🌑 MOON TEAM\n- More complex, detailed shapes\n- More hair, spikes, hooks\n- Deep, heavy sound from the throat\n\nYou can read 80% of Khmer just by knowing which team a letter belongs to.\n\nVISUAL ANCHORS:\n🥚 Smooth egg head = Sun Team\n🦅 Complicated bird hair = Moon Team",
-            "sublesson_title": "Visual Classification",
-            "screen_id": "R1.auto.08"
+            "sublesson_title": "Visual Classification"
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "ក",
             "target_char": "ក",
@@ -190,14 +183,11 @@
             "english_translation": "Ka (Sun, smooth)",
             "letter_series": 1,
             "word_audio": "letter_ka.mp3",
-            "char_audio_map": {},
-            "screen_id": "R1.auto.09",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            "char_audio_map": {}
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "ខ",
             "target_char": "ខ",
@@ -208,14 +198,11 @@
             "english_translation": "Kha (Sun, with antenna)",
             "letter_series": 1,
             "word_audio": "letter_kha.mp3",
-            "char_audio_map": {},
-            "screen_id": "R1.auto.10",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            "char_audio_map": {}
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "គ",
             "target_char": "គ",
@@ -226,14 +213,11 @@
             "english_translation": "Ko (Moon, complicated hair)",
             "letter_series": 2,
             "word_audio": "letter_ko.mp3",
-            "char_audio_map": {},
-            "screen_id": "R1.auto.11",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            "char_audio_map": {}
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "ឃ",
             "target_char": "ឃ",
@@ -244,14 +228,11 @@
             "english_translation": "Kho (Moon, with pit)",
             "letter_series": 2,
             "word_audio": "letter_kho.mp3",
-            "char_audio_map": {},
-            "screen_id": "R1.auto.12",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            "char_audio_map": {}
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "ង",
             "target_char": "ង",
@@ -262,14 +243,11 @@
             "english_translation": "Ngo (Moon, tail always present)",
             "letter_series": 2,
             "word_audio": "letter_ngo.mp3",
-            "char_audio_map": {},
-            "screen_id": "R1.auto.13",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            "char_audio_map": {}
           }
         },
         {
-          "type": "analysis",
+          "type": "quiz",
           "data": {
             "question": "Hair/Teeth Check: Which of these K-group letters is MOON TEAM?",
             "options": [
@@ -285,23 +263,28 @@
               "ខ": "kha (Sun)",
               "គ": "ko (Moon) ← MOON TEAM",
               "ឃ": "kho (Moon)"
-            },
-            "screen_id": "R1.auto.14",
-            "original_type": "quiz",
-            "render_hint": "quiz"
+            }
           }
-        },
+        }
+      ]
+    },
+    {
+      "lesson_id": 10103,
+      "title": "UNIT R1.3 — The Commander Principle",
+      "desc": "One consonant (the commander) decides how the vowel is read. You’ll start reading syllables.",
+      "module_id": 10000,
+      "order_index": 2,
+      "content": [
         {
           "type": "theory",
           "data": {
             "title": "The Commander Principle: One rule that explains everything",
             "text": "Here's the magic:\n\nThe consonant (the Hero) decides how the vowel will sound.\n\nSame vowel mark.\nDifferent consonant = Different sound.\n\nWhy? Because the consonant is the COMMANDER.\nIt controls the tone.\n\nSun consonant + vowel = vowel sounds CLEAN\nMoon consonant + same vowel = vowel sounds ALTERED (with E or O coloring)",
-            "sublesson_title": "Commander Principle",
-            "screen_id": "R1.auto.15"
+            "sublesson_title": "Commander Principle"
           }
         },
         {
-          "type": "analysis",
+          "type": "quiz",
           "data": {
             "question": "Will they sound the same? Look at: ក + ា (Sun) vs គ + ា (Moon). Same vowel mark, different commander.",
             "options": [
@@ -309,10 +292,7 @@
               "Different sounds"
             ],
             "correct_answer": "Different sounds",
-            "explanation": "Same vowel mark, but different commanders → different sounds.\nSun consonant (ក) → sound stays clear/light (kaa)\nMoon consonant (គ) → sound changes, gets 'colored' by the deep tone (kea)",
-            "screen_id": "R1.auto.16",
-            "original_type": "quiz",
-            "render_hint": "quiz"
+            "explanation": "Same vowel mark, but different commanders → different sounds.\nSun consonant (ក) → sound stays clear/light (kaa)\nMoon consonant (គ) → sound changes, gets 'colored' by the deep tone (kea)"
           }
         },
         {
@@ -320,12 +300,11 @@
           "data": {
             "title": "Right-side Vowels (Inventory)",
             "text": "Some vowel marks sit to the RIGHT of the consonant like a cane.\n\nIn R1 you learn three:\n\n• ា (Aa) — the most common\n• ះ (Ah) — short, sharp stop\n• ាំ (Am) — nasal tone\n\nWith Sun letters: ា→-aa, ះ→-ah, ាំ→-am\nWith Moon letters: ា→-ea, ះ→-eah, ាំ→-oam\n\nCore rule: Sun + vowel = vowel sound stays clean; Moon + vowel = vowel shifts with E/O coloring.",
-            "sublesson_title": "Right-side Vowels",
-            "screen_id": "R1.auto.17"
+            "sublesson_title": "Right-side Vowels"
           }
         },
         {
-          "type": "analysis",
+          "type": "quiz",
           "data": {
             "question": "Which pair matches the correct Sun vs Moon reading for ា (Aa)?",
             "options": [
@@ -341,14 +320,11 @@
               "កា = kea, គា = kaa": "Backwards",
               "កា = kaa, គា = kaa": "Both same (wrong)",
               "កា = kea, គា = kea": "Both same (wrong)"
-            },
-            "screen_id": "R1.auto.18",
-            "original_type": "quiz",
-            "render_hint": "quiz"
+            }
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "កា",
             "target_char": "ក",
@@ -361,14 +337,11 @@
             "word_audio": "letter_ka_aa.mp3",
             "char_audio_map": {
               "កា": "letter_ka_aa.mp3"
-            },
-            "screen_id": "R1.auto.19",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            }
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "គា",
             "target_char": "គ",
@@ -381,23 +354,28 @@
             "word_audio": "letter_ko_aa.mp3",
             "char_audio_map": {
               "គា": "letter_ko_aa.mp3"
-            },
-            "screen_id": "R1.auto.20",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            }
           }
-        },
+        }
+      ]
+    },
+    {
+      "lesson_id": 10104,
+      "title": "UNIT R1.4 — Right-side Vowels: ា, ះ, ាំ",
+      "desc": "Learn the right-side vowel inventory and how it changes sound: -ា, -ះ, -ាំ.",
+      "module_id": 10000,
+      "order_index": 3,
+      "content": [
         {
           "type": "theory",
           "data": {
             "title": "New mark: ះ (Ah) — short, sharp stop",
             "text": "This vowel mark makes the sound SHORT and SHARP.\n\nIt's like adding a full stop to the vowel.\n\nCompare:\n- កា = kaa (long, open)\n- កះ = kah (short, stops abruptly)\n\nMoon team works the same way:\n- គា = kea (long)\n- គះ = keah (short)\n\nThe pattern is consistent: the vowel mark changes the LENGTH and QUALITY, but the consonant still controls the TEAM color.",
-            "sublesson_title": "The Ah Mark",
-            "screen_id": "R1.auto.21"
+            "sublesson_title": "The Ah Mark"
           }
         },
         {
-          "type": "analysis",
+          "type": "quiz",
           "data": {
             "question": "Read the syllable: What is ក + ះ (Ah mark) in Sun series?",
             "options": [
@@ -407,14 +385,11 @@
               "kam"
             ],
             "correct_answer": "kah (short)",
-            "explanation": "Sun letters keep vowels clean. ះ makes a short, sharp stop.\nSo: កះ = kah (short)",
-            "screen_id": "R1.auto.22",
-            "original_type": "quiz",
-            "render_hint": "quiz"
+            "explanation": "Sun letters keep vowels clean. ះ makes a short, sharp stop.\nSo: កះ = kah (short)"
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "កះ",
             "target_char": "ក",
@@ -427,14 +402,11 @@
             "word_audio": "letter_ka_ah.mp3",
             "char_audio_map": {
               "កះ": "letter_ka_ah.mp3"
-            },
-            "screen_id": "R1.auto.23",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            }
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "គះ",
             "target_char": "គ",
@@ -447,10 +419,7 @@
             "word_audio": "letter_ko_ah.mp3",
             "char_audio_map": {
               "គះ": "letter_ko_ah.mp3"
-            },
-            "screen_id": "R1.auto.24",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            }
           }
         },
         {
@@ -458,12 +427,11 @@
           "data": {
             "title": "New mark: ាំ (Am) — nasal tone",
             "text": "This vowel mark adds a NASAL quality to the vowel.\n\nIt's like the vowel passes through the nose.\n\nCompare:\n- កា = kaa (clear, open)\n- កាំ = kam (nasal quality)\n\nMoon team:\n- គា = kea (clear)\n- គាំ = koam (nasal with O-coloring)\n\nNotice: the nasal mark ាំ combines with the vowel ា, and Moon team still adds the O-coloring.",
-            "sublesson_title": "The Am Mark",
-            "screen_id": "R1.auto.25"
+            "sublesson_title": "The Am Mark"
           }
         },
         {
-          "type": "analysis",
+          "type": "quiz",
           "data": {
             "question": "Right-side vowels reference: What is the Moon team reading of ាំ (Am)?",
             "options": [
@@ -473,14 +441,11 @@
               "-um"
             ],
             "correct_answer": "-oam",
-            "explanation": "Moon letters add O-coloring: ាំ with Moon consonant → -oam\nExample: ង + ាំ = ngoam (not ngam)",
-            "screen_id": "R1.auto.26",
-            "original_type": "quiz",
-            "render_hint": "quiz"
+            "explanation": "Moon letters add O-coloring: ាំ with Moon consonant → -oam\nExample: ង + ាំ = ngoam (not ngam)"
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "កាំ",
             "target_char": "ក",
@@ -493,14 +458,11 @@
             "word_audio": "letter_ka_am.mp3",
             "char_audio_map": {
               "កាំ": "letter_ka_am.mp3"
-            },
-            "screen_id": "R1.auto.27",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            }
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "គាំ",
             "target_char": "គ",
@@ -513,14 +475,11 @@
             "word_audio": "letter_ko_am.mp3",
             "char_audio_map": {
               "គាំ": "letter_ko_am.mp3"
-            },
-            "screen_id": "R1.auto.28",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            }
           }
         },
         {
-          "type": "analysis",
+          "type": "quiz",
           "data": {
             "question": "Pattern transfer: You learned ក, គ, ខ. Now apply the rule: What is ខាំ (Sun Kha + nasal)?",
             "options": [
@@ -530,14 +489,11 @@
               "keam"
             ],
             "correct_answer": "kham",
-            "explanation": "ខ is Sun team (like ក). So it keeps the vowel clean.\nខ + ាំ = kham (not khoam, that would be Moon)",
-            "screen_id": "R1.auto.29",
-            "original_type": "quiz",
-            "render_hint": "quiz"
+            "explanation": "ខ is Sun team (like ក). So it keeps the vowel clean.\nខ + ាំ = kham (not khoam, that would be Moon)"
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "កាហ្វេ",
             "target_char": "ក",
@@ -551,14 +507,11 @@
             "word_audio": "word_coffee.mp3",
             "char_audio_map": {
               "កា": "letter_ka_aa.mp3"
-            },
-            "screen_id": "R1.auto.30",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            }
           }
         },
         {
-          "type": "learn_char",
+          "type": "visual_decoder",
           "data": {
             "word": "ហាង",
             "target_char": "ហ",
@@ -573,261 +526,210 @@
             "char_audio_map": {
               "ហា": "letter_ha_aa.mp3",
               "ង": "letter_ngo.mp3"
-            },
-            "screen_id": "R1.auto.31",
-            "original_type": "visual_decoder",
-            "render_hint": "visual_decoder"
+            }
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Sun + ា (Aa mark)",
             "back": "កា",
             "pronunciation": "kaa",
             "item_type": "syllable",
-            "audio": "letter_ka_aa.mp3",
-            "screen_id": "R1.auto.32",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "letter_ka_aa.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Moon + ា (Aa mark)",
             "back": "គា",
             "pronunciation": "kea",
             "item_type": "syllable",
-            "audio": "letter_ko_aa.mp3",
-            "screen_id": "R1.auto.33",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "letter_ko_aa.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Sun Kha + ា",
             "back": "ខា",
             "pronunciation": "khaa",
             "item_type": "syllable",
-            "audio": "letter_kha_aa.mp3",
-            "screen_id": "R1.auto.34",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "letter_kha_aa.mp3"
           }
-        },
+        }
+      ]
+    },
+    {
+      "lesson_id": 10105,
+      "title": "UNIT R1.5 — Street Speed Drill + Final Check",
+      "desc": "Fast mixed practice: read like on the street. Final confidence check for R1.",
+      "module_id": 10000,
+      "order_index": 4,
+      "content": [
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Moon Ngo + ា",
             "back": "ងា",
             "pronunciation": "ngea",
             "item_type": "syllable",
-            "audio": "letter_ngo_aa.mp3",
-            "screen_id": "R1.auto.35",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "letter_ngo_aa.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Baby / child / angel",
             "back": "ងា",
             "pronunciation": "ngea",
             "item_type": "word",
-            "audio": "word_child.mp3",
-            "screen_id": "R1.auto.36",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_child.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Side / direction",
             "back": "ខាង",
             "pronunciation": "khaang",
             "item_type": "word",
-            "audio": "word_side.mp3",
-            "screen_id": "R1.auto.37",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_side.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Crab / wheel / hoop",
             "back": "កង",
             "pronunciation": "kang",
             "item_type": "word",
-            "audio": "word_crab.mp3",
-            "screen_id": "R1.auto.38",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_crab.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Tent / hut / home",
             "back": "កាក",
             "pronunciation": "kaak",
             "item_type": "word",
-            "audio": "word_tent.mp3",
-            "screen_id": "R1.auto.39",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_tent.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Shop / store / stall",
             "back": "ហាង",
             "pronunciation": "haang",
             "item_type": "word",
-            "audio": "word_shop.mp3",
-            "screen_id": "R1.auto.40",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_shop.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Woman / Mrs. / lady",
             "back": "នាង",
             "pronunciation": "naang",
             "item_type": "word",
-            "audio": "word_woman.mp3",
-            "screen_id": "R1.auto.41",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_woman.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Mouth (anatomy)",
             "back": "ពាក",
             "pronunciation": "paak",
             "item_type": "word",
-            "audio": "word_mouth.mp3",
-            "screen_id": "R1.auto.42",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_mouth.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Very / too much",
             "back": "មាក",
             "pronunciation": "mak",
             "item_type": "word",
-            "audio": "word_very.mp3",
-            "screen_id": "R1.auto.43",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_very.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "To clean / to scrub",
             "back": "រាក",
             "pronunciation": "rak",
             "item_type": "word",
-            "audio": "word_clean.mp3",
-            "screen_id": "R1.auto.44",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_clean.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "To try / to test",
             "back": "សាក",
             "pronunciation": "sak",
             "item_type": "word",
-            "audio": "word_try.mp3",
-            "screen_id": "R1.auto.45",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_try.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Word / phrase",
             "back": "វាក",
             "pronunciation": "vak",
             "item_type": "word",
-            "audio": "word_word.mp3",
-            "screen_id": "R1.auto.46",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "word_word.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Sun + ះ (Ah short)",
             "back": "កះ",
             "pronunciation": "kah",
             "item_type": "syllable",
-            "audio": "letter_ka_ah.mp3",
-            "screen_id": "R1.auto.47",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "letter_ka_ah.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Moon + ះ (Ah short)",
             "back": "គះ",
             "pronunciation": "keah",
             "item_type": "syllable",
-            "audio": "letter_ko_ah.mp3",
-            "screen_id": "R1.auto.48",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "letter_ko_ah.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Sun + ាំ (Am nasal)",
             "back": "កាំ",
             "pronunciation": "kam",
             "item_type": "syllable",
-            "audio": "letter_ka_am.mp3",
-            "screen_id": "R1.auto.49",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "letter_ka_am.mp3"
           }
         },
         {
-          "type": "word_breakdown",
+          "type": "vocab_card",
           "data": {
             "front": "Moon + ាំ (Am nasal)",
             "back": "គាំ",
             "pronunciation": "koam",
             "item_type": "syllable",
-            "audio": "letter_ko_am.mp3",
-            "screen_id": "R1.auto.50",
-            "original_type": "vocab_card",
-            "render_hint": "vocab_card"
+            "audio": "letter_ko_am.mp3"
           }
         },
         {
-          "type": "analysis",
+          "type": "quiz",
           "data": {
             "question": "FINAL CHECK: Read by steps. Which pair matches Sun vs Moon for all three vowels?",
             "options": [
@@ -837,10 +739,7 @@
               "ក=kaa, គ=kaa | ក=kah, គ=kah | ក=kam, គ=kam"
             ],
             "correct_answer": "ក=kaa, គ=kea | ក=kah, គ=keah | ក=kam, គ=koam",
-            "explanation": "Sun (ក) keeps vowels clean: kaa, kah, kam\nMoon (គ) shifts them with E/O: kea, keah, koam\nThis is the COMMANDER PRINCIPLE.",
-            "screen_id": "R1.auto.51",
-            "original_type": "quiz",
-            "render_hint": "quiz"
+            "explanation": "Sun (ក) keeps vowels clean: kaa, kah, kam\nMoon (គ) shifts them with E/O: kea, keah, koam\nThis is the COMMANDER PRINCIPLE."
           }
         }
       ]

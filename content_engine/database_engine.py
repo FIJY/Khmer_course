@@ -370,16 +370,7 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
             "data": item['data']
         }))
 
-    # 5. ОБНОВЛЯЕМ LESSON JSON (fallback совместимость)
-    try:
-        db_execute_retry(supabase.table("lessons").update({
-            "content": content_list
-        }).eq("id", lesson_id))
-        print(f"\n   ✅ Updated lesson content JSON with audio references")
-    except Exception as e:
-        print(f"   ⚠️ Could not update lesson content JSON: {e}")
 
-    print(f"\n🎉 Lesson {lesson_id} synced with {len(content_list)} items!")
 
 
 async def update_study_materials(module_id, lessons_data):
