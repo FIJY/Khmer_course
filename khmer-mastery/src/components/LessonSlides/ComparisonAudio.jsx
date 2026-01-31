@@ -1,7 +1,8 @@
 // src/components/LessonSlides/ComparisonAudio.jsx
 import React, { useState, useRef } from "react";
-import { Volume2, Play, Pause } from "lucide-react";
+import { Volume2, Pause } from "lucide-react";
 import { getSoundFileForChar } from "../../data/audioMap";
+import LessonCard from "../UI/LessonCard";
 
 /**
  * ComparisonAudio Component
@@ -81,7 +82,7 @@ export default function ComparisonAudio({
   };
 
   return (
-    <div className="w-full space-y-6 p-6 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 rounded-lg border border-slate-700">
+    <LessonCard className="space-y-6">
       <audio ref={audioRef} crossOrigin="anonymous" />
 
       {/* Title */}
@@ -141,7 +142,7 @@ export default function ComparisonAudio({
                     <button
                       onClick={() => playSound(leftAudio, pairIdx, "left")}
                       disabled={isPlaying(pairIdx, "left")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-700 text-white transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-60 transition-colors"
                       aria-label="Play left audio"
                     >
                       {isPlaying(pairIdx, "left") ? (
@@ -192,7 +193,7 @@ export default function ComparisonAudio({
                     <button
                       onClick={() => playSound(rightAudio, pairIdx, "right")}
                       disabled={isPlaying(pairIdx, "right")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:bg-cyan-700 text-white transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-60 transition-colors"
                       aria-label="Play right audio"
                     >
                       {isPlaying(pairIdx, "right") ? (
@@ -217,7 +218,7 @@ export default function ComparisonAudio({
 
       {/* Note */}
       {note && (
-        <div className="mt-6 p-4 bg-slate-700 rounded-lg border border-slate-600">
+        <div className="mt-6 p-4 bg-black/30 rounded-2xl border border-white/10">
           <p className="text-sm text-slate-200 italic">{note}</p>
         </div>
       )}
@@ -227,12 +228,12 @@ export default function ComparisonAudio({
         <div className="flex justify-center pt-4">
           <button
             onClick={onComplete}
-            className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-semibold transition-colors"
+            className="px-6 py-2 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 font-semibold hover:bg-emerald-500/30 transition-colors"
           >
             Got it! Continue →
           </button>
         </div>
       )}
-    </div>
+    </LessonCard>
   );
 }

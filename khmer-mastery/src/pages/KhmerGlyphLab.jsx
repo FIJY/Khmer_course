@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import VisualDecoder from '../components/VisualDecoder'; // Наш новый компонент
 import Button from '../components/UI/Button';
+import MobileLayout from '../components/Layout/MobileLayout';
 
 export default function KhmerGlyphLab() {
   const [inputText, setInputText] = useState('កាហ្វេ');
   const [activeWord, setActiveWord] = useState('កាហ្វេ');
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8 flex flex-col items-center">
-      <h1 className="text-3xl font-bold mb-8 text-cyan-400">🔬 Лаборатория Глифов</h1>
+    <MobileLayout withNav={false} contentClassName="flex flex-col items-center p-6 gap-6">
+      <h1 className="text-3xl font-bold text-cyan-400 text-center">🔬 Лаборатория Глифов</h1>
 
       {/* Блок управления */}
-      <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 mb-8 w-full max-w-lg">
+      <div className="bg-gray-800/70 p-6 rounded-2xl border border-gray-700 w-full">
         <label className="block text-sm text-gray-400 mb-2">Введите слово на кхмерском:</label>
         <div className="flex gap-2">
           <input
@@ -30,7 +31,7 @@ export default function KhmerGlyphLab() {
       </div>
 
       {/* Экран просмотра */}
-      <div className="w-full max-w-2xl bg-black/40 p-10 rounded-3xl border border-white/10 min-h-[300px] flex items-center justify-center">
+      <div className="w-full bg-black/40 p-8 rounded-3xl border border-white/10 min-h-[240px] flex items-center justify-center">
         <VisualDecoder
           text={activeWord}
           onLetterClick={(char) => console.log("Клик:", char)}
@@ -38,7 +39,7 @@ export default function KhmerGlyphLab() {
       </div>
 
       {/* Список для быстрой проверки */}
-      <div className="mt-8 flex flex-wrap gap-2 justify-center max-w-2xl">
+      <div className="flex flex-wrap gap-2 justify-center">
         {["កាហ្វេ", "សួស្តី", "ញ៉ាំ", "ខ្មែរ", "សាលារៀន", "ទឹក", "ម៉ាក់"].map(word => (
            <button
              key={word}
@@ -49,6 +50,6 @@ export default function KhmerGlyphLab() {
            </button>
         ))}
       </div>
-    </div>
+    </MobileLayout>
   );
 }

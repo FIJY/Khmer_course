@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Loader } from 'lucide-react';
+import MobileLayout from '../components/Layout/MobileLayout';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -35,24 +36,26 @@ export default function Login() {
 
   if (session) {
     return (
-      <div className="h-screen bg-black flex flex-col items-center justify-center p-6 text-white font-sans">
-        <div className="mb-8 text-center">
-          <p className="text-xs uppercase tracking-[0.35em] text-cyan-400">Khmer Mastery</p>
-          <h2 className="text-4xl font-bold mt-3">Welcome back</h2>
-          <p className="text-gray-500 mt-3 text-center">You are authorized. Ready to continue?</p>
+      <MobileLayout withNav={false} contentClassName="flex items-center justify-center p-6">
+        <div className="w-full max-w-sm text-center">
+          <div className="mb-8">
+            <p className="text-xs uppercase tracking-[0.35em] text-cyan-400">Khmer Mastery</p>
+            <h2 className="text-4xl font-bold mt-3">Welcome back</h2>
+            <p className="text-gray-500 mt-3">You are authorized. Ready to continue?</p>
+          </div>
+          <button
+            onClick={() => navigate('/map')}
+            className="bg-cyan-500 hover:bg-cyan-400 text-black font-black py-5 px-12 rounded-2xl shadow-xl w-full transition-all transform active:scale-95 uppercase tracking-widest focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-500/60 focus-visible:ring-offset-1 focus-visible:ring-offset-black"
+          >
+            Go to Map
+          </button>
         </div>
-        <button
-          onClick={() => navigate('/map')}
-          className="bg-cyan-500 hover:bg-cyan-400 text-black font-black py-5 px-12 rounded-2xl shadow-xl w-full max-w-xs transition-all transform active:scale-95 uppercase tracking-widest focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-500/60 focus-visible:ring-offset-1 focus-visible:ring-offset-black"
-        >
-          Go to Map
-        </button>
-      </div>
+      </MobileLayout>
     );
   }
 
   return (
-    <div className="h-screen bg-black flex items-center justify-center p-6 font-sans">
+    <MobileLayout withNav={false} contentClassName="flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-gradient-to-b from-gray-900/70 via-gray-900/40 to-black/60 rounded-[2.5rem] p-10 border border-white/10 shadow-[0_25px_60px_-35px_rgba(34,211,238,0.35)]">
         <div className="text-center mb-10">
           <p className="text-xs uppercase tracking-[0.35em] text-cyan-400">Khmer Mastery</p>
@@ -95,6 +98,6 @@ export default function Login() {
           </div>
         </div>
       </div>
-    </div>
+    </MobileLayout>
   );
 }
