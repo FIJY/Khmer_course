@@ -76,6 +76,11 @@ async def async_main():
         action="store_true",
         help="Обновить сводку study_materials для модуля",
     )
+    parser.add_argument(
+        "--only-lesson-id",
+        type=int,
+        help="Если JSON содержит несколько уроков, обработать только этот lesson_id",
+    )
 
     args = parser.parse_args()
 
@@ -121,8 +126,14 @@ async def async_main():
 
     # 2. ЗАПУСКАЕМ ЦИКЛ ПО ВСЕМ НАЙДЕННЫМ УРОКАМ
     processed_count = 0
-
     for lesson_idx, lesson_data in enumerate(lessons_to_process, 1):
+        lesson_id_in_file = lesson_data.get("lesson_id")
+
+        if args.only_lesson_id is not None:
+            if int(lesson_id_in_file or 0) != int(args.only_lesson_id):
+                continue
+
+
         content = lesson_data.get("content")
         lesson_id = args.lesson_id or lesson_data.get("lesson_id")
         title = args.title or lesson_data.get("title")

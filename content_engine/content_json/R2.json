@@ -1,0 +1,18 @@
+{
+  "lesson_id": 10000,
+  "title": "R 1.1: Находим согласные",
+  "desc": "Первое знакомство с кхмерским текстом",
+  "module_id": 10000,
+  "content": [
+    {
+      "type": "analysis",
+      "data": {
+        "title": "R 1.1.1",
+        "subtitle": "",
+        "text": "Today, we work with text.\n\nOne thing to know:\nKhmer has no spaces. At all.\n\nEnglish without spaces:\nthissentencehasnospaces\n\nKhmer looks like this:\nលаឈានឆាប់លឿងរហូតដល់ថ្ងៃ\n\nIf it feels unreadable — good.\nThat’s normal.",
+        "translation": "",
+        "audio": "intro_r1_1_1"
+      }
+    }
+  ]
+}
