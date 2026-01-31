@@ -10,6 +10,11 @@ import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
 import SessionCompletion from '../components/Session/SessionCompletion';
 import SessionFrame from '../components/Session/SessionFrame';
+import DrillChoiceSlide from "../components/LessonSlides/DrillChoiceSlide";
+import AnalysisSlide from '../components/LessonSlides/AnalysisSlide';
+import ComparisonAudio from '../components/LessonSlides/ComparisonAudio';
+
+
 
 // --- ИМПОРТ КОМПОНЕНТОВ (БЕЗ ЛИШНИХ ПАПОК) ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
@@ -72,8 +77,10 @@ export default function LessonPlayer() {
       'rule',
       'reading-algorithm',
       'ready',
-      'intro'
+      'intro',
+      'analysis'
     ];
+
 
     if (autoUnlockTypes.includes(currentType)) {
       setCanAdvance(true);
@@ -200,6 +207,15 @@ export default function LessonPlayer() {
       {type === 'learn_char' && (
         <HeroSlide data={current} onPlayAudio={playLocalAudio} />
       )}
+      {type === "drill_choice" && (
+        <DrillChoiceSlide
+          data={current}
+          onPlayAudio={playLocalAudio}
+          onComplete={() => setCanAdvance(true)}
+        />
+      )}
+
+
 
       {type === 'word_breakdown' && (
         <InventorySlide data={current} onPlayAudio={playLocalAudio} />
@@ -336,6 +352,21 @@ export default function LessonPlayer() {
           onPlayAudio={playLocalAudio}
         />
       )}
+
+      {type === 'analysis' && (
+        <AnalysisSlide
+          data={current}
+          onPlayAudio={playLocalAudio}
+        />
+      )}
+      {type === 'comparison_audio' && (
+        <ComparisonAudio
+          data={current}
+          onComplete={() => setCanAdvance(true)}
+          hideDefaultButton={true}
+        />
+      )}
+
 
       {type === 'no-spaces' && (
         <div className="w-full flex flex-col items-center">

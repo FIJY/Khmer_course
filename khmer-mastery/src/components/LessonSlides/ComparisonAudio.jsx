@@ -5,16 +5,16 @@ import { getSoundFileForChar } from "../../data/audioMap";
 
 /**
  * ComparisonAudio Component
- * 
+ *
  * Displays two (or more) columns of Khmer text with audio playback.
  * Perfect for R1 lessons:
  * - ក (Sun) vs គ (Moon) with same vowel
  * - ក + ា vs ក + ះ (different vowels)
  * - etc.
- * 
+ *
  * Props:
  * - title: string (lesson title)
- * - pairs: array of { left, right, instruction? } 
+ * - pairs: array of { left, right, instruction? }
  *   where left/right = { text, label?, audio?, romanization?, team? }
  * - note: string (optional note at bottom)
  * - onComplete: callback when user clicks play

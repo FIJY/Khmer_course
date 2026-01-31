@@ -25,6 +25,9 @@ KHMER_PATTERN = re.compile(r"[\u1780-\u17FF]")
 AUDIO_DIR = Path(__file__).resolve().parent.parent / "khmer-mastery" / "public" / "sounds"
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
+# НЕ генерим такие префиксы (у тебя уже есть готовые ассеты)
+SKIP_AUDIO_PREFIXES = ("letter_",)
+
 if not url or not key:
     print(f"❌ ОШИБКА: Нет ключей Supabase в {env_path.absolute()}")
     sys.exit(1)
@@ -52,22 +55,38 @@ def db_execute_retry(query, retries=5, delay=2):
     raise last_error
 
 
+def ensure_mp3(name: str) -> str:
+    """Нормализует имя аудиофайла: добавляет .mp3 если расширения нет."""
+    name = (name or "").strip()
+    if not name:
+        return name
+    # если уже есть расширение — оставляем как есть
+    if re.search(r"\.[a-z0-9]{2,5}$", name, re.IGNORECASE):
+        return name
+    return f"{name}.mp3"
+
+
+def should_skip_generation(audio_key: str) -> bool:
+    """Возвращает True если это пред-собранный ассет и его генерить не надо."""
+    if not audio_key:
+        return True
+    for p in SKIP_AUDIO_PREFIXES:
+        if audio_key.startswith(p):
+            return True
+    return False
+
+
 def get_safe_audio_name(khmer_text, english_label=None, item_type="word"):
     """
     Генерирует безопасное имя аудиофайла на основе кхмерского текста и типа.
-
     Примеры:
-    - get_safe_audio_name("សូត្របាទ", "Hello", "phrase") → "hello_a1b2c3.mp3"
-    - get_safe_audio_name("ញ៉ាំ", "Eat", "word") → "eat_d4e5f6.mp3"
-    - get_safe_audio_name("ក", "Ka", "char") → "ka_7g8h9i.mp3"
+    - get_safe_audio_name("សួស្តី", "Hello", "phrase") → "hello_a1b2c3.mp3"
     """
     clean_k = khmer_text.split(' (')[0].replace('?', '').strip()
 
-    # Используй english_label как основное имя, или type как fallback
     base_label = english_label or item_type
-    safe_label = re.sub(r'[\\/*?:"<>|]', "", base_label).lower().strip().replace(' ', '_')[:12]
+    safe_label = re.sub(r'[\\/*?:"<>|]', "", base_label).lower().strip().replace(' ', '_')[:16]
 
-    # Хеш кхмерского текста для уникальности
     w_hash = hashlib.md5(clean_k.encode()).hexdigest()[:6]
 
     return f"{safe_label}_{w_hash}.mp3"
@@ -85,22 +104,11 @@ def get_item_type(khmer_text, english_text):
     return 'word'
 
 
-def resolve_khmer_english(item_type, data):
-    """Извлекает кхмерский и английский текст из разных типов"""
-    if item_type == "vocab_card":
-        front = data.get("front", "") or ""
-        back = data.get("back", "") or ""
-        if KHMER_PATTERN.search(front):
-            return front, back
-        return back, front
-    return data.get("correct_answer", "") or "", "Quiz Answer"
-
-
 async def generate_audio(text, filename):
     """Генерирует аудиофайл с помощью TTS"""
+    filename = ensure_mp3(filename)
     filepath = AUDIO_DIR / filename
 
-    # Если файл уже существует, пропускаем
     if filepath.exists():
         print(f"   ⏭️  Already exists: {filename}")
         return
@@ -152,7 +160,7 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
         print(f"\n   📝 Item {idx + 1}/{len(content_list)}: {item['type']}")
 
         # ═══════════════════════════════════════════════════════════════
-        # A) ОБРАБОТКА QUIZ (с опциями и озвучкой)
+        # A) QUIZ
         # ═══════════════════════════════════════════════════════════════
         if item['type'] == 'quiz':
             options = item['data'].get('options', [])
@@ -162,19 +170,17 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
             for opt in options:
                 clean_opt = opt.split(' (')[0].replace('?', '').strip()
 
-                # Ищем в словаре
                 dict_res = db_execute_retry(
-                    supabase.table("dictionary").select("pronunciation", "english").eq("khmer", clean_opt))
+                    supabase.table("dictionary").select("pronunciation", "english").eq("khmer", clean_opt)
+                )
                 entry = dict_res.data[0] if dict_res.data else {}
 
                 db_pron = entry.get("pronunciation", "")
                 eng = entry.get("english", "option")
                 json_pron = pron_map.get(clean_opt, "")
 
-                # Определяем правильное произношение
                 if json_pron:
                     pron = json_pron
-                    # Обновляем словарь если расхождение
                     if pron != db_pron:
                         try:
                             db_execute_retry(supabase.table("dictionary").upsert({
@@ -188,7 +194,6 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                 else:
                     pron = db_pron
 
-                # ✅ ГЕНЕРИРУЕМ АУДИО ДЛЯ ОПЦИИ
                 audio_name = get_safe_audio_name(clean_opt, eng, "option")
                 await generate_audio(clean_opt, audio_name)
 
@@ -198,36 +203,33 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                 }
 
         # ═══════════════════════════════════════════════════════════════
-        # B) ОБРАБОТКА VOCAB CARD (главный источник озвучки!)
+        # B) VOCAB CARD (главный источник аудио словаря)
         # ═══════════════════════════════════════════════════════════════
         if item['type'] == 'vocab_card':
             data = item.get('data', {})
-            front = data.get('front', '') or ""     # Английский
-            back = data.get('back', '') or ""       # Кхмерский
+            front = data.get('front', '') or ""  # Английский
+            back = data.get('back', '') or ""  # Кхмерский
             item_type = data.get('item_type', 'word')
 
             if back:
                 clean_k = back.split(' (')[0].replace('?', '').strip()
 
-                # Ищем в словаре
                 dict_res = db_execute_retry(
-                    supabase.table("dictionary").select("pronunciation", "english").eq("khmer", clean_k))
+                    supabase.table("dictionary").select("pronunciation", "english").eq("khmer", clean_k)
+                )
                 entry = dict_res.data[0] if dict_res.data else {}
 
-                # Определяем произношение
                 json_pron = data.get("pronunciation", "")
                 final_pron = json_pron or entry.get("pronunciation", "")
 
                 english = entry.get("english", front)
 
-                # ✅ ГЕНЕРИРУЕМ АУДИО ДЛЯ VOCAB CARD (используй front как label!)
                 audio_name = get_safe_audio_name(clean_k, front, item_type)
                 await generate_audio(clean_k, audio_name)
 
-                item['data']['audio'] = audio_name  # 🔴 ЗАПИСЫВАЕМ В DATA!
+                item['data']['audio'] = audio_name
                 item['data']['pronunciation'] = final_pron
 
-                # Обновляем словарь
                 db_execute_retry(supabase.table("dictionary").upsert({
                     "khmer": clean_k,
                     "english": english,
@@ -236,23 +238,18 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                 }, on_conflict="khmer"))
 
         # ═══════════════════════════════════════════════════════════════
-        # C) ОБРАБОТКА LEARN_CHAR (букв)
+        # C) LEARN_CHAR (буквы) — ❗ НЕ ГЕНЕРИМ (используем готовые letter_*.mp3)
         # ═══════════════════════════════════════════════════════════════
         if item['type'] == 'learn_char':
             data = item.get('data', {})
-            char_text = data.get('char', '')
-
-            if char_text:
-                char_name = data.get('name', 'unknown')
-
-                # ✅ ГЕНЕРИРУЕМ АУДИО ДЛЯ БУКВЫ
-                audio_name = get_safe_audio_name(char_text, char_name, 'char')
-                await generate_audio(char_text, audio_name)
-
-                item['data']['audio'] = audio_name  # 🔴 ЗАПИСЫВАЕМ В DATA!
+            # Если в JSON уже есть data.audio = "letter_ka" — оставляем как есть.
+            # Если аудио нет — тоже не генерим (иначе разведём хаос имен).
+            if 'audio' in data:
+                data['audio'] = ensure_mp3(data['audio']) if data['audio'].endswith(".mp3") else data['audio']
+                item['data'] = data
 
         # ═══════════════════════════════════════════════════════════════
-        # D) ОБРАБОТКА WORD_BREAKDOWN (разбор слова)
+        # D) WORD_BREAKDOWN (разбор слова)
         # ═══════════════════════════════════════════════════════════════
         if item['type'] == 'word_breakdown':
             data = item.get('data', {})
@@ -260,15 +257,12 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
 
             if word_text:
                 word_trans = data.get('translation', 'word')
-
-                # ✅ ГЕНЕРИРУЕМ АУДИО ДЛЯ СЛОВА
                 audio_name = get_safe_audio_name(word_text, word_trans, 'word')
                 await generate_audio(word_text, audio_name)
-
-                item['data']['audio'] = audio_name  # 🔴 ЗАПИСЫВАЕМ В DATA!
+                item['data']['audio'] = audio_name
 
         # ═══════════════════════════════════════════════════════════════
-        # E) ОБРАБОТКА VISUAL_DECODER
+        # E) VISUAL_DECODER
         # ═══════════════════════════════════════════════════════════════
         if item['type'] == 'visual_decoder':
             data = item.get('data', {})
@@ -280,6 +274,94 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                 await generate_audio(word, audio_name)
                 item['data']['word_audio'] = audio_name
 
+        # ═══════════════════════════════════════════════════════════════
+        # F) COMPARISON_AUDIO — ✅ генерим слоги/слова по парам
+        # ═══════════════════════════════════════════════════════════════
+        if item['type'] == 'comparison_audio':
+            data = item.get('data', {}) or {}
+            pairs = data.get('pairs', []) or []
+
+            for p in pairs:
+                left = (p.get("left") or {})
+                right = (p.get("right") or {})
+
+                # LEFT
+                l_text = (left.get("text") or "").strip()
+                l_audio_key = (left.get("audio") or "").strip()
+                if l_audio_key:
+                    # нормализуем в JSON: добавляем .mp3 для файловых ключей (кроме letter_*)
+                    if not l_audio_key.startswith(SKIP_AUDIO_PREFIXES):
+                        l_audio_key = ensure_mp3(l_audio_key)
+                        left["audio"] = l_audio_key
+
+                    if l_text and (not should_skip_generation(left.get("audio") or "")):
+                        await generate_audio(l_text, left["audio"])
+
+                # RIGHT
+                r_text = (right.get("text") or "").strip()
+                r_audio_key = (right.get("audio") or "").strip()
+                if r_audio_key:
+                    if not r_audio_key.startswith(SKIP_AUDIO_PREFIXES):
+                        r_audio_key = ensure_mp3(r_audio_key)
+                        right["audio"] = r_audio_key
+
+                    if r_text and (not should_skip_generation(right.get("audio") or "")):
+                        await generate_audio(r_text, right["audio"])
+
+                p["left"] = left
+                p["right"] = right
+
+            data["pairs"] = pairs
+            item["data"] = data
+
+        # ═══════════════════════════════════════════════════════════════
+        # G) ANALYSIS — ✅ если есть data.audio + khmer/text → генерим
+        # ═══════════════════════════════════════════════════════════════
+        if item['type'] == 'analysis':
+            data = item.get('data', {}) or {}
+
+            # текст для TTS: берём khmer/word/khmerText, иначе не генерим
+            khmer_text = data.get("khmer") or data.get("word") or data.get("khmerText") or ""
+            if not khmer_text and isinstance(data.get("text"), str) and KHMER_PATTERN.search(data.get("text", "")):
+                khmer_text = data.get("text", "")
+
+            audio_key = (data.get("audio") or "").strip()
+            if audio_key:
+                if not audio_key.startswith(SKIP_AUDIO_PREFIXES):
+                    audio_key = ensure_mp3(audio_key)
+                    data["audio"] = audio_key
+
+                if khmer_text and (not should_skip_generation(data.get("audio") or "")):
+                    await generate_audio(str(khmer_text), data["audio"])
+
+            item["data"] = data
+
+        # ═══════════════════════════════════════════════════════════════
+        # H) DRILL_CHOICE — ✅ генерим аудио опций, если это НЕ letter_*
+        # ═══════════════════════════════════════════════════════════════
+        if item['type'] == 'drill_choice':
+            data = item.get('data', {}) or {}
+            options = data.get('options', []) or []
+
+            for opt in options:
+                o_text = (opt.get("text") or opt.get("char") or "").strip()
+                o_audio = (opt.get("audio") or "").strip()
+
+                if not o_audio:
+                    continue
+
+                # нормализуем только если это не letter_*
+                if not o_audio.startswith(SKIP_AUDIO_PREFIXES):
+                    o_audio = ensure_mp3(o_audio)
+                    opt["audio"] = o_audio
+
+                # генерим только не-letter
+                if o_text and (not should_skip_generation(opt.get("audio") or "")):
+                    await generate_audio(o_text, opt["audio"])
+
+            data["options"] = options
+            item["data"] = data
+
         # 4. ВСТАВЛЯЕМ ITEM В БД
         db_execute_retry(supabase.table("lesson_items").insert({
             "lesson_id": lesson_id,
@@ -288,7 +370,7 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
             "data": item['data']
         }))
 
-    # 5. ОБНОВЛЯЕМ LESSON JSON (для fallback совместимости)
+    # 5. ОБНОВЛЯЕМ LESSON JSON (fallback совместимость)
     try:
         db_execute_retry(supabase.table("lessons").update({
             "content": content_list
@@ -303,28 +385,25 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
 async def update_study_materials(module_id, lessons_data):
     """
     1. Обновляет текстовое саммари.
-    2. Переиспользует Урок-Главку (ID = module_id)
-       чтобы кнопка 'Книжечка' показывала ВСЕ слова главы.
+    2. Переиспользует Урок-Главку (ID = module_id) чтобы кнопка 'Книжечка'
+       показывала ВСЕ слова главы.
     """
     print(f"\n📚 Updating Summary & Guidebook for Module {module_id}...")
 
     summary_text = f"# Chapter Summary\n\n"
 
-    # Собираем все уникальные карточки для сводного урока
     aggregated_items = []
     seen_words = set()
 
     sorted_lessons = sorted(lessons_data.items(), key=lambda x: x[0])
 
     for lesson_id, info in sorted_lessons:
-        # Пропускаем финальный квиз в сводке слов
         if "Final Quiz" in info.get('title', ''):
             continue
 
         lesson_title = info.get('title', f'Lesson {lesson_id}')
         summary_text += f"## {lesson_title}\n"
 
-        # Добавляем теорию в текст
         for item in info.get('content', []):
             if item['type'] == 'theory':
                 t_title = item['data'].get('title', 'Note')
@@ -334,7 +413,6 @@ async def update_study_materials(module_id, lessons_data):
 
         summary_text += "\n"
 
-        # Добавляем слова
         for item in info.get('content', []):
             if item['type'] == 'vocab_card':
                 data = item.get('data', {})
@@ -342,18 +420,15 @@ async def update_study_materials(module_id, lessons_data):
                 eng = data.get('front', '')
                 pron = data.get('pronunciation', '')
 
-                # Добавляем в текст
                 if khmer and eng:
                     summary_text += f"* **{khmer}** ({pron}) — {eng}\n"
 
-                # Добавляем в список карточек (без дублей)
-                if khmer not in seen_words:
+                if khmer and khmer not in seen_words:
                     seen_words.add(khmer)
                     aggregated_items.append(item)
 
         summary_text += "\n"
 
-    # 1. Записываем текстовое саммари
     try:
         db_execute_retry(supabase.table("study_materials").upsert({
             "chapter_id": module_id,
@@ -365,18 +440,14 @@ async def update_study_materials(module_id, lessons_data):
     except Exception as e:
         print(f"⚠️ Failed to update study_materials: {e}")
 
-    # 2. 📖 ПЕРЕИСПОЛЬЗУЕМ Урок-Главку (ID = module_id)
-    # Это то, что открывает кнопка 'Книжечка'
     print(f"📖 Regenerating Chapter Guidebook (Lesson ID {module_id})...")
 
-    # Чистим старые "6 слов"
     existing = db_execute_retry(supabase.table("lesson_items").select("id").eq("lesson_id", module_id))
     ids = [i['id'] for i in existing.data]
     if ids:
         db_execute_retry(supabase.table("lesson_items").delete().eq("lesson_id", module_id))
         print(f"   🗑️  Cleaned {len(ids)} old guidebook items")
 
-    # Вставляем все собранные слова
     for idx, item in enumerate(aggregated_items):
         db_execute_retry(supabase.table("lesson_items").insert({
             "lesson_id": module_id,

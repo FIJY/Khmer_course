@@ -1,12 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  // Просто разрешаем Vite обрабатывать .wasm как статические ассеты
-  assetsInclude: ['**/*.wasm'],
-  optimizeDeps: {
-    // Исключаем harfbuzzjs из предварительной сборки, чтобы не ломать внутренние пути
-    exclude: ['harfbuzzjs']
-  }
+  server: {
+    port: 5173,
+    strictPort: false,
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+  },
 })

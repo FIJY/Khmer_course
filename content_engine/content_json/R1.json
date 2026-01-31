@@ -26,6 +26,103 @@
           }
         },
         {
+          "type": "drill_choice",
+          "data": {
+            "title": "TEST: Choose Sun Team",
+            "subtitle": "drill_choice (strict A)",
+            "prompt": "Tap ONLY Sun Team letters. Exact match required.",
+            "layout": "grid",
+            "mode": "multi",
+            "options": [
+              {
+                "id": "ka",
+                "text": "ក",
+                "audio": "letter_ka"
+              },
+              {
+                "id": "kha",
+                "text": "ខ",
+                "audio": "letter_kha"
+              },
+              {
+                "id": "ko",
+                "text": "គ",
+                "audio": "letter_ko"
+              },
+              {
+                "id": "kho",
+                "text": "ឃ",
+                "audio": "letter_kho"
+              },
+              {
+                "id": "ngo",
+                "text": "ង",
+                "audio": "letter_ngo"
+              },
+              {
+                "id": "cha",
+                "text": "ច",
+                "audio": "letter_cha"
+              }
+            ],
+            "correct_ids": [
+              "ka",
+              "kha",
+              "cha"
+            ],
+            "shuffle": true,
+            "success_text": "✅ Correct. Smooth = Sun.",
+            "fail_text": "❌ Not exact. Try again.",
+            "check_button_text": "Check",
+            "reset_button_text": "Reset"
+          }
+        },
+        {
+          "type": "comparison_audio",
+          "data": {
+            "title": "TEST: Sun vs Moon (same vowel)",
+            "pairs": [
+              {
+                "instruction": "Listen. Same or different?",
+                "left": {
+                  "text": "កា",
+                  "audio": "syllable_kaa.mp3",
+                  "label": "Sun"
+                },
+                "right": {
+                  "text": "គា",
+                  "audio": "syllable_kea.mp3",
+                  "label": "Moon"
+                }
+              },
+              {
+                "instruction": "Now nasal vowel:",
+                "left": {
+                  "text": "កាំ",
+                  "audio": "syllable_kam.mp3",
+                  "label": "Sun"
+                },
+                "right": {
+                  "text": "គាំ",
+                  "audio": "syllable_koam.mp3",
+                  "label": "Moon"
+                }
+              }
+            ],
+            "note": "If you hear an extra E/O at the start — that's Moon behavior."
+          }
+        },
+        {
+          "type": "analysis",
+          "data": {
+            "title": "TEST: Deep Dive",
+            "subtitle": "Tap a word. See glyph breakdown.",
+            "text": "កាហ្វេ នៅ ហាង",
+            "translation": "Coffee is at the shop.",
+            "audio": "phrase_coffee_shop"
+          }
+        },
+        {
           "type": "visual_decoder",
           "data": {
             "word": "កា",

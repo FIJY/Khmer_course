@@ -1,77 +1,268 @@
-import React, { useState, useEffect } from 'react';
-import { Volume2, ScanSearch } from 'lucide-react';
-import KhmerWordReader from '../KhmerWordReader';
-import KhmerWordAnalyzer from '../KhmerWordAnalyzer';
+import React, { useMemo } from "react";
+import { Volume2, ScanSearch } from "lucide-react";
 
-// Ссылка на шрифт
-const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
-  ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
+const DEFAULT_KHMER_FONT_URL =
+  import.meta.env.VITE_KHMER_FONT_URL ??
+  "/fonts/KhmerOS_siemreap.ttf";
 
+/**
+ * AnalysisSlide (autonomous)
+ *
+ * Props:
+ *  - data: object (lesson item data)
+ *  - onPlayAudio: (filename: string) => void
+ *
+ * data schema (flexible):
+ *  {
+ *    title?: string,
+ *    subtitle?: string,
+ *    text?: string | string[],
+ *    khmer?: string,
+ *    translation?: string,
+ *    note?: string,
+ *    audio?: string,
+ *    highlight?: string[]   // опционально: список слов/символов, которые подсветить в khmer
+ *  }
+ */
 export default function AnalysisSlide({ data, onPlayAudio }) {
-  // Если в данных есть начальное слово, выбираем его, иначе первое слово из текста
-  const [selectedWord, setSelectedWord] = useState('');
+  const d = data || {};
 
-  // При загрузке слайда выбираем первое слово автоматически
-  useEffect(() => {
-    if (data.text && !selectedWord) {
-      const firstWord = data.text.split(' ')[0];
-      setSelectedWord(firstWord);
-    }
-  }, [data.text]);
+  const title = d.title ?? "Analysis";
+  const subtitle = d.subtitle ?? "";
+  const textLines = useMemo(() => {
+    if (!d.text) return [];
+    if (Array.isArray(d.text)) return d.text;
+    return String(d.text).split("\n").map((s) => s.trim()).filter(Boolean);
+  }, [d.text]);
+
+  const khmer = d.khmer ?? d.word ?? d.khmerText ?? "";
+  const translation = d.translation ?? "";
+  const note = d.note ?? "";
+  const audio = d.audio ?? "";
+
+  const highlight = Array.isArray(d.highlight) ? d.highlight : [];
+
+  function playAudio() {
+    if (!onPlayAudio) return;
+    if (!audio) return;
+    onPlayAudio(audio);
+  }
+
+  // очень простая “подсветка” без парсинга графем:
+  // подсвечиваем точные совпадения строк из highlight
+  function renderHighlightedKhmer(str) {
+    if (!str) return null;
+    if (!highlight.length) return str;
+
+    // грубо, но достаточно для теста типов:
+    // делаем последовательные split для каждого маркера
+    let parts = [{ text: str, hot: false }];
+
+    highlight.forEach((token) => {
+      if (!token) return;
+      const next = [];
+      parts.forEach((p) => {
+        if (p.hot) return next.push(p);
+        const chunks = p.text.split(token);
+        if (chunks.length === 1) {
+          next.push(p);
+        } else {
+          chunks.forEach((c, idx) => {
+            if (c) next.push({ text: c, hot: false });
+            if (idx < chunks.length - 1) next.push({ text: token, hot: true });
+          });
+        }
+      });
+      parts = next;
+    });
+
+    return (
+      <>
+        {parts.map((p, i) =>
+          p.hot ? (
+            <span key={i} style={styles.hot}>
+              {p.text}
+            </span>
+          ) : (
+            <span key={i}>{p.text}</span>
+          )
+        )}
+      </>
+    );
+  }
 
   return (
-    <div className="w-full flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div style={styles.wrap}>
+      <style>{`
+        @font-face {
+          font-family: "KhmerFont";
+          src: url("${DEFAULT_KHMER_FONT_URL}");
+          font-display: swap;
+        }
+      `}</style>
 
-      {/* ЗАГОЛОВОК */}
-      <div className="text-center mb-6">
-        <div className="flex items-center justify-center gap-2 text-cyan-400 mb-2">
-          <ScanSearch size={24} />
-          <span className="font-black uppercase tracking-widest text-xs">Deep Dive</span>
+      <div style={styles.card}>
+        <div style={styles.headerRow}>
+          <div>
+            <div style={styles.title}>{title}</div>
+            {subtitle ? <div style={styles.subtitle}>{subtitle}</div> : null}
+          </div>
+
+          <div style={styles.iconRow}>
+            <div style={styles.badge}>
+              <ScanSearch size={16} />
+              <span>analysis</span>
+            </div>
+
+            {audio ? (
+              <button type="button" style={styles.audioBtn} onClick={playAudio}>
+                <Volume2 size={16} />
+                <span>Play</span>
+              </button>
+            ) : null}
+          </div>
         </div>
-        <h2 className="text-2xl font-black text-white italic uppercase">{data.title}</h2>
-        <p className="text-slate-400 text-sm">{data.subtitle}</p>
+
+        {textLines.length ? (
+          <div style={styles.textBlock}>
+            {textLines.map((line, idx) => (
+              <div key={idx} style={styles.textLine}>
+                {line}
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {khmer ? (
+          <div style={styles.khmerBox}>
+            <div style={styles.khmerLabel}>Khmer</div>
+            <div style={styles.khmerText}>{renderHighlightedKhmer(khmer)}</div>
+          </div>
+        ) : null}
+
+        {translation ? (
+          <div style={styles.translationBox}>
+            <div style={styles.khmerLabel}>Meaning</div>
+            <div style={styles.translationText}>{translation}</div>
+          </div>
+        ) : null}
+
+        {note ? <div style={styles.note}>{note}</div> : null}
       </div>
-
-      {/* 1. READER (ЧИТАЛКА) - Кликабельное предложение */}
-      <div className="bg-gray-900 border border-white/10 rounded-[2rem] p-6 mb-4 shadow-lg">
-        <div className="flex justify-between items-start mb-4">
-           <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Tap a word to analyze</span>
-           {data.audio && (
-             <button onClick={() => onPlayAudio(data.audio)} className="text-cyan-400 hover:text-white transition-colors">
-               <Volume2 size={20} />
-             </button>
-           )}
-        </div>
-
-        {/* Компонент, который ты загрузила */}
-        <div className="text-2xl md:text-3xl font-khmer leading-relaxed text-center">
-          <KhmerWordReader
-            text={data.text}
-            selectedWord={selectedWord}
-            onSelectWord={setSelectedWord}
-          />
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-white/5 text-center">
-           <p className="text-white font-medium text-lg">{data.translation}</p>
-        </div>
-      </div>
-
-      {/* 2. ANALYZER (РАЗБОР) - Детали выбранного слова */}
-      {selectedWord && (
-        <div className="flex-1 bg-black/40 border border-white/10 rounded-[2rem] p-6 animate-in fade-in zoom-in duration-300">
-           <div className="mb-4 flex items-center justify-between">
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Glyph Breakdown</span>
-              <span className="text-2xl font-khmer text-cyan-400">{selectedWord}</span>
-           </div>
-
-           {/* Компонент, который ты загрузила */}
-           <KhmerWordAnalyzer
-              word={selectedWord}
-              fontUrl={DEFAULT_KHMER_FONT_URL}
-           />
-        </div>
-      )}
     </div>
   );
 }
+
+const styles = {
+  wrap: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "center",
+    padding: "16px",
+    boxSizing: "border-box",
+  },
+  card: {
+    width: "100%",
+    maxWidth: "760px",
+    border: "1px solid rgba(0,0,0,0.08)",
+    borderRadius: "18px",
+    padding: "18px",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+    background: "white",
+    boxSizing: "border-box",
+
+    color: "rgba(0,0,0,0.92)", // добавь
+
+  },
+  headerRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "12px",
+    alignItems: "flex-start",
+    marginBottom: "10px",
+  },
+  iconRow: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+  },
+  badge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    border: "1px solid rgba(0,0,0,0.12)",
+    fontSize: "12px",
+    opacity: 0.85,
+  },
+  audioBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "8px 10px",
+    borderRadius: "12px",
+    border: "1px solid rgba(0,0,0,0.15)",
+    background: "white",
+    cursor: "pointer",
+    fontSize: "13px",
+  },
+  title: {
+    fontSize: "20px",
+    fontWeight: 800,
+    lineHeight: 1.15,
+  },
+  subtitle: {
+    marginTop: "4px",
+    fontSize: "13px",
+    opacity: 0.7,
+  },
+  textBlock: {
+    marginTop: "10px",
+    marginBottom: "12px",
+  },
+  textLine: {
+    fontSize: "15px",
+    lineHeight: 1.35,
+    marginBottom: "6px",
+  },
+  khmerBox: {
+    marginTop: "10px",
+    padding: "12px",
+    borderRadius: "14px",
+    border: "1px solid rgba(0,0,0,0.10)",
+  },
+  translationBox: {
+    marginTop: "10px",
+    padding: "12px",
+    borderRadius: "14px",
+    border: "1px solid rgba(0,0,0,0.10)",
+  },
+  khmerLabel: {
+    fontSize: "12px",
+    opacity: 0.65,
+    marginBottom: "8px",
+  },
+  khmerText: {
+    fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif",
+    fontSize: "28px",
+    lineHeight: 1.25,
+  },
+  translationText: {
+    fontSize: "15px",
+    lineHeight: 1.35,
+  },
+  note: {
+    marginTop: "12px",
+    fontSize: "12px",
+    opacity: 0.65,
+  },
+  hot: {
+    outline: "2px solid rgba(0,0,0,0.55)",
+    borderRadius: "8px",
+    padding: "0 4px",
+    margin: "0 2px",
+  },
+};
