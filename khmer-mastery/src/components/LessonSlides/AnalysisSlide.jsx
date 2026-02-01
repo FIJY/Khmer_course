@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Volume2, ScanSearch } from "lucide-react";
 import LessonCard from "../UI/LessonCard";
+import VisualDecoder, { HIGHLIGHT_MODES } from "../VisualDecoder";
 
 const DEFAULT_KHMER_FONT_URL =
   import.meta.env.VITE_KHMER_FONT_URL ??
@@ -27,6 +28,7 @@ const DEFAULT_KHMER_FONT_URL =
  */
 export default function AnalysisSlide({ data, onPlayAudio }) {
   const d = data || {};
+  const [highlightMode, setHighlightMode] = useState(HIGHLIGHT_MODES.ALL);
 
   const title = d.title ?? "Analysis";
   const subtitle = d.subtitle ?? "";
@@ -41,55 +43,10 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
   const note = d.note ?? "";
   const audio = d.audio ?? "";
 
-  const highlight = Array.isArray(d.highlight) ? d.highlight : [];
-
   function playAudio() {
     if (!onPlayAudio) return;
     if (!audio) return;
     onPlayAudio(audio);
-  }
-
-  // очень простая “подсветка” без парсинга графем:
-  // подсвечиваем точные совпадения строк из highlight
-  function renderHighlightedKhmer(str) {
-    if (!str) return null;
-    if (!highlight.length) return str;
-
-    // грубо, но достаточно для теста типов:
-    // делаем последовательные split для каждого маркера
-    let parts = [{ text: str, hot: false }];
-
-    highlight.forEach((token) => {
-      if (!token) return;
-      const next = [];
-      parts.forEach((p) => {
-        if (p.hot) return next.push(p);
-        const chunks = p.text.split(token);
-        if (chunks.length === 1) {
-          next.push(p);
-        } else {
-          chunks.forEach((c, idx) => {
-            if (c) next.push({ text: c, hot: false });
-            if (idx < chunks.length - 1) next.push({ text: token, hot: true });
-          });
-        }
-      });
-      parts = next;
-    });
-
-    return (
-      <>
-        {parts.map((p, i) =>
-          p.hot ? (
-            <span key={i} className="outline outline-2 outline-cyan-400/60 rounded-lg px-1 mx-0.5">
-              {p.text}
-            </span>
-          ) : (
-            <span key={i}>{p.text}</span>
-          )
-        )}
-      </>
-    );
   }
 
   return (
@@ -114,17 +71,6 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
               <ScanSearch size={14} />
               <span>analysis</span>
             </div>
-
-            {audio ? (
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-cyan-400/50 text-cyan-100 bg-cyan-500/15 hover:bg-cyan-500/25 text-xs font-semibold"
-                onClick={playAudio}
-              >
-                <Volume2 size={14} />
-                <span>Play</span>
-              </button>
-            ) : null}
           </div>
         </div>
 
@@ -140,12 +86,63 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
 
         {khmer ? (
           <div className="mt-4 p-4 rounded-2xl border border-white/10 bg-black/30">
-            <div className="text-[11px] uppercase tracking-[0.3em] text-slate-400 mb-2">Khmer</div>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Khmer</div>
+              {audio ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-cyan-400/50 text-cyan-100 bg-cyan-500/15 hover:bg-cyan-500/25 text-xs font-semibold"
+                  onClick={playAudio}
+                >
+                  <Volume2 size={14} />
+                  <span>Play</span>
+                </button>
+              ) : null}
+            </div>
+            <div className="flex justify-center gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setHighlightMode(HIGHLIGHT_MODES.ALL)}
+                className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                  highlightMode === HIGHLIGHT_MODES.ALL
+                    ? "bg-cyan-500 text-black border-cyan-300"
+                    : "bg-gray-900 text-white border-white/10"
+                }`}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setHighlightMode(HIGHLIGHT_MODES.CONSONANTS)}
+                className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                  highlightMode === HIGHLIGHT_MODES.CONSONANTS
+                    ? "bg-cyan-500 text-black border-cyan-300"
+                    : "bg-gray-900 text-white border-white/10"
+                }`}
+              >
+                Consonants
+              </button>
+              <button
+                type="button"
+                onClick={() => setHighlightMode(HIGHLIGHT_MODES.OFF)}
+                className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                  highlightMode === HIGHLIGHT_MODES.OFF
+                    ? "bg-cyan-500 text-black border-cyan-300"
+                    : "bg-gray-900 text-white border-white/10"
+                }`}
+              >
+                Off
+              </button>
+            </div>
             <div
-              className="text-2xl leading-relaxed"
+              className="flex items-center justify-center"
               style={{ fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif" }}
             >
-              {renderHighlightedKhmer(khmer)}
+              <VisualDecoder
+                data={{ ...d, word: khmer }}
+                highlightMode={highlightMode}
+                hideDefaultButton={true}
+              />
             </div>
           </div>
         ) : null}
