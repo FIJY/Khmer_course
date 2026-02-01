@@ -1,868 +1,343 @@
+import React from 'react';
+import {Volume2, Sun, Moon, Lightbulb, Zap, ListOrdered} from 'lucide-react';
+
+export default function UniversalTheorySlide({type, data, onPlayAudio, onComplete}) {
+const effectiveType = type || data?.type || '';
+const mode = effectiveType.toLowerCase();
+
+const play = (file) => {
+if (onPlayAudio && file) onPlayAudio(file);
+};
+
+switch (mode) {
+case 'title': return (
+<div className="w-full h-screen flex flex-col items-center justify-center text-center
+animate-in fade-in slide-in-from-bottom-4 duration-500
+bg-gradient-to-b from-slate-950 to-slate-900 p-6">
+
+{/* Icon with glow */}
+<div className="mb-8 relative">
+<div className="absolute inset-0 bg-cyan-500/20 blur-3xl w-40 h-40 rounded-full" />
+<div className="relative text-8xl">
+{typeof data.icon === 'string' ? data.icon: '✨'
+}
+</div>
+</div>
+
+<h1 className="text-5xl md:text-6xl font-black text-white mb-4
+uppercase tracking-tight leading-tight max-w-2xl">
+{data.title
+}
+</h1>
+
 {
-  "chapter_id": 10000,
-  "title": "READING BOOTCAMP: THE CODEBREAKER",
-  "lessons": [
-    {
-      "lesson_id": 10101,
-      "title": "UNIT R1.1 — Orientation & Heroes",
-      "desc": "Text looks like chaos. Learn the single rule: every block has one main consonant.",
-      "module_id": 10000,
-      "order_index": 0,
-      "content": [
-        {
-          "type": "theory",
-          "data": {
-            "title": "Bad News First",
-            "description": [
-              "In Khmer, there are no spaces between words.",
-              "Not even one."
-            ],
-            "examples": [
-              {
-                "kind": "label",
-                "text": "English without spaces:"
-              },
-              {
-                "kind": "latin",
-                "text": "HaveYouEverSeenATextWallLikeThis"
-              },
-              {
-                "kind": "label",
-                "text": "Now the same problem in Khmer:"
-              },
-              {
-                "kind": "khmer",
-                "text": "លាឈានឆាប់លឿងរហូតដល់ថ្ងៃ",
-                "audio": "r1_1_1_khmer_nospaces.mp3"
-              }
-            ],
-            "footer": "Now you can see the real problem.\nReady to crack the code?",
-            "sublesson_title": "Orientation & Foundation"
-          }
-        },
-        {
-          "type": "theory",
-          "data": {
-            "title": "Khmer is like Lego",
-            "text": "Good news: Khmer is like Lego.\n\nYou don't need to memorize thousands of heroes.\nLet's not study the language yet.\nLet's just **observe** how it works.\n\nToday we learn to find the consonants (The Heroes) in the text.\n\nThis unit starts slowly.\nSit on the same line.\n\nReady?"
-          }
-        },
-        {
-          "type": "rule",
-          "data": {
-            "title": "Center of Gravity",
-            "text": "You may have noticed something.\n\nEvery Khmer block is built around **one main letter**.\nThat letter is a consonant.\n\nIt's like a game of 'Find Me'.\n\n**The Mechanic:**\n1. We tap a letter.\n2. A frame lights up.\n3. First you hear the consonant sound, then its name.\n\nNo strict rules yet. Only observation."
-          }
-        },
-        {
-          "type": "drill_choice",
-          "data": {
-            "title": "Select only the Heroes",
-            "subtitle": "Tap the main big letters.",
-            "prompt": "Khmer text is full of noise. Smooth shapes. Complex shapes. Decorations.\n\n**Task:** Find only the main letters (Heroes).\n\n(Tap a letter to hear the consonant sound).",
-            "layout": "grid",
-            "mode": "multi",
-            "options": [
-              {
-                "id": "ka",
-                "text": "ក",
-                "audio": "letter_ka"
-              },
-              {
-                "id": "aa",
-                "text": "ា",
-                "audio": "vowel_aa"
-              },
-              {
-                "id": "kha",
-                "text": "ខ",
-                "audio": "letter_kha"
-              },
-              {
-                "id": "ah",
-                "text": "ះ",
-                "audio": "vowel_ah"
-              }
-            ],
-            "correct_ids": [
-              "ka",
-              "kha"
-            ],
-            "success_text": "✅ Correct! Heroes are the big ones.",
-            "fail_text": "❌ decorations are not heroes."
-          }
-        },
-        {
-          "type": "drill_choice",
-          "data": {
-            "title": "Select only the Heroes (Harder)",
-            "subtitle": "Let's add more noise.",
-            "prompt": "Same principle.\nThe Main Letter is always ONE.\n\nDo not count the decorations.",
-            "layout": "grid",
-            "mode": "multi",
-            "options": [
-              {
-                "id": "ko",
-                "text": "គ",
-                "audio": "letter_ko"
-              },
-              {
-                "id": "am",
-                "text": "ាំ",
-                "audio": "vowel_am"
-              },
-              {
-                "id": "kho",
-                "text": "ឃ",
-                "audio": "letter_kho"
-              },
-              {
-                "id": "ngo",
-                "text": "ង",
-                "audio": "letter_ngo"
-              },
-              {
-                "id": "ei",
-                "text": "ី",
-                "audio": "vowel_ei"
-              }
-            ],
-            "correct_ids": [
-              "ko",
-              "kho",
-              "ngo"
-            ],
-            "success_text": "✅ You found them.",
-            "fail_text": "❌ Focus on the baseline."
-          }
-        },
-        {
-          "type": "meet-teams",
-          "data": {
-            "title": "Same or Different?",
-            "text": "Look at this pair:\n\n**ប** vs **ព**\n\n**Answer:** Different.\n\nThese two letters look similar.\nBut they belong to different groups.\n\nMixing them changes how a word sounds."
-          }
-        },
-        {
-          "type": "comparison_audio",
-          "data": {
-            "title": "Listen closely",
-            "pairs": [
-              {
-                "instruction": "Tap the first one. Tap the second one. Different sounds = Different letters.",
-                "left": {
-                  "text": "ប",
-                  "audio": "letter_ba",
-                  "label": "BA"
-                },
-                "right": {
-                  "text": "ព",
-                  "audio": "letter_po",
-                  "label": "PO"
-                }
-              }
-            ],
-            "note": "They look like twins, but they are not."
-          }
-        },
-        {
-          "type": "drill_choice",
-          "data": {
-            "title": "Find the letter ខ",
-            "subtitle": "The letter is hidden inside words.",
-            "prompt": "Tap the letter **ខ** in the list below.\n\n**Hint:** It looks like a snail with a spiral.",
-            "layout": "grid",
-            "mode": "multi",
-            "options": [
-              {
-                "id": "khang",
-                "text": "ខាង",
-                "audio": "word_side"
-              },
-              {
-                "id": "kha",
-                "text": "ខា",
-                "audio": "syllable_kha"
-              },
-              {
-                "id": "mak",
-                "text": "មាក",
-                "audio": "word_mak"
-              },
-              {
-                "id": "lak",
-                "text": "លាក",
-                "audio": "word_lak"
-              }
-            ],
-            "correct_ids": [
-              "khang",
-              "kha"
-            ],
-            "success_text": "✅ Found the snail!",
-            "fail_text": "❌ Look for the spiral shape."
-          }
-        },
-        {
-          "type": "drill_choice",
-          "data": {
-            "title": "Find the letter ខ (Again)",
-            "subtitle": "Different set. Same principle.",
-            "prompt": "Remember the shape (Snail).\nFind it.",
-            "layout": "grid",
-            "mode": "multi",
-            "options": [
-              {
-                "id": "kak",
-                "text": "កាក",
-                "audio": "word_residue"
-              },
-              {
-                "id": "khak",
-                "text": "ខាក",
-                "audio": "word_spit"
-              },
-              {
-                "id": "kham",
-                "text": "ខាំ",
-                "audio": "word_bite"
-              },
-              {
-                "id": "kam",
-                "text": "កាំ",
-                "audio": "word_spoke"
-              }
-            ],
-            "correct_ids": [
-              "khak",
-              "kham"
-            ],
-            "success_text": "✅ Excellent.",
-            "fail_text": "❌ Try again."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Every Khmer block is built around...",
-            "options": [
-              "Decorations",
-              "A Main Consonant (Hero)",
-              "A Vowel"
-            ],
-            "correct_answer": "A Main Consonant (Hero)",
-            "explanation": "Correct. The consonant is the skeleton. Everything else hangs on it."
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "When we tap a letter, first we hear...",
-            "options": [
-              "The vowel sound",
-              "The Consonant sound",
-              "The word name"
-            ],
-            "correct_answer": "The Consonant sound",
-            "explanation": "Correct. First the sound, then the name."
-          }
-        },
-        {
-          "type": "ready",
-          "data": {
-            "title": "Summary",
-            "text": "Letters may look similar, but sound different.\n\nAlways look for the Hero."
-          }
-        }
-      ]
-    },
-    {
-      "lesson_id": 10102,
-      "title": "UNIT R1.2 — Sun vs Moon (Visual Teams)",
-      "desc": "Learn to spot the two visual teams (Sun vs Moon) and meet the K‑group letters.",
-      "module_id": 10000,
-      "order_index": 1,
-      "content": [
-        {
-          "type": "theory",
-          "data": {
-            "title": "The Two Teams: Sun ☀️ vs Moon 🌑",
-            "text": "All consonants are divided into two teams:\n\n☀️ SUN TEAM\n- Smoother, rounder shapes\n- Simpler appearance\n- Light, open sound from the front teeth\n\n🌑 MOON TEAM\n- More complex, detailed shapes\n- More hair, spikes, hooks\n- Deep, heavy sound from the throat\n\nYou can read 80% of Khmer just by knowing which team a letter belongs to.\n\nVISUAL ANCHORS:\n🥚 Smooth egg head = Sun Team\n🦅 Complicated bird hair = Moon Team",
-            "sublesson_title": "Visual Classification"
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "ក",
-            "target_char": "ក",
-            "hint": "Ka (Smooth Egg Head) = SUN TEAM ☀️",
-            "char_split": [
-              "ក"
-            ],
-            "english_translation": "Ka (Sun, smooth)",
-            "letter_series": 1,
-            "word_audio": "letter_ka.mp3",
-            "char_audio_map": {}
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "ខ",
-            "target_char": "ខ",
-            "hint": "Kha (Snail Spiral) = SUN TEAM ☀️ (smooth with one decoration)",
-            "char_split": [
-              "ខ"
-            ],
-            "english_translation": "Kha (Sun, with antenna)",
-            "letter_series": 1,
-            "word_audio": "letter_kha.mp3",
-            "char_audio_map": {}
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "គ",
-            "target_char": "គ",
-            "hint": "Ko (Bird with Hair) = MOON TEAM 🌑 (BIG hairstyle, complex)",
-            "char_split": [
-              "គ"
-            ],
-            "english_translation": "Ko (Moon, complicated hair)",
-            "letter_series": 2,
-            "word_audio": "letter_ko.mp3",
-            "char_audio_map": {}
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "ឃ",
-            "target_char": "ឃ",
-            "hint": "Kho (Bowl with Deep Pit) = MOON TEAM 🌑 (deep indent)",
-            "char_split": [
-              "ឃ"
-            ],
-            "english_translation": "Kho (Moon, with pit)",
-            "letter_series": 2,
-            "word_audio": "letter_kho.mp3",
-            "char_audio_map": {}
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "ង",
-            "target_char": "ង",
-            "hint": "Ngo (Snake Tail Down) = ALWAYS MOON 🌑 (ALWAYS!)",
-            "char_split": [
-              "ង"
-            ],
-            "english_translation": "Ngo (Moon, tail always present)",
-            "letter_series": 2,
-            "word_audio": "letter_ngo.mp3",
-            "char_audio_map": {}
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Hair/Teeth Check: Which of these K-group letters is MOON TEAM?",
-            "options": [
-              "ក",
-              "ខ",
-              "គ",
-              "ឃ"
-            ],
-            "correct_answer": "គ",
-            "explanation": "គ (Ko) has a big hairstyle with complex details. That's MOON TEAM 🌑. ក and ខ are smooth (Sun). ឃ also has details but the primary example here is គ.",
-            "pronunciation_map": {
-              "ក": "ka (Sun)",
-              "ខ": "kha (Sun)",
-              "គ": "ko (Moon) ← MOON TEAM",
-              "ឃ": "kho (Moon)"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "lesson_id": 10103,
-      "title": "UNIT R1.3 — The Commander Principle",
-      "desc": "One consonant (the commander) decides how the vowel is read. You’ll start reading syllables.",
-      "module_id": 10000,
-      "order_index": 2,
-      "content": [
-        {
-          "type": "theory",
-          "data": {
-            "title": "The Commander Principle: One rule that explains everything",
-            "text": "Here's the magic:\n\nThe consonant (the Hero) decides how the vowel will sound.\n\nSame vowel mark.\nDifferent consonant = Different sound.\n\nWhy? Because the consonant is the COMMANDER.\nIt controls the tone.\n\nSun consonant + vowel = vowel sounds CLEAN\nMoon consonant + same vowel = vowel sounds ALTERED (with E or O coloring)",
-            "sublesson_title": "Commander Principle"
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Will they sound the same? Look at: ក + ា (Sun) vs គ + ា (Moon). Same vowel mark, different commander.",
-            "options": [
-              "Same sound",
-              "Different sounds"
-            ],
-            "correct_answer": "Different sounds",
-            "explanation": "Same vowel mark, but different commanders → different sounds.\nSun consonant (ក) → sound stays clear/light (kaa)\nMoon consonant (គ) → sound changes, gets 'colored' by the deep tone (kea)"
-          }
-        },
-        {
-          "type": "theory",
-          "data": {
-            "title": "Right-side Vowels (Inventory)",
-            "text": "Some vowel marks sit to the RIGHT of the consonant like a cane.\n\nIn R1 you learn three:\n\n• ា (Aa) — the most common\n• ះ (Ah) — short, sharp stop\n• ាំ (Am) — nasal tone\n\nWith Sun letters: ា→-aa, ះ→-ah, ាំ→-am\nWith Moon letters: ា→-ea, ះ→-eah, ាំ→-oam\n\nCore rule: Sun + vowel = vowel sound stays clean; Moon + vowel = vowel shifts with E/O coloring.",
-            "sublesson_title": "Right-side Vowels"
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Which pair matches the correct Sun vs Moon reading for ា (Aa)?",
-            "options": [
-              "កា = kaa, គា = kea",
-              "កា = kea, គា = kaa",
-              "កា = kaa, គា = kaa",
-              "កា = kea, គា = kea"
-            ],
-            "correct_answer": "កា = kaa, គា = kea",
-            "explanation": "Sun (ក) keeps ា as -aa: កា = kaa\nMoon (គ) shifts ា to -ea: គា = kea",
-            "pronunciation_map": {
-              "កា = kaa, គា = kea": "Correct ✓",
-              "កា = kea, គា = kaa": "Backwards",
-              "កា = kaa, គា = kaa": "Both same (wrong)",
-              "កា = kea, គា = kea": "Both same (wrong)"
-            }
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "កា",
-            "target_char": "ក",
-            "hint": "Sun Ka + ា (Aa mark) = kaa",
-            "char_split": [
-              "កា"
-            ],
-            "english_translation": "basic syllable (kaa)",
-            "letter_series": 1,
-            "word_audio": "letter_ka_aa.mp3",
-            "char_audio_map": {
-              "កា": "letter_ka_aa.mp3"
-            }
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "គា",
-            "target_char": "គ",
-            "hint": "Moon Ko + ា (Aa mark) → Moon shift = kea",
-            "char_split": [
-              "គា"
-            ],
-            "english_translation": "basic syllable (kea)",
-            "letter_series": 2,
-            "word_audio": "letter_ko_aa.mp3",
-            "char_audio_map": {
-              "គា": "letter_ko_aa.mp3"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "lesson_id": 10104,
-      "title": "UNIT R1.4 — Right-side Vowels: ា, ះ, ាំ",
-      "desc": "Learn the right-side vowel inventory and how it changes sound: -ា, -ះ, -ាំ.",
-      "module_id": 10000,
-      "order_index": 3,
-      "content": [
-        {
-          "type": "theory",
-          "data": {
-            "title": "New mark: ះ (Ah) — short, sharp stop",
-            "text": "This vowel mark makes the sound SHORT and SHARP.\n\nIt's like adding a full stop to the vowel.\n\nCompare:\n- កា = kaa (long, open)\n- កះ = kah (short, stops abruptly)\n\nMoon team works the same way:\n- គា = kea (long)\n- គះ = keah (short)\n\nThe pattern is consistent: the vowel mark changes the LENGTH and QUALITY, but the consonant still controls the TEAM color.",
-            "sublesson_title": "The Ah Mark"
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Read the syllable: What is ក + ះ (Ah mark) in Sun series?",
-            "options": [
-              "kah (short)",
-              "kaa (long)",
-              "keah",
-              "kam"
-            ],
-            "correct_answer": "kah (short)",
-            "explanation": "Sun letters keep vowels clean. ះ makes a short, sharp stop.\nSo: កះ = kah (short)"
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "កះ",
-            "target_char": "ក",
-            "hint": "Sun Ka + ះ (Ah mark) = kah (short)",
-            "char_split": [
-              "កះ"
-            ],
-            "english_translation": "basic syllable (kah - short)",
-            "letter_series": 1,
-            "word_audio": "letter_ka_ah.mp3",
-            "char_audio_map": {
-              "កះ": "letter_ka_ah.mp3"
-            }
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "គះ",
-            "target_char": "គ",
-            "hint": "Moon Ko + ះ (Ah mark) → Moon shift = keah (short)",
-            "char_split": [
-              "គះ"
-            ],
-            "english_translation": "basic syllable (keah - short)",
-            "letter_series": 2,
-            "word_audio": "letter_ko_ah.mp3",
-            "char_audio_map": {
-              "គះ": "letter_ko_ah.mp3"
-            }
-          }
-        },
-        {
-          "type": "theory",
-          "data": {
-            "title": "New mark: ាំ (Am) — nasal tone",
-            "text": "This vowel mark adds a NASAL quality to the vowel.\n\nIt's like the vowel passes through the nose.\n\nCompare:\n- កា = kaa (clear, open)\n- កាំ = kam (nasal quality)\n\nMoon team:\n- គា = kea (clear)\n- គាំ = koam (nasal with O-coloring)\n\nNotice: the nasal mark ាំ combines with the vowel ា, and Moon team still adds the O-coloring.",
-            "sublesson_title": "The Am Mark"
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Right-side vowels reference: What is the Moon team reading of ាំ (Am)?",
-            "options": [
-              "-am",
-              "-oam",
-              "-eam",
-              "-um"
-            ],
-            "correct_answer": "-oam",
-            "explanation": "Moon letters add O-coloring: ាំ with Moon consonant → -oam\nExample: ង + ាំ = ngoam (not ngam)"
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "កាំ",
-            "target_char": "ក",
-            "hint": "Sun Ka + ាំ (Am mark) = kam (nasal)",
-            "char_split": [
-              "កាំ"
-            ],
-            "english_translation": "basic syllable (kam - nasal)",
-            "letter_series": 1,
-            "word_audio": "letter_ka_am.mp3",
-            "char_audio_map": {
-              "កាំ": "letter_ka_am.mp3"
-            }
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "គាំ",
-            "target_char": "គ",
-            "hint": "Moon Ko + ាំ (Am mark) → Moon shift = koam (nasal)",
-            "char_split": [
-              "គាំ"
-            ],
-            "english_translation": "basic syllable (koam - nasal)",
-            "letter_series": 2,
-            "word_audio": "letter_ko_am.mp3",
-            "char_audio_map": {
-              "គាំ": "letter_ko_am.mp3"
-            }
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "Pattern transfer: You learned ក, គ, ខ. Now apply the rule: What is ខាំ (Sun Kha + nasal)?",
-            "options": [
-              "khaam",
-              "kham",
-              "khoam",
-              "keam"
-            ],
-            "correct_answer": "kham",
-            "explanation": "ខ is Sun team (like ក). So it keeps the vowel clean.\nខ + ាំ = kham (not khoam, that would be Moon)"
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "កាហ្វេ",
-            "target_char": "ក",
-            "hint": "REAL WORLD WIN: Coffee. First syllable ក + ា = kaa. You can read this now!",
-            "char_split": [
-              "កា",
-              "ហ្វេ"
-            ],
-            "english_translation": "coffee (☕)",
-            "letter_series": 1,
-            "word_audio": "word_coffee.mp3",
-            "char_audio_map": {
-              "កា": "letter_ka_aa.mp3"
-            }
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "ហាង",
-            "target_char": "ហ",
-            "hint": "REAL WORLD WIN: Shop sign. You'll see this on streets everywhere!",
-            "char_split": [
-              "ហា",
-              "ង"
-            ],
-            "english_translation": "shop / store / stall",
-            "letter_series": 1,
-            "word_audio": "word_shop.mp3",
-            "char_audio_map": {
-              "ហា": "letter_ha_aa.mp3",
-              "ង": "letter_ngo.mp3"
-            }
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Sun + ា (Aa mark)",
-            "back": "កា",
-            "pronunciation": "kaa",
-            "item_type": "syllable",
-            "audio": "letter_ka_aa.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Moon + ា (Aa mark)",
-            "back": "គា",
-            "pronunciation": "kea",
-            "item_type": "syllable",
-            "audio": "letter_ko_aa.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Sun Kha + ា",
-            "back": "ខា",
-            "pronunciation": "khaa",
-            "item_type": "syllable",
-            "audio": "letter_kha_aa.mp3"
-          }
-        }
-      ]
-    },
-    {
-      "lesson_id": 10105,
-      "title": "UNIT R1.5 — Street Speed Drill + Final Check",
-      "desc": "Fast mixed practice: read like on the street. Final confidence check for R1.",
-      "module_id": 10000,
-      "order_index": 4,
-      "content": [
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Moon Ngo + ា",
-            "back": "ងា",
-            "pronunciation": "ngea",
-            "item_type": "syllable",
-            "audio": "letter_ngo_aa.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Baby / child / angel",
-            "back": "ងា",
-            "pronunciation": "ngea",
-            "item_type": "word",
-            "audio": "word_child.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Side / direction",
-            "back": "ខាង",
-            "pronunciation": "khaang",
-            "item_type": "word",
-            "audio": "word_side.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Crab / wheel / hoop",
-            "back": "កង",
-            "pronunciation": "kang",
-            "item_type": "word",
-            "audio": "word_crab.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Tent / hut / home",
-            "back": "កាក",
-            "pronunciation": "kaak",
-            "item_type": "word",
-            "audio": "word_tent.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Shop / store / stall",
-            "back": "ហាង",
-            "pronunciation": "haang",
-            "item_type": "word",
-            "audio": "word_shop.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Woman / Mrs. / lady",
-            "back": "នាង",
-            "pronunciation": "naang",
-            "item_type": "word",
-            "audio": "word_woman.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Mouth (anatomy)",
-            "back": "ពាក",
-            "pronunciation": "paak",
-            "item_type": "word",
-            "audio": "word_mouth.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Very / too much",
-            "back": "មាក",
-            "pronunciation": "mak",
-            "item_type": "word",
-            "audio": "word_very.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "To clean / to scrub",
-            "back": "រាក",
-            "pronunciation": "rak",
-            "item_type": "word",
-            "audio": "word_clean.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "To try / to test",
-            "back": "សាក",
-            "pronunciation": "sak",
-            "item_type": "word",
-            "audio": "word_try.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Word / phrase",
-            "back": "វាក",
-            "pronunciation": "vak",
-            "item_type": "word",
-            "audio": "word_word.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Sun + ះ (Ah short)",
-            "back": "កះ",
-            "pronunciation": "kah",
-            "item_type": "syllable",
-            "audio": "letter_ka_ah.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Moon + ះ (Ah short)",
-            "back": "គះ",
-            "pronunciation": "keah",
-            "item_type": "syllable",
-            "audio": "letter_ko_ah.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Sun + ាំ (Am nasal)",
-            "back": "កាំ",
-            "pronunciation": "kam",
-            "item_type": "syllable",
-            "audio": "letter_ka_am.mp3"
-          }
-        },
-        {
-          "type": "vocab_card",
-          "data": {
-            "front": "Moon + ាំ (Am nasal)",
-            "back": "គាំ",
-            "pronunciation": "koam",
-            "item_type": "syllable",
-            "audio": "letter_ko_am.mp3"
-          }
-        },
-        {
-          "type": "quiz",
-          "data": {
-            "question": "FINAL CHECK: Read by steps. Which pair matches Sun vs Moon for all three vowels?",
-            "options": [
-              "ក=ka, គ=ka | ក=kah, គ=kah | ក=kam, គ=kam",
-              "ក=kaa, គ=kea | ក=kah, គ=keah | ក=kam, គ=koam",
-              "ក=kea, គ=kaa | ក=keah, គ=kah | ក=koam, គ=kam",
-              "ក=kaa, គ=kaa | ក=kah, គ=kah | ក=kam, គ=kam"
-            ],
-            "correct_answer": "ក=kaa, គ=kea | ក=kah, គ=keah | ក=kam, គ=koam",
-            "explanation": "Sun (ក) keeps vowels clean: kaa, kah, kam\nMoon (គ) shifts them with E/O: kea, keah, koam\nThis is the COMMANDER PRINCIPLE."
-          }
-        }
-      ]
-    }
-  ]
+data.subtitle && (
+<p className="text-lg md:text-xl text-cyan-300 mb-8 font-semibold">
+{
+data.subtitle
+}
+</p>
+)
+}
+
+<p className="text-lg text-slate-300 max-w-lg mx-auto leading-relaxed font-light">
+{
+data.description
+}
+</p>
+</div>
+);
+
+case 'meet-teams': return (
+<div className="w-full min-h-screen flex flex-col items-center justify-center
+bg-gradient-to-b from-slate-950 to-slate-900 p-6
+animate-in zoom-in duration-500">
+
+<h2 className="text-4xl md:text-5xl font-black text-white mb-12
+uppercase italic tracking-tight">
+{data.title || 'Meet the Teams'}
+</h2>
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-2xl">
+
+{/* Sun Team */}
+<div className="group relative overflow-hidden rounded-3xl
+bg-gradient-to-br from-amber-500/10 to-orange-900/10
+border border-amber-500/30 hover: border-amber-500/60
+p-8 transition-all duration-300 hover: scale-105">
+<div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent
+opacity-0 group-hover: opacity-100 transition-opacity" />
+
+<div className="relative text-center">
+<Sun size={48} className="text-amber-400 mx-auto mb-4" />
+<h3 className="text-2xl font-black text-amber-300 mb-2">
+SOLAR TEAM
+</h3>
+<p className="text-sm text-amber-200/80 font-light">
+Open mouth, natural voice. Like saying "Ahhh"
+</p>
+</div>
+</div>
+
+{/* Moon Team */}
+<div className="group relative overflow-hidden rounded-3xl
+bg-gradient-to-br from-indigo-500/10 to-blue-900/10
+border border-indigo-500/30 hover: border-indigo-500/60
+p-8 transition-all duration-300 hover: scale-105">
+<div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent
+opacity-0 group-hover: opacity-100 transition-opacity" />
+
+<div className="relative text-center">
+<Moon size={48} className="text-indigo-400 mx-auto mb-4" />
+<h3 className="text-2xl font-black text-indigo-300 mb-2">
+LUNAR TEAM
+</h3>
+<p className="text-sm text-indigo-200/80 font-light">
+Round mouth, deeper voice. Like saying "Ohhh"
+</p>
+</div>
+</div>
+</div>
+</div>
+);
+
+case 'theory': case 'rule': return (
+<div className="w-full min-h-screen flex flex-col items-center justify-center
+bg-gradient-to-b from-slate-950 to-slate-900 p-6
+animate-in fade-in duration-500">
+
+<div className="w-full max-w-3xl">
+
+{/* Title */}
+<h2 className="text-5xl md:text-6xl font-black italic uppercase text-white mb-8
+tracking-tight text-center leading-tight">
+{
+data.title || 'Theory Block'}
+</h2>
+
+{
+/* Main description */
+}
+<div className="text-lg md:text-xl text-slate-200 leading-relaxed space-y-6 mb-8
+text-center font-light">
+{Array.isArray(data.description)
+? data.description.map((line, i) => (
+<p key={
+i
+} className="text-lg">
+{
+line
+}
+</p>
+)): <p className="text-lg">{data.description}</p>
+}
+</div>
+
+{/* Examples */}
+{data.examples && (
+<div className="space-y-4 mb-12">
+{data.examples.map((ex, i) => {
+const obj = typeof ex === "string" ? {text: ex, kind: "plain"}: ex;
+const isKhmer = obj.kind === "khmer";
+const isLabel = obj.kind === "label";
+const isLatin = obj.kind === "latin";
+
+if (isLabel) {
+return (
+<p key={i} className="text-sm text-slate-400 tracking-widest
+uppercase font-semibold text-center">
+{obj.text}
+</p>
+);
+}
+
+const boxClass = `
+group relative rounded-2xl border transition-all duration-300
+px-6 md: px-8 py-6 md:py-8 text-center cursor-pointer
+hover: scale-105 hover: shadow-xl
+${
+isKhmer
+? 'bg-gradient-to-br from-slate-800/50 to-slate-800/20 border-slate-700/50 hover:border-cyan-500/50': 'bg-gradient-to-br from-slate-800/40 to-slate-800/10 border-slate-700/50 hover:border-cyan-500/50'
+}
+`;
+
+const textClass = `
+${isKhmer
+? 'text-3xl md:text-4xl text-cyan-200 font-semibold leading-relaxed': 'text-lg md:text-xl text-cyan-300 font-mono'
+}
+`;
+
+const content = (
+<div className={boxClass
+}>
+<div className="relative">
+<div className={textClass
+}>
+{
+obj.text
+}
+</div>
+{
+obj.audio && (
+<div className="mt-3 flex items-center justify-center gap-2
+text-xs text-cyan-400 opacity-0 group-hover:opacity-100
+transition-opacity">
+<Volume2 size={
+14
+} />
+<span>Tap to listen</span>
+</div>
+)}
+</div>
+</div>
+);
+
+if (obj.audio) {
+return (
+<button
+key={i}
+onClick={
+() => play(obj.audio)
+}
+className="w-full text-left focus:outline-none focus:ring-2
+focus: ring-cyan-500 rounded-2xl"
+>
+{content}
+</button>
+);
+}
+
+return <div key={i}>{content}</div>;
+})
+}
+</div>
+)
+}
+
+{
+/* Footer */
+}
+{data.footer && (
+<div className="text-center pt-6 border-t border-slate-700/50
+text-slate-300 text-base md: text-lg whitespace-pre-line
+font-light leading-relaxed">
+{data.footer}
+</div>
+)}
+
+{/* Audio button */}
+{data.audio && (
+<button
+onClick={() => play(data.audio)}
+className="mt-8 flex items-center justify-center gap-3 px-8 py-3
+bg-gradient-to-r from-cyan-500/20 to-blue-500/20
+hover: from-cyan-500/30 hover: to-blue-500/30
+rounded-full text-cyan-300 hover: text-cyan-200
+font-bold transition-all border border-cyan-500/30 hover: border-cyan-500/60
+mx-auto focus: outline-none focus: ring-2 focus: ring-cyan-500"
+>
+<Volume2 size={
+20
+} />
+<span>Listen</span>
+</button>
+)}
+</div>
+</div>
+);
+
+case 'reading-algorithm': return (
+<div className="w-full min-h-screen flex flex-col items-center justify-center
+bg-gradient-to-b from-slate-950 to-slate-900 p-6
+animate-in fade-in duration-500">
+
+<div className="w-full max-w-2xl">
+<h2 className="text-4xl md:text-5xl font-black text-white mb-12
+text-center uppercase tracking-tight">
+{data.title || 'How to read'}
+</h2>
+
+<div className="space-y-4">
+{(data.steps || []).map((step, idx) => (
+<div key={
+idx
+}
+className="flex items-start gap-4 bg-gradient-to-r from-emerald-500/10 to-transparent
+p-6 rounded-2xl border border-emerald-500/20 hover: border-emerald-500/50
+transition-all duration-300 hover: translate-x-1">
+
+<div className="h-8 w-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600
+text-white flex items-center justify-center font-bold text-sm shrink-0">
+{idx + 1}
+</div>
+
+<p className="text-slate-200 font-medium text-base leading-relaxed pt-1">
+{
+step
+}
+</p>
+</div>
+))}
+</div>
+</div>
+</div>
+);
+
+case 'ready': return (
+<div className="w-full h-screen flex flex-col items-center justify-center
+text-center bg-gradient-to-b from-slate-950 to-slate-900
+animate-pulse-slow p-6">
+
+<div className="text-7xl md:text-8xl mb-8 animate-bounce">🏆</div>
+
+<h2 className="text-4xl md:text-5xl font-black text-white mb-4
+uppercase italic tracking-tight">
+{data.title}
+</h2>
+
+<p className="text-lg text-slate-300 max-w-md mx-auto font-light">
+{data.description}
+</p>
+</div>
+);
+
+case 'intro': return (
+<div className="w-full h-screen flex flex-col items-center justify-center
+text-center bg-gradient-to-b from-slate-950 to-slate-900
+animate-in fade-in duration-700 p-6">
+
+<h2 className="text-5xl md:text-6xl font-black text-white mb-6
+uppercase tracking-tight">
+{
+data.title
+}
+</h2>
+
+<p className="text-xl text-slate-300 max-w-2xl font-light leading-relaxed">
+{
+data.text || data.description
+}
+</p>
+</div>
+);
+
+default: return (
+<div className="w-full h-screen flex flex-col items-center justify-center
+text-center bg-gradient-to-b from-slate-950 to-slate-900 p-6">
+
+<p className="text-red-400 font-bold mb-4 text-lg">
+Unknown Slide Type: "{mode}"
+</p>
+
+<div className="bg-slate-800 p-4 rounded-lg text-left overflow-auto max-w-sm max-h-40
+border border-slate-700">
+<pre className="text-xs text-cyan-400 font-mono">
+{
+JSON.stringify(data, null, 2)
+}
+</pre>
+</div>
+</div>
+);
+}
 }
