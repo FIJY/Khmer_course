@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Volume2, ScanSearch } from "lucide-react";
+import LessonCard from "../UI/LessonCard";
 
 const DEFAULT_KHMER_FONT_URL =
   import.meta.env.VITE_KHMER_FONT_URL ??
@@ -80,7 +81,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
       <>
         {parts.map((p, i) =>
           p.hot ? (
-            <span key={i} style={styles.hot}>
+            <span key={i} className="outline outline-2 outline-cyan-400/60 rounded-lg px-1 mx-0.5">
               {p.text}
             </span>
           ) : (
@@ -92,7 +93,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
   }
 
   return (
-    <div style={styles.wrap}>
+    <div className="w-full flex justify-center px-4">
       <style>{`
         @font-face {
           font-family: "KhmerFont";
@@ -101,22 +102,26 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
         }
       `}</style>
 
-      <div style={styles.card}>
-        <div style={styles.headerRow}>
+      <LessonCard className="max-w-[760px]">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <div style={styles.title}>{title}</div>
-            {subtitle ? <div style={styles.subtitle}>{subtitle}</div> : null}
+            <div className="text-lg font-black uppercase tracking-[0.08em]">{title}</div>
+            {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
           </div>
 
-          <div style={styles.iconRow}>
-            <div style={styles.badge}>
-              <ScanSearch size={16} />
+          <div className="flex gap-2 flex-wrap items-center justify-end">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 text-xs uppercase tracking-widest text-slate-200/80">
+              <ScanSearch size={14} />
               <span>analysis</span>
             </div>
 
             {audio ? (
-              <button type="button" style={styles.audioBtn} onClick={playAudio}>
-                <Volume2 size={16} />
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-cyan-400/50 text-cyan-100 bg-cyan-500/15 hover:bg-cyan-500/25 text-xs font-semibold"
+                onClick={playAudio}
+              >
+                <Volume2 size={14} />
                 <span>Play</span>
               </button>
             ) : null}
@@ -124,9 +129,9 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
         </div>
 
         {textLines.length ? (
-          <div style={styles.textBlock}>
+          <div className="mt-4 space-y-2 text-sm text-slate-200">
             {textLines.map((line, idx) => (
-              <div key={idx} style={styles.textLine}>
+              <div key={idx} className="leading-relaxed">
                 {line}
               </div>
             ))}
@@ -134,135 +139,26 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
         ) : null}
 
         {khmer ? (
-          <div style={styles.khmerBox}>
-            <div style={styles.khmerLabel}>Khmer</div>
-            <div style={styles.khmerText}>{renderHighlightedKhmer(khmer)}</div>
+          <div className="mt-4 p-4 rounded-2xl border border-white/10 bg-black/30">
+            <div className="text-[11px] uppercase tracking-[0.3em] text-slate-400 mb-2">Khmer</div>
+            <div
+              className="text-2xl leading-relaxed"
+              style={{ fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif" }}
+            >
+              {renderHighlightedKhmer(khmer)}
+            </div>
           </div>
         ) : null}
 
         {translation ? (
-          <div style={styles.translationBox}>
-            <div style={styles.khmerLabel}>Meaning</div>
-            <div style={styles.translationText}>{translation}</div>
+          <div className="mt-4 p-4 rounded-2xl border border-white/10 bg-black/30">
+            <div className="text-[11px] uppercase tracking-[0.3em] text-slate-400 mb-2">Meaning</div>
+            <div className="text-sm text-slate-100 leading-relaxed">{translation}</div>
           </div>
         ) : null}
 
-        {note ? <div style={styles.note}>{note}</div> : null}
-      </div>
+        {note ? <div className="mt-4 text-xs text-slate-400">{note}</div> : null}
+      </LessonCard>
     </div>
   );
 }
-
-const styles = {
-  wrap: {
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-    padding: "16px",
-    boxSizing: "border-box",
-  },
-  card: {
-    width: "100%",
-    maxWidth: "760px",
-    border: "1px solid rgba(0,0,0,0.08)",
-    borderRadius: "18px",
-    padding: "18px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-    background: "white",
-    boxSizing: "border-box",
-
-    color: "rgba(0,0,0,0.92)", // добавь
-
-  },
-  headerRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "12px",
-    alignItems: "flex-start",
-    marginBottom: "10px",
-  },
-  iconRow: {
-    display: "flex",
-    gap: "10px",
-    alignItems: "center",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-  },
-  badge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "6px 10px",
-    borderRadius: "999px",
-    border: "1px solid rgba(0,0,0,0.12)",
-    fontSize: "12px",
-    opacity: 0.85,
-  },
-  audioBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "8px 10px",
-    borderRadius: "12px",
-    border: "1px solid rgba(0,0,0,0.15)",
-    background: "white",
-    cursor: "pointer",
-    fontSize: "13px",
-  },
-  title: {
-    fontSize: "20px",
-    fontWeight: 800,
-    lineHeight: 1.15,
-  },
-  subtitle: {
-    marginTop: "4px",
-    fontSize: "13px",
-    opacity: 0.7,
-  },
-  textBlock: {
-    marginTop: "10px",
-    marginBottom: "12px",
-  },
-  textLine: {
-    fontSize: "15px",
-    lineHeight: 1.35,
-    marginBottom: "6px",
-  },
-  khmerBox: {
-    marginTop: "10px",
-    padding: "12px",
-    borderRadius: "14px",
-    border: "1px solid rgba(0,0,0,0.10)",
-  },
-  translationBox: {
-    marginTop: "10px",
-    padding: "12px",
-    borderRadius: "14px",
-    border: "1px solid rgba(0,0,0,0.10)",
-  },
-  khmerLabel: {
-    fontSize: "12px",
-    opacity: 0.65,
-    marginBottom: "8px",
-  },
-  khmerText: {
-    fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif",
-    fontSize: "28px",
-    lineHeight: 1.25,
-  },
-  translationText: {
-    fontSize: "15px",
-    lineHeight: 1.35,
-  },
-  note: {
-    marginTop: "12px",
-    fontSize: "12px",
-    opacity: 0.65,
-  },
-  hot: {
-    outline: "2px solid rgba(0,0,0,0.55)",
-    borderRadius: "8px",
-    padding: "0 4px",
-    margin: "0 2px",
-  },
-};

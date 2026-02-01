@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import LessonCard from "../UI/LessonCard";
 
 /**
  * DrillChoiceSlide
@@ -117,68 +118,79 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
 
   if (!data) {
     return (
-      <div style={styles.wrap}>
-        <div style={styles.card}>
-          <div style={styles.title}>Missing data</div>
-        </div>
+      <div className="w-full flex justify-center px-4">
+        <LessonCard className="max-w-[720px]">
+          <div className="text-lg font-black uppercase tracking-[0.08em]">Missing data</div>
+        </LessonCard>
       </div>
     );
   }
 
   if (layout !== "grid") {
     return (
-      <div style={styles.wrap}>
-        <div style={styles.card}>
-          <div style={styles.title}>{title || "Drill"}</div>
-          <div style={styles.text}>
+      <div className="w-full flex justify-center px-4">
+        <LessonCard className="max-w-[720px]">
+          <div className="text-lg font-black uppercase tracking-[0.08em]">{title || "Drill"}</div>
+          <div className="text-sm text-slate-300 mt-2">
             layout="{layout}" пока не реализован. (Сделаем следующим шагом)
           </div>
-        </div>
+        </LessonCard>
       </div>
     );
   }
 
-  return (
-    <div style={styles.wrap}>
-      <div style={styles.card}>
-        {title ? <div style={styles.title}>{title}</div> : null}
-        {subtitle ? <div style={styles.subtitle}>{subtitle}</div> : null}
-        {prompt ? <div style={styles.prompt}>{prompt}</div> : null}
+  const baseOptionClass =
+    "border border-slate-500/30 rounded-2xl px-3 py-4 min-h-[84px] flex flex-col items-center justify-center bg-slate-900/60 text-white transition-all";
+  const selectedOptionClass =
+    "border-cyan-400 shadow-[0_0_0_2px_rgba(34,211,238,0.2)] bg-cyan-500/15";
+  const lockedOptionClass = "opacity-60 cursor-default";
 
-        <div style={styles.grid}>
+  return (
+    <div className="w-full flex justify-center px-4">
+      <LessonCard className="max-w-[720px]">
+        {title ? <div className="text-lg font-black uppercase tracking-[0.08em]">{title}</div> : null}
+        {subtitle ? (
+          <div className="text-xs text-slate-400 uppercase tracking-[0.3em] mt-1">{subtitle}</div>
+        ) : null}
+        {prompt ? (
+          <div className="text-sm text-slate-300 leading-relaxed mt-4">{prompt}</div>
+        ) : null}
+
+        <div className="grid grid-cols-3 gap-3 mt-4 mb-5">
           {shuffledOptions.map((opt) => {
             const id = opt?.id;
             const text = opt?.text ?? "";
             const isSelected = id ? selectedSet.has(id) : false;
-
-            const btnStyle = {
-              ...styles.option,
-              ...(isSelected ? styles.optionSelected : null),
-              ...(completed ? styles.optionLocked : null),
-            };
+            const optionClassName = [
+              baseOptionClass,
+              isSelected ? selectedOptionClass : "",
+              completed ? lockedOptionClass : "hover:border-cyan-400/60",
+            ]
+              .filter(Boolean)
+              .join(" ");
 
             return (
               <button
                 key={id || text}
                 type="button"
-                style={btnStyle}
+                className={optionClassName}
                 onClick={() => toggle(id, opt)}
                 disabled={!id || completed}
                 title={opt?.hint || ""}
               >
-                <div style={styles.optionText}>{text}</div>
+                <div className="text-2xl leading-none">{text}</div>
                 {opt?.label ? (
-                  <div style={styles.optionLabel}>{opt.label}</div>
+                  <div className="text-xs text-slate-400 mt-2">{opt.label}</div>
                 ) : null}
               </button>
             );
           })}
         </div>
 
-        <div style={styles.actions}>
+        <div className="flex gap-3 justify-end">
           <button
             type="button"
-            style={{ ...styles.actionBtn, ...(completed ? styles.btnDisabled : null) }}
+            className={`px-4 py-2 rounded-full border border-slate-500/40 text-slate-200 text-sm ${completed ? "opacity-60 cursor-default" : "hover:border-slate-300/60"}`}
             onClick={handleReset}
             disabled={completed}
           >
@@ -187,11 +199,7 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
 
           <button
             type="button"
-            style={{
-              ...styles.actionBtn,
-              ...styles.primaryBtn,
-              ...(completed ? styles.btnDisabled : null),
-            }}
+            className={`px-4 py-2 rounded-full border border-cyan-400/60 bg-cyan-500/20 text-cyan-100 text-sm font-semibold ${completed ? "opacity-60 cursor-default" : "hover:bg-cyan-500/30"}`}
             onClick={handleCheck}
             disabled={completed}
           >
@@ -200,154 +208,24 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
         </div>
 
         {status === "correct" ? (
-          <div style={{ ...styles.feedback, ...styles.feedbackOk }}>
+          <div className="mt-4 px-4 py-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/15 text-emerald-100 text-sm">
             {success_text}
           </div>
         ) : null}
 
         {status === "wrong" ? (
-          <div style={{ ...styles.feedback, ...styles.feedbackBad }}>
+          <div className="mt-4 px-4 py-2 rounded-2xl border border-rose-400/40 bg-rose-500/15 text-rose-100 text-sm">
             {fail_text}
           </div>
         ) : null}
 
         {/* маленькая подсказка о строгом правиле (можно убрать) */}
-        <div style={styles.micro}>
+        <div className="mt-4 text-xs text-slate-400">
           {mode === "multi"
             ? "Нужно выбрать ровно правильный набор (лишнее = ошибка)."
             : "Нужно выбрать ровно один правильный вариант."}
         </div>
-      </div>
+      </LessonCard>
     </div>
   );
 }
-
-// Минимальные стили без зависимости от tailwind
-const styles = {
-  wrap: {
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-    padding: "16px",
-    boxSizing: "border-box",
-  },
-  card: {
-    width: "100%",
-    maxWidth: "720px",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: "28px",
-    padding: "24px",
-    boxShadow: "0 22px 45px rgba(0,0,0,0.45)",
-    background: "linear-gradient(180deg, rgba(20,27,40,0.96), rgba(10,14,24,0.98))",
-    color: "rgba(255,255,255,0.92)",
-    boxSizing: "border-box",
-  },
-
-  title: {
-    fontSize: "20px",
-    fontWeight: 800,
-    marginBottom: "6px",
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-  },
-  subtitle: {
-    fontSize: "12px",
-    opacity: 0.6,
-    marginBottom: "12px",
-    textTransform: "uppercase",
-    letterSpacing: "0.2em",
-  },
-  prompt: {
-    fontSize: "15px",
-    marginBottom: "16px",
-    lineHeight: 1.5,
-    color: "rgba(226,232,240,0.8)",
-  },
-  text: {
-    fontSize: "14px",
-    opacity: 0.8,
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "12px",
-    marginTop: "12px",
-    marginBottom: "18px",
-  },
-  option: {
-    border: "1px solid rgba(148,163,184,0.2)",
-    borderRadius: "18px",
-    padding: "16px 10px",
-    cursor: "pointer",
-    background: "rgba(15,23,42,0.8)",
-    minHeight: "84px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "column",
-    userSelect: "none",
-  },
-  optionSelected: {
-    border: "2px solid rgba(34,211,238,0.9)",
-    boxShadow: "0 0 0 2px rgba(34,211,238,0.15)",
-    background: "rgba(14,116,144,0.28)",
-  },
-  optionLocked: {
-    opacity: 0.6,
-    cursor: "default",
-  },
-  optionText: {
-    fontSize: "30px",
-    lineHeight: 1,
-  },
-  optionLabel: {
-    fontSize: "12px",
-    opacity: 0.65,
-    marginTop: "6px",
-  },
-  actions: {
-    display: "flex",
-    gap: "10px",
-    justifyContent: "flex-end",
-    marginTop: "8px",
-  },
-  actionBtn: {
-    border: "1px solid rgba(148,163,184,0.35)",
-    borderRadius: "14px",
-    padding: "10px 16px",
-    background: "rgba(15,23,42,0.7)",
-    cursor: "pointer",
-    fontSize: "14px",
-    color: "rgba(226,232,240,0.9)",
-  },
-  primaryBtn: {
-    border: "1px solid rgba(34,211,238,0.7)",
-    background: "rgba(34,211,238,0.18)",
-    color: "rgba(255,255,255,0.95)",
-    fontWeight: 700,
-  },
-  btnDisabled: {
-    opacity: 0.6,
-    cursor: "default",
-  },
-  feedback: {
-    marginTop: "12px",
-    padding: "10px 14px",
-    borderRadius: "14px",
-    fontSize: "14px",
-  },
-  feedbackOk: {
-    border: "1px solid rgba(34,211,238,0.4)",
-    background: "rgba(20,184,166,0.15)",
-  },
-  feedbackBad: {
-    border: "1px solid rgba(248,113,113,0.4)",
-    background: "rgba(248,113,113,0.12)",
-  },
-  micro: {
-    marginTop: "10px",
-    fontSize: "12px",
-    opacity: 0.55,
-    color: "rgba(148,163,184,0.9)",
-  },
-};
