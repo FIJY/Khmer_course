@@ -5,32 +5,61 @@
     {
       "lesson_id": 10101,
       "title": "UNIT R1.1 — Orientation & Heroes",
-      "desc": "Text looks like chaos. Learn the single rule: every block has one main consonant (the hero).",
+      "desc": "Text looks like chaos. Learn the single rule: every block has one main consonant.",
       "module_id": 10000,
       "order_index": 0,
       "content": [
         {
           "type": "theory",
           "data": {
-            "title": "Why Khmer looks like chaos (but it's not)",
-            "text": "In Khmer, there are no spaces between words.\n\nSo the text looks like this:\n\nលាឈានឆាប់លឿងរហូតដល់ថ្ងៃ\n\nCompletely unreadable, right?\n\n(This is completely normal. You're not broken.)\n\nBut here's the secret: Inside this chaos is a strict structure.\n\nThink of it like:\n- A skeleton (consonant) = the main part\n- Everything else = decorations hanging on the skeleton\n\nOnce you know the skeleton, the whole thing becomes readable.",
+            "title": "Bad News First",
+            "description": [
+              "In Khmer, there are no spaces between words.",
+              "Not even one."
+            ],
+            "examples": [
+              {
+                "kind": "label",
+                "text": "English without spaces:"
+              },
+              {
+                "kind": "latin",
+                "text": "HaveYouEverSeenATextWallLikeThis"
+              },
+              {
+                "kind": "label",
+                "text": "Now the same problem in Khmer:"
+              },
+              {
+                "kind": "khmer",
+                "text": "លាឈានឆាប់លឿងរហូតដល់ថ្ងៃ",
+                "audio": "r1_1_1_khmer_nospaces.mp3"
+              }
+            ],
+            "footer": "Now you can see the real problem.\nReady to crack the code?",
             "sublesson_title": "Orientation & Foundation"
           }
         },
         {
           "type": "theory",
           "data": {
-            "title": "Your first tool: The Consonant (The Hero)",
-            "text": "In every Khmer syllable, there is ONE main letter.\n\nThis is always a consonant.\n\nEverything else just hangs around it.\n\nMicroRule:\nWhen in doubt, look for what sits on the baseline. That's your hero.",
-            "sublesson_title": "Consonant First"
+            "title": "Khmer is like Lego",
+            "text": "Good news: Khmer is like Lego.\n\nYou don't need to memorize thousands of heroes.\nLet's not study the language yet.\nLet's just **observe** how it works.\n\nToday we learn to find the consonants (The Heroes) in the text.\n\nThis unit starts slowly.\nSit on the same line.\n\nReady?"
+          }
+        },
+        {
+          "type": "rule",
+          "data": {
+            "title": "Center of Gravity",
+            "text": "You may have noticed something.\n\nEvery Khmer block is built around **one main letter**.\nThat letter is a consonant.\n\nIt's like a game of 'Find Me'.\n\n**The Mechanic:**\n1. We tap a letter.\n2. A frame lights up.\n3. First you hear the consonant sound, then its name.\n\nNo strict rules yet. Only observation."
           }
         },
         {
           "type": "drill_choice",
           "data": {
-            "title": "TEST: Choose Sun Team",
-            "subtitle": "drill_choice (strict A)",
-            "prompt": "Tap ONLY Sun Team letters. Exact match required.",
+            "title": "Select only the Heroes",
+            "subtitle": "Tap the main big letters.",
+            "prompt": "Khmer text is full of noise. Smooth shapes. Complex shapes. Decorations.\n\n**Task:** Find only the main letters (Heroes).\n\n(Tap a letter to hear the consonant sound).",
             "layout": "grid",
             "mode": "multi",
             "options": [
@@ -40,14 +69,47 @@
                 "audio": "letter_ka"
               },
               {
+                "id": "aa",
+                "text": "ា",
+                "audio": "vowel_aa"
+              },
+              {
                 "id": "kha",
                 "text": "ខ",
                 "audio": "letter_kha"
               },
               {
+                "id": "ah",
+                "text": "ះ",
+                "audio": "vowel_ah"
+              }
+            ],
+            "correct_ids": [
+              "ka",
+              "kha"
+            ],
+            "success_text": "✅ Correct! Heroes are the big ones.",
+            "fail_text": "❌ decorations are not heroes."
+          }
+        },
+        {
+          "type": "drill_choice",
+          "data": {
+            "title": "Select only the Heroes (Harder)",
+            "subtitle": "Let's add more noise.",
+            "prompt": "Same principle.\nThe Main Letter is always ONE.\n\nDo not count the decorations.",
+            "layout": "grid",
+            "mode": "multi",
+            "options": [
+              {
                 "id": "ko",
                 "text": "គ",
                 "audio": "letter_ko"
+              },
+              {
+                "id": "am",
+                "text": "ាំ",
+                "audio": "vowel_am"
               },
               {
                 "id": "kho",
@@ -60,98 +122,156 @@
                 "audio": "letter_ngo"
               },
               {
-                "id": "cha",
-                "text": "ច",
-                "audio": "letter_cha"
+                "id": "ei",
+                "text": "ី",
+                "audio": "vowel_ei"
               }
             ],
             "correct_ids": [
-              "ka",
-              "kha",
-              "cha"
+              "ko",
+              "kho",
+              "ngo"
             ],
-            "shuffle": true,
-            "success_text": "✅ Correct. Smooth = Sun.",
-            "fail_text": "❌ Not exact. Try again.",
-            "check_button_text": "Check",
-            "reset_button_text": "Reset"
+            "success_text": "✅ You found them.",
+            "fail_text": "❌ Focus on the baseline."
+          }
+        },
+        {
+          "type": "meet-teams",
+          "data": {
+            "title": "Same or Different?",
+            "text": "Look at this pair:\n\n**ប** vs **ព**\n\n**Answer:** Different.\n\nThese two letters look similar.\nBut they belong to different groups.\n\nMixing them changes how a word sounds."
           }
         },
         {
           "type": "comparison_audio",
           "data": {
-            "title": "TEST: Sun vs Moon (same vowel)",
+            "title": "Listen closely",
             "pairs": [
               {
-                "instruction": "Listen. Same or different?",
+                "instruction": "Tap the first one. Tap the second one. Different sounds = Different letters.",
                 "left": {
-                  "text": "កា",
-                  "audio": "syllable_kaa.mp3",
-                  "label": "Sun"
+                  "text": "ប",
+                  "audio": "letter_ba",
+                  "label": "BA"
                 },
                 "right": {
-                  "text": "គា",
-                  "audio": "syllable_kea.mp3",
-                  "label": "Moon"
-                }
-              },
-              {
-                "instruction": "Now nasal vowel:",
-                "left": {
-                  "text": "កាំ",
-                  "audio": "syllable_kam.mp3",
-                  "label": "Sun"
-                },
-                "right": {
-                  "text": "គាំ",
-                  "audio": "syllable_koam.mp3",
-                  "label": "Moon"
+                  "text": "ព",
+                  "audio": "letter_po",
+                  "label": "PO"
                 }
               }
             ],
-            "note": "If you hear an extra E/O at the start — that's Moon behavior."
+            "note": "They look like twins, but they are not."
           }
         },
         {
-          "type": "analysis",
+          "type": "drill_choice",
           "data": {
-            "title": "TEST: Deep Dive",
-            "subtitle": "Tap a word. See glyph breakdown.",
-            "text": "កាហ្វេ នៅ ហាង",
-            "translation": "Coffee is at the shop.",
-            "audio": "phrase_coffee_shop"
-          }
-        },
-        {
-          "type": "visual_decoder",
-          "data": {
-            "word": "កា",
-            "target_char": "ក",
-            "hint": "The hero (consonant) sits on the baseline. Everything else is decoration.",
-            "char_split": [
-              "ក",
-              "ា"
+            "title": "Find the letter ខ",
+            "subtitle": "The letter is hidden inside words.",
+            "prompt": "Tap the letter **ខ** in the list below.\n\n**Hint:** It looks like a snail with a spiral.",
+            "layout": "grid",
+            "mode": "multi",
+            "options": [
+              {
+                "id": "khang",
+                "text": "ខាង",
+                "audio": "word_side"
+              },
+              {
+                "id": "kha",
+                "text": "ខា",
+                "audio": "syllable_kha"
+              },
+              {
+                "id": "mak",
+                "text": "មាក",
+                "audio": "word_mak"
+              },
+              {
+                "id": "lak",
+                "text": "លាក",
+                "audio": "word_lak"
+              }
             ],
-            "english_translation": "ក = hero (consonant), ា = vowel mark",
-            "letter_series": 1,
-            "word_audio": "",
-            "char_audio_map": {}
+            "correct_ids": [
+              "khang",
+              "kha"
+            ],
+            "success_text": "✅ Found the snail!",
+            "fail_text": "❌ Look for the spiral shape."
+          }
+        },
+        {
+          "type": "drill_choice",
+          "data": {
+            "title": "Find the letter ខ (Again)",
+            "subtitle": "Different set. Same principle.",
+            "prompt": "Remember the shape (Snail).\nFind it.",
+            "layout": "grid",
+            "mode": "multi",
+            "options": [
+              {
+                "id": "kak",
+                "text": "កាក",
+                "audio": "word_residue"
+              },
+              {
+                "id": "khak",
+                "text": "ខាក",
+                "audio": "word_spit"
+              },
+              {
+                "id": "kham",
+                "text": "ខាំ",
+                "audio": "word_bite"
+              },
+              {
+                "id": "kam",
+                "text": "កាំ",
+                "audio": "word_spoke"
+              }
+            ],
+            "correct_ids": [
+              "khak",
+              "kham"
+            ],
+            "success_text": "✅ Excellent.",
+            "fail_text": "❌ Try again."
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "Find the Hero: In the syllable គី, which letter is the main consonant (the hero)?",
+            "question": "Every Khmer block is built around...",
             "options": [
-              "គ",
-              "ី"
+              "Decorations",
+              "A Main Consonant (Hero)",
+              "A Vowel"
             ],
-            "correct_answer": "គ",
-            "explanation": "គ sits on the baseline → it's the hero. ី is a vowel mark that decorates it.",
-            "pronunciation_map": {
-              "គ": "ko (main consonant)",
-              "ី": "vowel mark"
-            }
+            "correct_answer": "A Main Consonant (Hero)",
+            "explanation": "Correct. The consonant is the skeleton. Everything else hangs on it."
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "When we tap a letter, first we hear...",
+            "options": [
+              "The vowel sound",
+              "The Consonant sound",
+              "The word name"
+            ],
+            "correct_answer": "The Consonant sound",
+            "explanation": "Correct. First the sound, then the name."
+          }
+        },
+        {
+          "type": "ready",
+          "data": {
+            "title": "Summary",
+            "text": "Letters may look similar, but sound different.\n\nAlways look for the Hero."
           }
         }
       ]

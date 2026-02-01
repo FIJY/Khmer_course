@@ -161,7 +161,30 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
                 if not should_skip_generation(audio_key):
                     await generate_audio(str(khmer_text), audio_key)
 
+            # === PATCH: examples khmer audio ===
+            examples = data.get("examples", []) or []
+            for ex in examples:
+                if not isinstance(ex, dict):
+                    continue
+                if ex.get("kind") != "khmer":
+                    continue
+
+                txt = (ex.get("text") or "").strip()
+                aud = (ex.get("audio") or "").strip()
+
+                if not txt or not aud:
+                    continue
+
+                if not aud.startswith(SKIP_AUDIO_PREFIXES):
+                    aud = ensure_mp3(aud)
+                    ex["audio"] = aud
+
+                if not should_skip_generation(aud):
+                    await generate_audio(txt, aud)
+            # === /PATCH ===
+
             item["data"] = data
+
 
         # ═══════════════════════════════════════════════════════════════
         # QUIZ

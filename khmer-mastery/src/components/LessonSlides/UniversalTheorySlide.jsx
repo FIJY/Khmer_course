@@ -76,14 +76,60 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
                 }
 
                 {data.examples && (
-                  <div className="flex flex-wrap justify-center gap-3 mt-6">
-                    {data.examples.map((ex, i) => (
-                      <div key={i} className="px-4 py-2 bg-black/40 rounded-xl border border-white/5 text-cyan-200 font-khmer">
-                        {typeof ex === 'string' ? ex : ex.letter}
-                      </div>
-                    ))}
+                  <div className="mt-8 space-y-4">
+                    {data.examples.map((ex, i) => {
+                      const obj = typeof ex === "string" ? { text: ex, kind: "plain" } : ex;
+                      const isKhmer = obj.kind === "khmer";
+                      const isLabel = obj.kind === "label";
+                      const isLatin = obj.kind === "latin";
+
+                      const base =
+                        "w-full rounded-2xl border border-white/5 px-5 py-4 text-center";
+
+                      const labelCls =
+                        "bg-transparent border-0 px-0 py-0 text-sm text-gray-400 tracking-wide";
+                      const latinCls =
+                        "bg-black/35 font-mono text-cyan-200 text-base md:text-lg break-words";
+                      const khmerCls =
+                        "bg-black/45 font-khmer text-cyan-100 text-2xl md:text-3xl leading-relaxed";
+
+                      const cls = isLabel ? labelCls : `${base} ${isKhmer ? khmerCls : isLatin ? latinCls : "bg-black/40 text-cyan-200"}`;
+
+                      const content = (
+                        <div className={cls}>
+                          {obj.text}
+                          {obj.audio && (
+                            <div className="mt-2 text-xs text-cyan-400/80">
+                              Tap to listen
+                            </div>
+                          )}
+                        </div>
+                      );
+
+                      // если есть аудио — делаем кликабельным
+                      if (obj.audio) {
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => play(obj.audio)}
+                            className="w-full text-left"
+                          >
+                            {content}
+                          </button>
+                        );
+                      }
+
+                      return <div key={i}>{content}</div>;
+                    })}
                   </div>
                 )}
+
+                {data.footer && (
+                  <div className="mt-8 pt-6 border-t border-white/10 text-gray-200 text-base md:text-lg text-center whitespace-pre-line">
+                    {data.footer}
+                  </div>
+                )}
+
             </div>
 
             {data.audio && (
