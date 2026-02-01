@@ -60,8 +60,8 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
       return (
         <div className="w-full bg-gray-900 border border-white/10 p-8 rounded-[3.5rem] text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="flex justify-center mb-6">
-                <div className="p-4 bg-cyan-500/10 rounded-full">
-                    {mode === 'rule' ? <Lightbulb className="text-amber-400" size={40} /> : <BookOpen className="text-cyan-400" size={40} />}
+                <div className="p-2 bg-cyan-500/10 rounded-full">
+                    {mode === 'rule' ? <Lightbulb className="text-amber-400" size={10} /> : <BookOpen className="text-cyan-400" size={10} />}
                 </div>
             </div>
 
