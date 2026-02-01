@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Volume2, ScanSearch } from "lucide-react";
 import LessonCard from "../UI/LessonCard";
 import VisualDecoder, { HIGHLIGHT_MODES } from "../VisualDecoder";
@@ -28,7 +28,6 @@ const DEFAULT_KHMER_FONT_URL =
  */
 export default function AnalysisSlide({ data, onPlayAudio }) {
   const d = data || {};
-  const [highlightMode, setHighlightMode] = useState(HIGHLIGHT_MODES.ALL);
 
   const title = d.title ?? "Analysis";
   const subtitle = d.subtitle ?? "";
@@ -41,8 +40,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
   const khmer = d.khmer ?? d.word ?? d.khmerText ?? "";
   const translation = d.translation ?? "";
   const note = d.note ?? "";
-  const audio = d.audio ?? "";
-  const phraseAudio = d.word_audio ?? d.phrase_audio ?? audio;
+  const phraseAudio = d.word_audio ?? d.phrase_audio ?? d.audio ?? "";
   const mode = d.mode ?? "text";
 
   const showDecoder = mode === "visual_decoder";
@@ -135,7 +133,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
           <div className="mt-4 p-4 rounded-2xl border border-white/10 bg-black/30">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Khmer</div>
-              {audio ? (
+              {phraseAudio ? (
                 <button
                   type="button"
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-cyan-400/50 text-cyan-100 bg-cyan-500/15 hover:bg-cyan-500/25 text-xs font-semibold"
@@ -147,54 +145,18 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
               ) : null}
             </div>
             {showDecoder ? (
-              <>
-                <div className="flex justify-center gap-2 mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setHighlightMode(HIGHLIGHT_MODES.ALL)}
-                    className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      highlightMode === HIGHLIGHT_MODES.ALL
-                        ? "bg-cyan-500 text-black border-cyan-300"
-                        : "bg-gray-900 text-white border-white/10"
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHighlightMode(HIGHLIGHT_MODES.CONSONANTS)}
-                    className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      highlightMode === HIGHLIGHT_MODES.CONSONANTS
-                        ? "bg-cyan-500 text-black border-cyan-300"
-                        : "bg-gray-900 text-white border-white/10"
-                    }`}
-                  >
-                    Consonants
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHighlightMode(HIGHLIGHT_MODES.OFF)}
-                    className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      highlightMode === HIGHLIGHT_MODES.OFF
-                        ? "bg-cyan-500 text-black border-cyan-300"
-                        : "bg-gray-900 text-white border-white/10"
-                    }`}
-                  >
-                    Off
-                  </button>
-                </div>
-                <div
-                  className="flex items-center justify-center"
-                  style={{ fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif" }}
-                >
-                  <VisualDecoder
-                    data={{ ...d, word: khmer }}
-                    highlightMode={highlightMode}
-                    interactionMode="find_consonant"
-                    hideDefaultButton={true}
-                  />
-                </div>
-              </>
+              <div
+                className="flex items-center justify-center"
+                style={{ fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif" }}
+              >
+                <VisualDecoder
+                  data={{ ...d, word: khmer }}
+                  highlightMode={HIGHLIGHT_MODES.OFF}
+                  interactionMode="find_consonant"
+                  onLetterClick={(file) => onPlayAudio?.(file)}
+                  hideDefaultButton={true}
+                />
+              </div>
             ) : (
               <div
                 className="text-2xl leading-relaxed text-slate-100"

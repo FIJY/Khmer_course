@@ -310,7 +310,7 @@ export default function VisualDecoder({
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
 
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
-      return isKhmerConsonant(resolved) ? getKhmerGlyphColor(resolved) : FALLBACK.MUTED;
+      return isKhmerConsonant(resolved) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
     }
 
     // OFF
