@@ -90,8 +90,9 @@ export default function VisualDecoder({
   text: propText,
   onLetterClick,
   onComplete,
-  hideDefaultButton,
+  hideDefaultButton = true,
   highlightMode = HIGHLIGHT_MODES.ALL,
+  interactionMode = "default",
 }) {
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
@@ -289,6 +290,19 @@ export default function VisualDecoder({
     if (onComplete) onComplete();
   };
 
+  const subscriptConsonantIndices = useMemo(() => {
+    const indices = new Set();
+    if (!glyphs || glyphs.length === 0) return indices;
+    glyphs.forEach((glyph, idx) => {
+      if (glyph.char !== COENG_CHAR) return;
+      const next = glyphs[idx + 1];
+      if (!next) return;
+      const resolved = resolvedGlyphChars[idx + 1] || next.char || "";
+      if (isKhmerConsonant(resolved)) indices.add(idx + 1);
+    });
+    return indices;
+  }, [glyphs, resolvedGlyphChars]);
+
   function colorForGlyph(glyph, idx) {
     const resolved = resolvedGlyphChars[idx] || glyph.char || "";
     const base = getKhmerGlyphColor(glyph.char); // цвет формы — по глифу (coeng останется SUBSCRIPT)
@@ -312,7 +326,7 @@ export default function VisualDecoder({
   }
 
   return (
-    <div className="w-full flex justify-center items-center py-8">
+    <div className="w-full flex flex-col items-center py-8">
       <svg
         ref={svgRef}
         viewBox={`${vb.minX} ${vb.minY} ${vb.w} ${vb.h}`}
@@ -327,6 +341,24 @@ export default function VisualDecoder({
         {glyphs.map((glyph, i) => {
           const isSelected = selectedId === glyph.id;
           const fillColor = colorForGlyph(glyph, i);
+          const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
+          const isSubscript = subscriptConsonantIndices.has(i);
+
+          let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
+          let outlineWidth = isSelected ? 5 : 0;
+
+          if (interactionMode === "find_consonant" && selectedId !== null) {
+            outlineWidth = 4;
+            if (isSelected) {
+              outlineColor = "#22c55e";
+            } else if (isSubscript) {
+              outlineColor = "#facc15";
+            } else if (isConsonant) {
+              outlineColor = "#ef4444";
+            } else {
+              outlineColor = "#ef4444";
+            }
+          }
 
           return (
             <g key={glyph.id ?? i}>
@@ -347,12 +379,12 @@ export default function VisualDecoder({
                 pointerEvents="none"
                 className="transition-all duration-200"
                 style={{
-                  stroke: isSelected ? FALLBACK.SELECTED : "transparent",
-                  strokeWidth: isSelected ? 5 : 0,
+                  stroke: outlineColor,
+                  strokeWidth: outlineWidth,
                   vectorEffect: "non-scaling-stroke",
                   paintOrder: "stroke fill",
                   filter: isSelected
-                    ? `drop-shadow(0 0 10px ${FALLBACK.SELECTED})`
+                    ? `drop-shadow(0 0 10px ${outlineColor})`
                     : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
                 }}
               />
@@ -360,6 +392,15 @@ export default function VisualDecoder({
           );
         })}
       </svg>
+      {!hideDefaultButton && onComplete ? (
+        <button
+          type="button"
+          onClick={onComplete}
+          className="mt-4 px-4 py-2 rounded-full bg-white/10 border border-white/10 text-xs uppercase tracking-widest text-white hover:bg-white/20 transition-all"
+        >
+          Continue
+        </button>
+      ) : null}
     </div>
   );
 }
