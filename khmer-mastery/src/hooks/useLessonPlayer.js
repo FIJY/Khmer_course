@@ -24,7 +24,7 @@ export default function useLessonPlayer() {
   const [lessonId, setLessonId] = useState(id);
 
   // Добавляем состояние для словаря алфавита
-  const [alphabetDb, setAlphabetDb] = useState({});
+  const [alphabetDb, setAlphabetDb] = useState(new Map());
 
   const audioRef = useRef(null);
   const audioTimeoutRef = useRef(null);
@@ -79,10 +79,10 @@ export default function useLessonPlayer() {
       ]);
 
       // Создаем карту (словарь) для мгновенного поиска типа символа
-      const alphaMap = {};
+      const alphaMap = new Map();
       if (alphabetResponse.data) {
         alphabetResponse.data.forEach(charEntry => {
-          alphaMap[charEntry.id] = charEntry;
+          alphaMap.set(charEntry.id, charEntry);
         });
       }
       setAlphabetDb(alphaMap);
