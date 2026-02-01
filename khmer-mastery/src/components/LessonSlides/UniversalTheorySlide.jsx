@@ -58,18 +58,18 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
     case 'theory':
     case 'rule':
       return (
-        <div className="w-full bg-gray-900 border border-white/10 p-8 rounded-[3.5rem] text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <div className="flex justify-center mb-6">
-                <div className="p-2 bg-cyan-500/10 rounded-full">
-                    {mode === 'rule' ? <Lightbulb className="text-amber-400" size={10} /> : <BookOpen className="text-cyan-400" size={10} />}
+        <div className="w-full bg-gray-900 border border-white/10 p-6 md:p-8 rounded-[3.5rem] text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="hidden sm:flex justify-center mb-4">
+                <div className="p-1.5 bg-cyan-500/10 rounded-full">
+                    {mode === 'rule' ? <Lightbulb className="text-amber-400" size={12} /> : <BookOpen className="text-cyan-400" size={12} />}
                 </div>
             </div>
 
-            <h2 className="text-2xl font-black italic uppercase text-white mb-6 tracking-wide">
+            <h2 className="text-xl md:text-2xl font-black italic uppercase text-white mb-4 tracking-wide">
                 {data.title || 'Theory Block'}
             </h2>
 
-            <div className="text-lg text-gray-300 leading-relaxed space-y-4 font-medium text-left md:text-center">
+            <div className="text-base md:text-lg text-gray-300 leading-relaxed space-y-3 font-medium text-left md:text-center">
                 {Array.isArray(data.description)
                     ? data.description.map((line, i) => <p key={i}>{line}</p>)
                     : <p>{data.description}</p>
@@ -84,12 +84,12 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
                       const isLatin = obj.kind === "latin";
 
                       const base =
-                        "w-full rounded-2xl border border-white/5 px-5 py-4 text-center";
+                        "w-full rounded-2xl border border-white/5 px-4 py-3 text-center";
 
                       const labelCls =
                         "bg-transparent border-0 px-0 py-0 text-sm text-gray-400 tracking-wide";
                       const latinCls =
-                        "bg-black/35 font-mono text-cyan-200 text-base md:text-lg break-words";
+                        "bg-black/35 font-mono text-cyan-200 text-[clamp(0.95rem,3.4vw,1.25rem)] tracking-tight uppercase whitespace-nowrap";
                       const khmerCls =
                         "bg-black/45 font-khmer text-cyan-100 text-2xl md:text-3xl leading-relaxed";
 
@@ -125,7 +125,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
                 )}
 
                 {data.footer && (
-                  <div className="mt-8 pt-6 border-t border-white/10 text-gray-200 text-base md:text-lg text-center whitespace-pre-line">
+                  <div className="mt-6 pt-5 border-t border-white/10 text-gray-200 text-base md:text-lg text-center whitespace-pre-line">
                     {data.footer}
                   </div>
                 )}
@@ -135,7 +135,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
             {data.audio && (
                 <button
                     onClick={() => play(data.audio)}
-                    className="mt-8 flex items-center gap-3 px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-full text-cyan-400 font-bold transition-all mx-auto border border-white/5"
+                    className="mt-6 flex items-center gap-3 px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-full text-cyan-400 font-bold transition-all mx-auto border border-white/5"
                 >
                     <Volume2 size={20} />
                     <span>Listen</span>
