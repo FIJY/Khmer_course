@@ -12,6 +12,7 @@ const DEFAULT_KHMER_FONT_URL =
  * Props:
  *  - data: object (lesson item data)
  *  - onPlayAudio: (filename: string) => void
+ *  - alphabetDb?: Map<char, {type: string, ...}> (база данных алфавита с подсказками)
  *
  * data schema (flexible):
  *  {
@@ -25,7 +26,7 @@ const DEFAULT_KHMER_FONT_URL =
  *    highlight?: string[]   // опционально: список слов/символов, которые подсветить в khmer
  *  }
  */
-export default function AnalysisSlide({ data, onPlayAudio }) {
+export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
   const d = data || {};
   const [highlightMode, setHighlightMode] = useState(HIGHLIGHT_MODES.ALL);
   const [resetToken, setResetToken] = useState(0);
@@ -41,7 +42,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
   const khmer = d.khmer ?? d.word ?? d.khmerText ?? "";
   const translation = d.translation ?? "";
   const note = d.note ?? "";
-  const audio = d.audio ?? "";
+  const audio = d.audio ?? d.word_audio ?? d.phrase_audio ?? "";
   const mode = d.mode ?? "";
   const isDecoderSelect = mode === "decoder_select";
   const highlight = Array.isArray(d.highlight) ? d.highlight : [];
@@ -49,8 +50,33 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
   const [selectionIds, setSelectionIds] = useState([]);
   const [selectionResetSeed, setSelectionResetSeed] = useState(0);
 
+  // Для подсказок
+  const [tooltipData, setTooltipData] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+
   const showDecoder = mode === "visual_decoder";
   const showDecoderSelect = mode === "decoder_select";
+
+  // Подсчет согласных
+  const consonantStats = useMemo(() => {
+    if (!khmer) return { total: 0, selected: 0, percentage: 0 };
+
+    const chars = Array.from(khmer);
+    const isConsonant = (ch) => {
+      // Проверка: это символ Кхмерской согласной (U+1780 - U+17A2)
+      const code = ch.codePointAt(0);
+      return code >= 0x1780 && code <= 0x17a2;
+    };
+
+    const total = chars.filter(isConsonant).length;
+    const selected = selectionIds.length;
+
+    return {
+      total,
+      selected,
+      percentage: total > 0 ? Math.round((selected / total) * 100) : 0,
+    };
+  }, [khmer, selectionIds]);
 
   function playAudio() {
     if (!onPlayAudio) return;
@@ -63,19 +89,43 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
     if (fileName) onPlayAudio(fileName);
   }
 
+  function handleGlyphClick(glyphChar, clickEvent) {
+    // Получаем подсказку из БД алфавита
+    let tip = null;
+
+    if (alphabetDb && alphabetDb.has(glyphChar)) {
+      const charData = alphabetDb.get(glyphChar);
+      tip = charData.type || charData.hint || `${glyphChar} (${charData.name || 'unknown'})`;
+    } else {
+      // Fallback: если БД не предоставлена
+      tip = glyphChar;
+    }
+
+    // Позиция подсказки (рядом с курсором)
+    const rect = clickEvent?.currentTarget?.getBoundingClientRect?.();
+    const x = rect ? rect.left + rect.width / 2 : clickEvent?.clientX || 0;
+    const y = rect ? rect.top : clickEvent?.clientY || 0;
+
+    setTooltipData(tip);
+    setTooltipPosition({ x, y });
+
+    // Скрывать подсказку через 2 секунды
+    setTimeout(() => {
+      setTooltipData(null);
+    }, 2000);
+  }
+
   function handleResetSelection() {
     setSelectionIds([]);
     setSelectionResetSeed((prev) => prev + 1);
   }
 
-  // очень простая "подсветка" без парсинга графем:
+  // Простая подсветка без парсинга графем:
   // подсвечиваем точные совпадения строк из highlight
   function renderHighlightedKhmer(str) {
     if (!str) return null;
     if (!highlight.length) return str;
 
-    // грубо, но достаточно для теста типов:
-    // делаем последовательные split для каждого маркера
     let parts = [{ text: str, hot: false }];
 
     highlight.forEach((token) => {
@@ -174,11 +224,25 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
                     </button>
                   ) : null}
                 </div>
+
+                {/* Счетчик согласных */}
+                <div style={styles.consonantCounter}>
+                  <span style={styles.counterLabel}>Consonants:</span>
+                  <span style={styles.counterValue}>
+                    {consonantStats.selected} / {consonantStats.total}
+                  </span>
+                  {consonantStats.total > 0 && (
+                    <span style={styles.counterPercentage}>
+                      ({consonantStats.percentage}%)
+                    </span>
+                  )}
+                </div>
+
                 <VisualDecoder
                   data={d}
                   text={khmer}
                   highlightMode={HIGHLIGHT_MODES.OFF}
-                  interactionMode="decoder_select"
+                  interactionMode="persistent_select"
                   selectionMode="multi"
                   compact={true}
                   viewBoxPad={55}
@@ -186,6 +250,8 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
                   onSelectionChange={setSelectionIds}
                   onLetterClick={handleLetterClick}
                   hideDefaultButton={true}
+                  onGlyphClick={handleGlyphClick}
+                  alphabetDb={alphabetDb}
                 />
                 {translation ? (
                   <div style={styles.inlineTranslation}>
@@ -209,6 +275,19 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
 
         {note ? <div style={styles.note}>{note}</div> : null}
       </div>
+
+      {/* Всплывающая подсказка */}
+      {tooltipData && (
+        <div
+          style={{
+            ...styles.tooltip,
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`,
+          }}
+        >
+          {tooltipData}
+        </div>
+      )}
     </div>
   );
 }
@@ -220,18 +299,18 @@ const styles = {
     justifyContent: "center",
     padding: "16px",
     boxSizing: "border-box",
+    position: "relative",
   },
   card: {
     width: "100%",
     maxWidth: "760px",
-    border: "1px solid rgba(0,0,0,0.08)",
-    borderRadius: "18px",
+    border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: "28px",
     padding: "18px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-    background: "white",
+    boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
+    background: "rgba(15, 23, 42, 0.92)",
     boxSizing: "border-box",
-    color: "#0f172a",
-
+    color: "rgba(226,232,240,0.95)",
   },
   headerRow: {
     display: "flex",
@@ -253,20 +332,21 @@ const styles = {
     gap: "6px",
     padding: "6px 10px",
     borderRadius: "999px",
-    border: "1px solid rgba(0,0,0,0.12)",
+    border: "1px solid rgba(255,255,255,0.12)",
     fontSize: "12px",
-    opacity: 0.85,
+    opacity: 0.9,
   },
   audioBtn: {
     display: "inline-flex",
     alignItems: "center",
     gap: "6px",
     padding: "8px 10px",
-    borderRadius: "12px",
-    border: "1px solid rgba(0,0,0,0.15)",
-    background: "white",
+    borderRadius: "999px",
+    border: "1px solid rgba(34, 211, 238, 0.45)",
+    background: "rgba(34, 211, 238, 0.12)",
     cursor: "pointer",
     fontSize: "13px",
+    color: "rgba(207,250,254,0.95)",
   },
   title: {
     fontSize: "20px",
@@ -290,20 +370,23 @@ const styles = {
   khmerBox: {
     marginTop: "10px",
     padding: "12px",
-    borderRadius: "14px",
-    border: "1px solid rgba(0,0,0,0.10)",
+    borderRadius: "18px",
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(0,0,0,0.25)",
   },
   khmerBoxCompact: {
     marginTop: "8px",
     padding: "10px",
-    borderRadius: "14px",
-    border: "1px solid rgba(0,0,0,0.10)",
+    borderRadius: "18px",
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(0,0,0,0.22)",
   },
   translationBox: {
     marginTop: "10px",
     padding: "12px",
-    borderRadius: "14px",
-    border: "1px solid rgba(0,0,0,0.10)",
+    borderRadius: "18px",
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(0,0,0,0.25)",
   },
   decoderBlock: {
     display: "flex",
@@ -320,16 +403,39 @@ const styles = {
     fontSize: "12px",
     opacity: 0.7,
   },
+  consonantCounter: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 10px",
+    borderRadius: "10px",
+    background: "rgba(34, 211, 238, 0.1)",
+    border: "1px solid rgba(34, 211, 238, 0.2)",
+    fontSize: "13px",
+  },
+  counterLabel: {
+    opacity: 0.7,
+    fontWeight: 500,
+  },
+  counterValue: {
+    fontWeight: 700,
+    color: "rgba(34, 211, 238, 0.95)",
+  },
+  counterPercentage: {
+    opacity: 0.6,
+    fontSize: "12px",
+  },
   resetButton: {
     display: "inline-flex",
     alignItems: "center",
     gap: "6px",
-    padding: "4px 8px",
+    padding: "4px 10px",
     borderRadius: "999px",
-    border: "1px solid rgba(0,0,0,0.12)",
-    background: "white",
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(15,23,42,0.55)",
     fontSize: "11px",
     cursor: "pointer",
+    color: "rgba(226,232,240,0.9)",
   },
   khmerLabel: {
     fontSize: "12px",
@@ -360,9 +466,50 @@ const styles = {
     opacity: 0.65,
   },
   hot: {
-    outline: "2px solid rgba(0,0,0,0.55)",
+    outline: "2px solid rgba(34,211,238,0.55)",
     borderRadius: "8px",
     padding: "0 4px",
     margin: "0 2px",
   },
+  tooltip: {
+    position: "fixed",
+    transform: "translate(-50%, -120%)",
+    backgroundColor: "rgba(34, 211, 238, 0.9)",
+    color: "rgba(15, 23, 42, 0.95)",
+    padding: "8px 12px",
+    borderRadius: "8px",
+    fontSize: "12px",
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+    pointerEvents: "none",
+    zIndex: 1000,
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
+    animation: "fadeInOut 2s ease-in-out",
+  },
 };
+
+// Добавляем CSS-анимацию в стиль
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+  @keyframes fadeInOut {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -120%) scale(0.8);
+    }
+    10% {
+      opacity: 1;
+      transform: translate(-50%, -120%) scale(1);
+    }
+    90% {
+      opacity: 1;
+      transform: translate(-50%, -120%) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -120%) scale(0.8);
+    }
+  }
+`;
+if (typeof document !== "undefined") {
+  document.head.appendChild(styleSheet);
+}

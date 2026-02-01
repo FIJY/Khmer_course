@@ -41,13 +41,16 @@
         {
           "type": "analysis",
           "data": {
+            "mode": "visual_decoder",
             "title": "Khmer is like Lego",
             "text": "Good news: Khmer is like Lego.\n\nYou don't need to know thousands of heroes.\nLet's not study the language yet.\nLet's just observe how it works.\n\nToday we will learn to find the Consonants in the text.\n\nThis unit starts slowly.\nSit on the same line.\n\nReady?",
             "mode": "decoder_select",
-            "khmer": "ខ្ញុំចង់ញ៉ាំបាយ",
+            "word": "ខ្ញុំចង់ញ៉ាំបាយ",
             "translation": "I want to eat rice"
+
           }
         },
+
         {
           "type": "rule",
           "data": {

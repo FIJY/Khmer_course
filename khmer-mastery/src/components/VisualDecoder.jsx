@@ -99,6 +99,8 @@ export default function VisualDecoder(props) {
     resetSelectionKey,
     compact = false,
     viewBoxPad = 70,
+    onGlyphClick,
+    alphabetDb,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
@@ -120,7 +122,8 @@ export default function VisualDecoder(props) {
 
   useEffect(() => {
     if (interactionMode !== "persistent_select") return;
-    setSelectedGlyphIds(new Set());
+    setSelectedIds([]);
+    setSelectedId(null);
   }, [interactionMode, resetSelectionKey, text]);
 
   useEffect(() => {
@@ -224,7 +227,7 @@ export default function VisualDecoder(props) {
     return (glyphs || []).map((glyph) => {
       let resolvedChar = glyph.char || "";
 
-      // если видим coeng, для клика мы хотим взять СЛЕДУЮЩУЮ согласную как “звук”,
+      // если видим coeng, для клика мы хотим взять СЛЕДУЮЩУЮ согласную как "звук",
       // а цвет — оставлять по glyph.char (coeng) или по реальному символу, в зависимости от режима
       if (resolvedChar === COENG_CHAR) {
         const { char, index } = findNextConsonantAfterCoeng(textChars, textIndex);
@@ -277,7 +280,7 @@ export default function VisualDecoder(props) {
     });
     if (consonantHits.length > 0) return consonantHits[0];
 
-    // дальше избегаем “голого” coeng, если есть что-то еще
+    // дальше избегаем "голого" coeng, если есть что-то еще
     const nonCoengHits = hits.filter((item) => item.g.char !== COENG_CHAR);
     if (nonCoengHits.length > 0) return nonCoengHits[0];
 
@@ -291,6 +294,13 @@ export default function VisualDecoder(props) {
     if (!hit) return;
 
     const hitId = hit.g.id ?? hit.idx;
+    const resolvedChar = resolvedGlyphChars[hit.idx] || hit.g.char;
+
+    // Вызываем callback подсказки
+    if (onGlyphClick) {
+      onGlyphClick(resolvedChar, e);
+    }
+
     if (selectionMode === "multi") {
       setSelectedIds((prev) => (prev.includes(hitId) ? prev : [...prev, hitId]));
     } else {
@@ -302,7 +312,6 @@ export default function VisualDecoder(props) {
 
     // Приоритет 2: авто-определение по восстановленному символу
     if (!soundFile) {
-      const resolvedChar = resolvedGlyphChars[hit.idx] || hit.g.char;
       soundFile = getSoundFileForChar(resolvedChar);
     }
 
@@ -391,9 +400,13 @@ export default function VisualDecoder(props) {
           let outlineWidth = isSelected ? 5 : 0;
 
           if (interactionMode === "persistent_select") {
-            if (isSelected && isConsonant) {
+            if (isSelected) {
               outlineWidth = 4;
-              outlineColor = isSubscript ? "#facc15" : "#22c55e";
+              if (isConsonant) {
+                outlineColor = isSubscript ? "#facc15" : "#22c55e"; // yellow for subscript consonant, green for normal consonant
+              } else {
+                outlineColor = "#ef4444"; // red for non-consonant selections
+              }
             } else {
               outlineWidth = 0;
               outlineColor = "transparent";
@@ -452,6 +465,7 @@ export default function VisualDecoder(props) {
                   filter: isSelected
                     ? `drop-shadow(0 0 10px ${outlineColor})`
                     : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
+                  cursor: "pointer",
                 }}
               />
             </g>
