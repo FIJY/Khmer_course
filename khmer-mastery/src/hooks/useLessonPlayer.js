@@ -24,7 +24,7 @@ export default function useLessonPlayer() {
   const [lessonId, setLessonId] = useState(id);
 
   // Добавляем состояние для словаря алфавита
-  const [alphabetDb, setAlphabetDb] = useState({});
+  const [alphabetDb, setAlphabetDb] = useState(new Map());
 
   const audioRef = useRef(null);
   const audioTimeoutRef = useRef(null);
@@ -64,6 +64,27 @@ export default function useLessonPlayer() {
     return {};
   }, []);
 
+  const normalizeAlphabetKey = (value) => {
+    if (!value) return "";
+    return String(value)
+      .replace(/[\u25CC\u200C\u200D]/g, "")
+      .trim()
+      .normalize("NFC");
+  };
+
+  const registerAlphabetEntry = (map, entry) => {
+    if (!entry) return;
+    const rawId = entry.id;
+    const normalizedId = normalizeAlphabetKey(rawId);
+    const khmerMatch = normalizedId.match(/[\u1780-\u17FF]/);
+    const fallbackChar = khmerMatch ? khmerMatch[0] : "";
+
+    [rawId, normalizedId, fallbackChar, entry.subscript_form]
+      .map(normalizeAlphabetKey)
+      .filter(Boolean)
+      .forEach((key) => map.set(key, entry));
+  };
+
   const fetchLessonData = useCallback(async () => {
     try {
       setLoading(true);
@@ -79,10 +100,10 @@ export default function useLessonPlayer() {
       ]);
 
       // Создаем карту (словарь) для мгновенного поиска типа символа
-      const alphaMap = {};
+      const alphaMap = new Map();
       if (alphabetResponse.data) {
         alphabetResponse.data.forEach(charEntry => {
-          alphaMap[charEntry.id] = charEntry;
+          registerAlphabetEntry(alphaMap, charEntry);
         });
       }
       setAlphabetDb(alphaMap);
