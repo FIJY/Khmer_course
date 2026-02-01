@@ -44,6 +44,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
   const audio = d.audio ?? "";
   const mode = d.mode ?? "";
   const isDecoderSelect = mode === "decoder_select";
+  const highlight = Array.isArray(d.highlight) ? d.highlight : [];
 
   const [selectionIds, setSelectionIds] = useState([]);
   const [selectionResetSeed, setSelectionResetSeed] = useState(0);
@@ -67,7 +68,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
     setSelectionResetSeed((prev) => prev + 1);
   }
 
-  // очень простая “подсветка” без парсинга графем:
+  // очень простая "подсветка" без парсинга графем:
   // подсвечиваем точные совпадения строк из highlight
   function renderHighlightedKhmer(str) {
     if (!str) return null;
