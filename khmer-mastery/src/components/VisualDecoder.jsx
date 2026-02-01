@@ -92,6 +92,7 @@ export default function VisualDecoder({
   onComplete,
   hideDefaultButton = true,
   highlightMode = HIGHLIGHT_MODES.ALL,
+  resetSelectionKey,
   interactionMode = "default",
 }) {
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
@@ -100,6 +101,7 @@ export default function VisualDecoder({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedGlyphIds, setSelectedGlyphIds] = useState(() => new Set());
 
   // Карта звуков для точного воспроизведения из БД
   const [glyphSoundMap, setGlyphSoundMap] = useState({});
@@ -110,6 +112,11 @@ export default function VisualDecoder({
   useEffect(() => {
     hitRefs.current = [];
   }, [text]);
+
+  useEffect(() => {
+    if (interactionMode !== "persistent_select") return;
+    setSelectedGlyphIds(new Set());
+  }, [interactionMode, resetSelectionKey, text]);
 
   useEffect(() => {
     let active = true;
@@ -275,7 +282,19 @@ export default function VisualDecoder({
     const hit = pickGlyphAtPoint(p);
     if (!hit) return;
 
-    setSelectedId(hit.g.id);
+    if (interactionMode === "persistent_select") {
+      setSelectedGlyphIds((prev) => {
+        const next = new Set(prev);
+        if (hit.g.id !== undefined && hit.g.id !== null) {
+          next.add(hit.g.id);
+        } else {
+          next.add(`idx-${hit.idx}`);
+        }
+        return next;
+      });
+    } else {
+      setSelectedId(hit.g.id);
+    }
 
     // Приоритет 1: звук из очереди (из БД/карты)
     let soundFile = glyphSoundMap[hit.idx];
@@ -310,7 +329,7 @@ export default function VisualDecoder({
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
 
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
-      return isKhmerConsonant(resolved) ? getKhmerGlyphColor(resolved) : FALLBACK.MUTED;
+      return isKhmerConsonant(resolved) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
     }
 
     // OFF
@@ -339,7 +358,11 @@ export default function VisualDecoder({
         onPointerDown={handlePointerDown}
       >
         {glyphs.map((glyph, i) => {
-          const isSelected = selectedId === glyph.id;
+          const glyphKey = glyph.id ?? `idx-${i}`;
+          const isSelected =
+            interactionMode === "persistent_select"
+              ? selectedGlyphIds.has(glyphKey)
+              : selectedId === glyph.id;
           const fillColor = colorForGlyph(glyph, i);
           const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
           const isSubscript = subscriptConsonantIndices.has(i);
@@ -347,7 +370,15 @@ export default function VisualDecoder({
           let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
           let outlineWidth = isSelected ? 5 : 0;
 
-          if (interactionMode === "find_consonant" && selectedId !== null) {
+          if (interactionMode === "persistent_select") {
+            if (isSelected && isConsonant) {
+              outlineWidth = 4;
+              outlineColor = isSubscript ? "#facc15" : "#22c55e";
+            } else {
+              outlineWidth = 0;
+              outlineColor = "transparent";
+            }
+          } else if (interactionMode === "find_consonant" && selectedId !== null) {
             outlineWidth = 4;
             if (isSelected) {
               outlineColor = "#22c55e";
