@@ -8,6 +8,8 @@ const DEFAULT_KHMER_FONT_URL =
   import.meta.env.VITE_KHMER_FONT_URL ??
   "/fonts/KhmerOS_siemreap.ttf";
 
+const COENG_CHAR = "្";
+
 const isKhmerConsonant = (ch) => {
   if (!ch) return false;
   const code = ch.codePointAt(0);
@@ -39,16 +41,65 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
     return String(d.text).split("\n").map((s) => s.trim()).filter(Boolean);
   }, [d.text]);
 
+  const resolvedGlyphChars = useMemo(() => {
+    const textChars = Array.from(khmer || "");
+    let textIndex = 0;
+    return (renderedGlyphs || []).map((glyph) => {
+      let resolvedChar = glyph?.char || "";
+
+      if (resolvedChar === COENG_CHAR) {
+        for (let i = textIndex; i < textChars.length; i += 1) {
+          if (textChars[i] === COENG_CHAR) {
+            for (let j = i + 1; j < textChars.length; j += 1) {
+              if (isKhmerConsonant(textChars[j])) {
+                resolvedChar = textChars[j];
+                textIndex = j + 1;
+                break;
+              }
+            }
+            break;
+          }
+        }
+      } else if (resolvedChar) {
+        const nextIndex = textChars.indexOf(resolvedChar, textIndex);
+        if (nextIndex !== -1) textIndex = nextIndex + 1;
+      }
+
+      return resolvedChar || glyph?.char || "";
+    });
+  }, [khmer, renderedGlyphs]);
+
+  const subscriptConsonantIndices = useMemo(() => {
+    const indices = new Set();
+    (renderedGlyphs || []).forEach((glyph, idx) => {
+      if (glyph?.char !== COENG_CHAR) return;
+      const resolved = resolvedGlyphChars[idx + 1] || renderedGlyphs[idx + 1]?.char || "";
+      if (isKhmerConsonant(resolved)) indices.add(idx + 1);
+    });
+    return indices;
+  }, [renderedGlyphs, resolvedGlyphChars]);
+
   const consonantStats = useMemo(() => {
     if (!khmer) return { total: 0, selected: 0, percentage: 0 };
     const chars = Array.from(khmer);
     const total = chars.filter(isKhmerConsonant).length;
-    const selected = selectionIds.filter(id => {
-      const glyph = renderedGlyphs[id];
-      return glyph && isKhmerConsonant(glyph.char);
+    const selectedIndices = selectionIds
+      .map((id) => (Number.isInteger(id) ? id : Number(id)))
+      .filter((id) => Number.isInteger(id) && id >= 0);
+    const selected = selectedIndices.filter((id) => {
+      const resolved = resolvedGlyphChars[id] || renderedGlyphs[id]?.char || "";
+      return isKhmerConsonant(resolved);
     }).length;
-    return { total, selected, percentage: total > 0 ? Math.round((selected / total) * 100) : 0 };
-  }, [khmer, selectionIds, renderedGlyphs]);
+    const totalSubscript = subscriptConsonantIndices.size;
+    const selectedSubscript = selectedIndices.filter((id) => subscriptConsonantIndices.has(id)).length;
+    return {
+      total,
+      selected,
+      percentage: total > 0 ? Math.round((selected / total) * 100) : 0,
+      totalSubscript,
+      selectedSubscript
+    };
+  }, [khmer, selectionIds, renderedGlyphs, resolvedGlyphChars, subscriptConsonantIndices]);
 
   function playAudio() {
     if (!onPlayAudio || !audio) return;
@@ -215,6 +266,11 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
                   <span style={styles.counterLabel}>Consonants:</span>
                   <span style={styles.counterValue}>{consonantStats.selected} / {consonantStats.total}</span>
                   {consonantStats.total > 0 && <span style={styles.counterPercentage}>({consonantStats.percentage}%)</span>}
+                  {consonantStats.totalSubscript > 0 && (
+                    <span style={styles.counterSubscript}>
+                      Subscript: {consonantStats.selectedSubscript} / {consonantStats.totalSubscript}
+                    </span>
+                  )}
                 </div>
 
                 <VisualDecoder
@@ -282,6 +338,7 @@ const styles = {
   decoderBlock: { display: "flex", flexDirection: "column", gap: "8px" },
   consonantCounter: { display: "flex", gap: "8px", padding: "8px 10px", borderRadius: "10px", background: "rgba(34, 211, 238, 0.1)", border: "1px solid rgba(34, 211, 238, 0.2)", fontSize: "13px" },
   counterValue: { fontWeight: 700, color: "#22d3ee" },
+  counterSubscript: { fontWeight: 700, color: "#facc15", border: "1px solid rgba(250, 204, 21, 0.4)", padding: "2px 6px", borderRadius: "999px", background: "rgba(250, 204, 21, 0.1)" },
   resetButton: { display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "999px", background: "rgba(15,23,42,0.55)", border: "1px solid rgba(255,255,255,0.12)", color: "white", cursor: "pointer", fontSize: "11px" },
   khmerLabel: { fontSize: "12px", opacity: 0.65, marginBottom: "4px" },
   khmerText: { fontFamily: "KhmerFont, sans-serif", fontSize: "28px" },
