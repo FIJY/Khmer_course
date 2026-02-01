@@ -10,7 +10,7 @@ import { buildShapeApiUrl } from "../lib/apiConfig";
 
 const COENG_CHAR = "្";
 
-// Режимы подсветки (временно, пока не задашь жестко по урокам)
+// Режимы подсветки
 export const HIGHLIGHT_MODES = {
   ALL: "all", // все как обычно по палитре
   CONSONANTS: "consonants", // подсвечиваем согласные, остальное приглушаем
@@ -26,7 +26,6 @@ const FALLBACK = {
 
 // --- ХЕЛПЕРЫ ---
 function isKhmerConsonant(ch) {
-  // можно использовать из lib, но оставим фолбэк
   if (!ch) return false;
   try {
     return typeof isKhmerConsonantChar === "function"
@@ -100,6 +99,7 @@ export default function VisualDecoder(props) {
     compact = false,
     viewBoxPad = 70,
     onGlyphClick,
+    onGlyphsRendered,
     alphabetDb,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
@@ -110,7 +110,6 @@ export default function VisualDecoder(props) {
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // Карта звуков для точного воспроизведения из БД
   const [glyphSoundMap, setGlyphSoundMap] = useState({});
 
   const svgRef = useRef(null);
@@ -142,8 +141,7 @@ export default function VisualDecoder(props) {
         if (!active) return;
         const arr = Array.isArray(json) ? json : [];
         setGlyphs(arr);
-        // для твоего дебага в консоли
-        window.__lastGlyphs = arr;
+        if (onGlyphsRendered) onGlyphsRendered(arr);
         setLoading(false);
       })
       .catch((err) => {
@@ -156,9 +154,8 @@ export default function VisualDecoder(props) {
     return () => {
       active = false;
     };
-  }, [text]);
+  }, [text, onGlyphsRendered]);
 
-  // ГЕНЕРАЦИЯ КАРТЫ ЗВУКОВ (Sound Queue)
   useEffect(() => {
     if (!glyphs.length || !data?.char_split) return;
 
@@ -219,7 +216,6 @@ export default function VisualDecoder(props) {
       .sort((a, b) => a.area - b.area);
   }, [glyphs]);
 
-  // Восстановление символов (важно для coeng/сабскриптов)
   const resolvedGlyphChars = useMemo(() => {
     const textChars = Array.from(text || "");
     let textIndex = 0;
@@ -227,8 +223,6 @@ export default function VisualDecoder(props) {
     return (glyphs || []).map((glyph) => {
       let resolvedChar = glyph.char || "";
 
-      // если видим coeng, для клика мы хотим взять СЛЕДУЮЩУЮ согласную как "звук",
-      // а цвет — оставлять по glyph.char (coeng) или по реальному символу, в зависимости от режима
       if (resolvedChar === COENG_CHAR) {
         const { char, index } = findNextConsonantAfterCoeng(textChars, textIndex);
         if (char) {
@@ -273,14 +267,12 @@ export default function VisualDecoder(props) {
 
     if (hits.length === 0) return null;
 
-    // приоритет: если попали в согласную — берем ее
     const consonantHits = hits.filter((item) => {
       const resolved = resolvedGlyphChars[item.idx] || item.g.char;
       return isKhmerConsonant(resolved);
     });
     if (consonantHits.length > 0) return consonantHits[0];
 
-    // дальше избегаем "голого" coeng, если есть что-то еще
     const nonCoengHits = hits.filter((item) => item.g.char !== COENG_CHAR);
     if (nonCoengHits.length > 0) return nonCoengHits[0];
 
@@ -296,7 +288,6 @@ export default function VisualDecoder(props) {
     const hitId = hit.g.id ?? hit.idx;
     const resolvedChar = resolvedGlyphChars[hit.idx] || hit.g.char;
 
-    // Вызываем callback подсказки
     if (onGlyphClick) {
       onGlyphClick(resolvedChar, e);
     }
@@ -307,10 +298,8 @@ export default function VisualDecoder(props) {
       setSelectedId(hitId);
     }
 
-    // Приоритет 1: звук из очереди (из БД/карты)
     let soundFile = glyphSoundMap[hit.idx];
 
-    // Приоритет 2: авто-определение по восстановленному символу
     if (!soundFile) {
       soundFile = getSoundFileForChar(resolvedChar);
     }
@@ -351,15 +340,12 @@ export default function VisualDecoder(props) {
 
   function colorForGlyph(glyph, idx) {
     const resolved = resolvedGlyphChars[idx] || glyph.char || "";
-    const base = getKhmerGlyphColor(glyph.char); // цвет формы — по глифу (coeng останется SUBSCRIPT)
+    const base = getKhmerGlyphColor(glyph.char);
 
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
-
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
       return isKhmerConsonant(resolved) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
     }
-
-    // OFF
     return FALLBACK.NEUTRAL;
   }
 
@@ -372,9 +358,7 @@ export default function VisualDecoder(props) {
   }
 
   return (
-    <div
-      className={`w-full flex flex-col items-center ${compact ? "py-3" : "py-8"}`}
-    >
+    <div className={`w-full flex flex-col items-center ${compact ? "py-3" : "py-8"}`}>
       <svg
         ref={svgRef}
         viewBox={`${vb.minX} ${vb.minY} ${vb.w} ${vb.h}`}
@@ -403,13 +387,10 @@ export default function VisualDecoder(props) {
             if (isSelected) {
               outlineWidth = 4;
               if (isConsonant) {
-                outlineColor = isSubscript ? "#facc15" : "#22c55e"; // yellow for subscript consonant, green for normal consonant
+                outlineColor = isSubscript ? "#facc15" : "#22c55e";
               } else {
-                outlineColor = "#ef4444"; // red for non-consonant selections
+                outlineColor = "#ef4444";
               }
-            } else {
-              outlineWidth = 0;
-              outlineColor = "transparent";
             }
           } else if (interactionMode === "find_consonant" && selectedId !== null) {
             outlineWidth = 4;
@@ -417,8 +398,6 @@ export default function VisualDecoder(props) {
               outlineColor = "#22c55e";
             } else if (isSubscript) {
               outlineColor = "#facc15";
-            } else if (isConsonant) {
-              outlineColor = "#ef4444";
             } else {
               outlineColor = "#ef4444";
             }
@@ -434,14 +413,11 @@ export default function VisualDecoder(props) {
               } else {
                 outlineColor = "#94a3b8";
               }
-            } else {
-              outlineColor = "transparent";
             }
           }
 
           return (
-            <g key={glyph.id ?? i}>
-              {/* hit-слой: толстый, невидимый; нужен для точного клика */}
+            <g key={glyphId}>
               <path
                 ref={(el) => (hitRefs.current[i] = el)}
                 d={glyph.d}
@@ -450,8 +426,6 @@ export default function VisualDecoder(props) {
                 strokeWidth="50"
                 pointerEvents="none"
               />
-
-              {/* видимый слой: ВАЖНО — не меняем fill на голубой, только обводка */}
               <path
                 d={glyph.d}
                 fill={fillColor}
