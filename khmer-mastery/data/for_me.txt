@@ -134,3 +134,45 @@ audio: если хочешь озвучить сам блок
 
 Когда: конец юнита/урока, перед квизом или перед переходом.
 Эффект: эмоциональная точка.
+
+text-base  → обычный
+text-sm    → немного меньше
+text-xs    → мелкий
+text-[11px] → очень аккуратный
+text-[10px] → микро
+
+
+Задача: собрать JSON для урока R 1.1.3 из текста ниже.
+Требования:
+
+каждый экран = объект { type, data }
+
+type брать только из списка поддерживаемых типов:
+title, intro, theory, rule, reading-algorithm, learn_char, word_breakdown, visual_decoder, analysis, comparison_audio, no-spaces, vocab_card, quiz, ready, drill_choice
+
+analysis использует поля: title, subtitle, text, khmer/khmerText, translation, audio, note
+
+visual_decoder — для механики “тыкаем по буквам, рамка загорается”
+
+если есть “сначала звучит согласный, потом — его название”, это можно оформить как comparison_audio или как analysis с объяснением
+
+итог — валидный JSON (массив экранов)
+
+Текст урока:
+R 1.1.3
+You may have noticed something.
+
+Every Khmer block is built around one main letter.
+That letter is a consonant.
+
+Кхмерский текст типа «найди меня».
+
+Механика —
+мы тыкаем по буквам,
+у букв загорается рамка.
+
+Сначала звучит согласный.
+Потом — его название.
+
+Никаких чётких правил.
+Только наблюдение.

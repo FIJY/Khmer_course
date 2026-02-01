@@ -22,14 +22,11 @@
                 "kind": "label",
                 "text": "English without spaces:"
               },
-              {
-                "kind": "latin",
-                "text": "HaveYouEverSeenATextWallLikeThis"
-              },
+
               {
                 "kind": "latin",
                 "text": "HaveYouEverSeenATextWallLikeThis",
-                "className": "text-sm md:text-base"
+                "className": "text-sm md:text-sm"
               },
               {
                 "kind": "khmer",
@@ -46,15 +43,10 @@
           "data": {
             "title": "Khmer is like Lego",
             "text": "Good news: Khmer is like Lego.\n\nYou don't need to know thousands of heroes.\nLet's not study the language yet.\nLet's just observe how it works.\n\nToday we will learn to find the Consonants in the text.\n\nThis unit starts slowly.\nSit on the same line.\n\nReady?",
-            "word": "ខ្ញុំចង់ញ៉ាំបាយ",
+            "mode": "visual_decoder",
+            "khmer": "ខ្ញុំចង់ញ៉ាំបាយ",
             "translation": "I want to eat rice",
-            "audio": "phrase_i_want_eat_rice",
-            "highlight": [
-              "ខ",
-              "ច",
-              "ញ",
-              "ប"
-            ]
+            "word_audio": "r1_1_2_rice.mp3"
           }
         },
         {
