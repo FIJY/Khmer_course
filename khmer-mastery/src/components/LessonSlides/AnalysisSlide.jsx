@@ -27,6 +27,8 @@ const DEFAULT_KHMER_FONT_URL =
  */
 export default function AnalysisSlide({ data, onPlayAudio }) {
   const d = data || {};
+  const [highlightMode, setHighlightMode] = useState(HIGHLIGHT_MODES.ALL);
+  const [resetToken, setResetToken] = useState(0);
 
   const title = d.title ?? "Analysis";
   const subtitle = d.subtitle ?? "";
@@ -46,7 +48,8 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
   const [selectionIds, setSelectionIds] = useState([]);
   const [selectionResetSeed, setSelectionResetSeed] = useState(0);
 
-  const highlight = Array.isArray(d.highlight) ? d.highlight : [];
+  const showDecoder = mode === "visual_decoder";
+  const showDecoderSelect = mode === "decoder_select";
 
   function playAudio() {
     if (!onPlayAudio) return;
