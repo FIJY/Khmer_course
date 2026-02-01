@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { RotateCcw, ScanSearch, Volume2 } from "lucide-react";
 import VisualDecoder, { HIGHLIGHT_MODES } from "../VisualDecoder";
+import { getKhmerGlyphCategory } from "../../lib/khmerGlyphRenderer";
 
 const DEFAULT_KHMER_FONT_URL =
   import.meta.env.VITE_KHMER_FONT_URL ??
@@ -58,17 +59,74 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
     if (onPlayAudio && fileName) onPlayAudio(fileName);
   }
 
+  const normalizeLookupChar = (glyphChar) => {
+    if (!glyphChar) return "";
+    const cleaned = String(glyphChar).replace(/\u25CC/g, "").trim();
+    return (cleaned || glyphChar).normalize("NFC");
+  };
+
+  const lookupAlphabetEntry = (glyphChar) => {
+    if (!alphabetDb || !glyphChar) return null;
+    const normalized = normalizeLookupChar(glyphChar);
+
+    if (alphabetDb instanceof Map) {
+      if (alphabetDb.has(normalized)) return alphabetDb.get(normalized);
+      if (alphabetDb.has(glyphChar)) return alphabetDb.get(glyphChar);
+    } else if (typeof alphabetDb === "object") {
+      if (alphabetDb[normalized]) return alphabetDb[normalized];
+      if (alphabetDb[glyphChar]) return alphabetDb[glyphChar];
+    }
+
+    const khmerMatch = normalized.match(/[\u1780-\u17FF]/);
+    const fallbackChar = khmerMatch ? khmerMatch[0] : "";
+    if (fallbackChar) {
+      if (alphabetDb instanceof Map) return alphabetDb.get(fallbackChar) || null;
+      if (typeof alphabetDb === "object") return alphabetDb[fallbackChar] || null;
+    }
+
+    return null;
+  };
+
+  const fallbackTypeFromChar = (glyphChar) => {
+    const normalized = normalizeLookupChar(glyphChar);
+    const khmerMatch = normalized.match(/[\u1780-\u17FF]/);
+    const targetChar = khmerMatch ? khmerMatch[0] : normalized;
+    const category = getKhmerGlyphCategory(targetChar);
+    switch (category) {
+      case "consonant":
+        return "consonant";
+      case "vowel_dep":
+        return "vowel_dependent";
+      case "vowel_ind":
+        return "vowel_independent";
+      case "diacritic":
+        return "diacritic";
+      case "numeral":
+        return "numeral";
+      case "space":
+        return "space";
+      case "coeng":
+        return "consonant";
+      default:
+        return "symbol";
+    }
+  };
+
   // ОБНОВЛЕНО: теперь данные сохраняются и не исчезают
   function handleGlyphClick(glyphChar) {
-    if (alphabetDb && alphabetDb.has(glyphChar)) {
-      const charData = alphabetDb.get(glyphChar);
+    const charData = lookupAlphabetEntry(glyphChar);
+    if (charData) {
       setActiveCharData({
         char: glyphChar,
-        type: charData.type || "",
-        hint: charData.hint || charData.name || ""
+        type: charData.type || fallbackTypeFromChar(glyphChar) || "",
+        hint: charData.hint || charData.name_en || charData.name || charData.description || ""
       });
     } else {
-      setActiveCharData({ char: glyphChar, type: "Unknown", hint: "" });
+      setActiveCharData({
+        char: glyphChar,
+        type: fallbackTypeFromChar(glyphChar) || "Unknown",
+        hint: ""
+      });
     }
   }
 

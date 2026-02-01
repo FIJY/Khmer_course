@@ -48,7 +48,8 @@ export default function LessonPlayer() {
     handleQuizAnswer,
     goBack,
     setCanAdvance,
-    refresh
+    refresh,
+    alphabetDb
   } = useLessonPlayer();
 
   const safeItems = Array.isArray(items) ? items : [];
@@ -357,6 +358,7 @@ export default function LessonPlayer() {
         <AnalysisSlide
           data={current}
           onPlayAudio={playLocalAudio}
+          alphabetDb={alphabetDb}
         />
       )}
       {type === 'comparison_audio' && (
