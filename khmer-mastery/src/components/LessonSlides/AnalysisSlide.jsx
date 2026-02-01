@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
-import { Volume2, ScanSearch } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { RotateCcw, ScanSearch, Volume2 } from "lucide-react";
+import VisualDecoder, { HIGHLIGHT_MODES } from "../VisualDecoder";
 
 const DEFAULT_KHMER_FONT_URL =
   import.meta.env.VITE_KHMER_FONT_URL ??
@@ -39,6 +40,11 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
   const translation = d.translation ?? "";
   const note = d.note ?? "";
   const audio = d.audio ?? "";
+  const mode = d.mode ?? "";
+  const isDecoderSelect = mode === "decoder_select";
+
+  const [selectionIds, setSelectionIds] = useState([]);
+  const [selectionResetSeed, setSelectionResetSeed] = useState(0);
 
   const highlight = Array.isArray(d.highlight) ? d.highlight : [];
 
@@ -46,6 +52,16 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
     if (!onPlayAudio) return;
     if (!audio) return;
     onPlayAudio(audio);
+  }
+
+  function handleLetterClick(fileName) {
+    if (!onPlayAudio) return;
+    if (fileName) onPlayAudio(fileName);
+  }
+
+  function handleResetSelection() {
+    setSelectionIds([]);
+    setSelectionResetSeed((prev) => prev + 1);
   }
 
   // очень простая “подсветка” без парсинга графем:
@@ -114,7 +130,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
               <span>analysis</span>
             </div>
 
-            {audio ? (
+            {audio && !isDecoderSelect ? (
               <button type="button" style={styles.audioBtn} onClick={playAudio}>
                 <Volume2 size={16} />
                 <span>Play</span>
@@ -134,13 +150,53 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
         ) : null}
 
         {khmer ? (
-          <div style={styles.khmerBox}>
+          <div style={isDecoderSelect ? styles.khmerBoxCompact : styles.khmerBox}>
             <div style={styles.khmerLabel}>Khmer</div>
-            <div style={styles.khmerText}>{renderHighlightedKhmer(khmer)}</div>
+            {isDecoderSelect ? (
+              <div style={styles.decoderBlock}>
+                <div style={styles.decoderHintRow}>
+                  <span style={styles.decoderHint}>
+                    Tap letters to hear them. Selected letters stay highlighted.
+                  </span>
+                  {selectionIds.length ? (
+                    <button
+                      type="button"
+                      onClick={handleResetSelection}
+                      style={styles.resetButton}
+                      aria-label="Reset selection"
+                    >
+                      <RotateCcw size={14} />
+                      Reset
+                    </button>
+                  ) : null}
+                </div>
+                <VisualDecoder
+                  data={d}
+                  text={khmer}
+                  highlightMode={HIGHLIGHT_MODES.OFF}
+                  interactionMode="decoder_select"
+                  selectionMode="multi"
+                  compact={true}
+                  viewBoxPad={55}
+                  resetSelectionKey={selectionResetSeed}
+                  onSelectionChange={setSelectionIds}
+                  onLetterClick={handleLetterClick}
+                  hideDefaultButton={true}
+                />
+                {translation ? (
+                  <div style={styles.inlineTranslation}>
+                    <span style={styles.inlineTranslationLabel}>Meaning:</span>
+                    {translation}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div style={styles.khmerText}>{renderHighlightedKhmer(khmer)}</div>
+            )}
           </div>
         ) : null}
 
-        {translation ? (
+        {!isDecoderSelect && translation ? (
           <div style={styles.translationBox}>
             <div style={styles.khmerLabel}>Meaning</div>
             <div style={styles.translationText}>{translation}</div>
@@ -233,11 +289,43 @@ const styles = {
     borderRadius: "14px",
     border: "1px solid rgba(0,0,0,0.10)",
   },
+  khmerBoxCompact: {
+    marginTop: "8px",
+    padding: "10px",
+    borderRadius: "14px",
+    border: "1px solid rgba(0,0,0,0.10)",
+  },
   translationBox: {
     marginTop: "10px",
     padding: "12px",
     borderRadius: "14px",
     border: "1px solid rgba(0,0,0,0.10)",
+  },
+  decoderBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  decoderHintRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
+  },
+  decoderHint: {
+    fontSize: "12px",
+    opacity: 0.7,
+  },
+  resetButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "4px 8px",
+    borderRadius: "999px",
+    border: "1px solid rgba(0,0,0,0.12)",
+    background: "white",
+    fontSize: "11px",
+    cursor: "pointer",
   },
   khmerLabel: {
     fontSize: "12px",
@@ -252,6 +340,15 @@ const styles = {
   translationText: {
     fontSize: "15px",
     lineHeight: 1.35,
+  },
+  inlineTranslation: {
+    fontSize: "14px",
+    lineHeight: 1.4,
+    opacity: 0.75,
+  },
+  inlineTranslationLabel: {
+    fontWeight: 600,
+    marginRight: "6px",
   },
   note: {
     marginTop: "12px",
