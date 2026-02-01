@@ -27,8 +27,9 @@
                 "text": "HaveYouEverSeenATextWallLikeThis"
               },
               {
-                "kind": "label",
-                "text": "Now imagine that's EVERY SINGLE WORD in Khmer:"
+                "kind": "latin",
+                "text": "HaveYouEverSeenATextWallLikeThis",
+                "className": "text-sm md:text-base"
               },
               {
                 "kind": "khmer",

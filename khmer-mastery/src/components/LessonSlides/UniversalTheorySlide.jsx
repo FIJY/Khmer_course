@@ -93,7 +93,9 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
                       const khmerCls =
                         "bg-black/45 font-khmer text-cyan-100 text-2xl md:text-3xl leading-relaxed";
 
-                      const cls = isLabel ? labelCls : `${base} ${isKhmer ? khmerCls : isLatin ? latinCls : "bg-black/40 text-cyan-200"}`;
+                      const extra = obj.className ? ` ${obj.className}` : "";
+                      const cls = (isLabel ? labelCls : `${base} ${isKhmer ? khmerCls : isLatin ? latinCls : "bg-black/40 text-cyan-200"}`) + extra;
+
 
                       const content = (
                         <div className={cls}>
