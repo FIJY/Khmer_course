@@ -85,23 +85,28 @@ function makeViewBoxFromGlyphs(glyphs, pad = 60) {
   };
 }
 
-export default function VisualDecoder({
-  data,
-  text: propText,
-  onLetterClick,
-  onComplete,
-  hideDefaultButton = true,
-  highlightMode = HIGHLIGHT_MODES.ALL,
-  resetSelectionKey,
-  interactionMode = "default",
-}) {
+export default function VisualDecoder(props) {
+  const {
+    data,
+    text: propText,
+    onLetterClick,
+    onComplete,
+    hideDefaultButton = true,
+    highlightMode = HIGHLIGHT_MODES.ALL,
+    interactionMode = "default",
+    selectionMode = "single",
+    onSelectionChange,
+    resetSelectionKey,
+    compact = false,
+    viewBoxPad = 70,
+  } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
   const [glyphs, setGlyphs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  const [selectedGlyphIds, setSelectedGlyphIds] = useState(() => new Set());
+  const [selectedIds, setSelectedIds] = useState([]);
 
   // Карта звуков для точного воспроизведения из БД
   const [glyphSoundMap, setGlyphSoundMap] = useState({});
@@ -199,7 +204,10 @@ export default function VisualDecoder({
     setGlyphSoundMap(newMap);
   }, [glyphs, data]);
 
-  const vb = useMemo(() => makeViewBoxFromGlyphs(glyphs, 70), [glyphs]);
+  const vb = useMemo(
+    () => makeViewBoxFromGlyphs(glyphs, viewBoxPad),
+    [glyphs, viewBoxPad]
+  );
 
   const hitOrder = useMemo(() => {
     if (!glyphs) return [];
@@ -282,18 +290,11 @@ export default function VisualDecoder({
     const hit = pickGlyphAtPoint(p);
     if (!hit) return;
 
-    if (interactionMode === "persistent_select") {
-      setSelectedGlyphIds((prev) => {
-        const next = new Set(prev);
-        if (hit.g.id !== undefined && hit.g.id !== null) {
-          next.add(hit.g.id);
-        } else {
-          next.add(`idx-${hit.idx}`);
-        }
-        return next;
-      });
+    const hitId = hit.g.id ?? hit.idx;
+    if (selectionMode === "multi") {
+      setSelectedIds((prev) => (prev.includes(hitId) ? prev : [...prev, hitId]));
     } else {
-      setSelectedId(hit.g.id);
+      setSelectedId(hitId);
     }
 
     // Приоритет 1: звук из очереди (из БД/карты)
@@ -308,6 +309,23 @@ export default function VisualDecoder({
     if (onLetterClick) onLetterClick(soundFile);
     if (onComplete) onComplete();
   };
+
+  useEffect(() => {
+    if (!onSelectionChange) return;
+    if (selectionMode === "multi") {
+      onSelectionChange(selectedIds);
+    } else if (selectedId !== null) {
+      onSelectionChange([selectedId]);
+    } else {
+      onSelectionChange([]);
+    }
+  }, [onSelectionChange, selectedId, selectedIds, selectionMode]);
+
+  useEffect(() => {
+    if (resetSelectionKey === undefined) return;
+    setSelectedId(null);
+    setSelectedIds([]);
+  }, [resetSelectionKey]);
 
   const subscriptConsonantIndices = useMemo(() => {
     const indices = new Set();
@@ -345,11 +363,13 @@ export default function VisualDecoder({
   }
 
   return (
-    <div className="w-full flex flex-col items-center py-8">
+    <div
+      className={`w-full flex flex-col items-center ${compact ? "py-3" : "py-8"}`}
+    >
       <svg
         ref={svgRef}
         viewBox={`${vb.minX} ${vb.minY} ${vb.w} ${vb.h}`}
-        className="max-h-[250px] w-full overflow-visible select-none"
+        className={`${compact ? "max-h-[190px]" : "max-h-[250px]"} w-full overflow-visible select-none`}
         style={{
           touchAction: "manipulation",
           WebkitTapHighlightColor: "transparent",
@@ -358,11 +378,11 @@ export default function VisualDecoder({
         onPointerDown={handlePointerDown}
       >
         {glyphs.map((glyph, i) => {
-          const glyphKey = glyph.id ?? `idx-${i}`;
+          const glyphId = glyph.id ?? i;
           const isSelected =
-            interactionMode === "persistent_select"
-              ? selectedGlyphIds.has(glyphKey)
-              : selectedId === glyph.id;
+            selectionMode === "multi"
+              ? selectedIds.includes(glyphId)
+              : selectedId === glyphId;
           const fillColor = colorForGlyph(glyph, i);
           const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
           const isSubscript = subscriptConsonantIndices.has(i);
@@ -388,6 +408,21 @@ export default function VisualDecoder({
               outlineColor = "#ef4444";
             } else {
               outlineColor = "#ef4444";
+            }
+          }
+
+          if (interactionMode === "decoder_select") {
+            outlineWidth = isSelected ? 4 : 0;
+            if (isSelected) {
+              if (isSubscript) {
+                outlineColor = "#facc15";
+              } else if (isConsonant) {
+                outlineColor = "#22c55e";
+              } else {
+                outlineColor = "#94a3b8";
+              }
+            } else {
+              outlineColor = "transparent";
             }
           }
 

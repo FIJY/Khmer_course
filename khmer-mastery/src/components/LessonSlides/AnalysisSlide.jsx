@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
-import { Volume2, ScanSearch } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { RotateCcw, ScanSearch, Volume2 } from "lucide-react";
+import VisualDecoder, { HIGHLIGHT_MODES } from "../VisualDecoder";
 
 const DEFAULT_KHMER_FONT_URL =
   import.meta.env.VITE_KHMER_FONT_URL ??
@@ -40,8 +41,12 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
   const khmer = d.khmer ?? d.word ?? d.khmerText ?? "";
   const translation = d.translation ?? "";
   const note = d.note ?? "";
-  const phraseAudio = d.word_audio ?? d.phrase_audio ?? d.audio ?? "";
-  const mode = d.mode ?? "text";
+  const audio = d.audio ?? "";
+  const mode = d.mode ?? "";
+  const isDecoderSelect = mode === "decoder_select";
+
+  const [selectionIds, setSelectionIds] = useState([]);
+  const [selectionResetSeed, setSelectionResetSeed] = useState(0);
 
   const showDecoder = mode === "visual_decoder";
   const showDecoderSelect = mode === "decoder_select";
@@ -50,6 +55,16 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
     if (!onPlayAudio) return;
     if (!audio) return;
     onPlayAudio(audio);
+  }
+
+  function handleLetterClick(fileName) {
+    if (!onPlayAudio) return;
+    if (fileName) onPlayAudio(fileName);
+  }
+
+  function handleResetSelection() {
+    setSelectionIds([]);
+    setSelectionResetSeed((prev) => prev + 1);
   }
 
   // очень простая “подсветка” без парсинга графем:
@@ -118,7 +133,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
               <span>analysis</span>
             </div>
 
-            {audio ? (
+            {audio && !isDecoderSelect ? (
               <button type="button" style={styles.audioBtn} onClick={playAudio}>
                 <Volume2 size={16} />
                 <span>Play</span>
@@ -138,119 +153,56 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
         ) : null}
 
         {khmer ? (
-          <div className="mt-4 p-4 rounded-2xl border border-white/10 bg-black/30">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div className="text-[11px] uppercase tracking-[0.3em] text-slate-400">Khmer</div>
-              {!showDecoderSelect && phraseAudio ? (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-cyan-400/50 text-cyan-100 bg-cyan-500/15 hover:bg-cyan-500/25 text-xs font-semibold"
-                  onClick={playAudio}
-                >
-                  <Volume2 size={14} />
-                  <span>Play</span>
-                </button>
-              ) : null}
-            </div>
-            {showDecoder ? (
-              <>
-                <div className="flex justify-center gap-2 mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setHighlightMode(HIGHLIGHT_MODES.ALL)}
-                    className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      highlightMode === HIGHLIGHT_MODES.ALL
-                        ? "bg-cyan-500 text-black border-cyan-300"
-                        : "bg-gray-900 text-white border-white/10"
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHighlightMode(HIGHLIGHT_MODES.CONSONANTS)}
-                    className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      highlightMode === HIGHLIGHT_MODES.CONSONANTS
-                        ? "bg-cyan-500 text-black border-cyan-300"
-                        : "bg-gray-900 text-white border-white/10"
-                    }`}
-                  >
-                    Consonants
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHighlightMode(HIGHLIGHT_MODES.OFF)}
-                    className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      highlightMode === HIGHLIGHT_MODES.OFF
-                        ? "bg-cyan-500 text-black border-cyan-300"
-                        : "bg-gray-900 text-white border-white/10"
-                    }`}
-                  >
-                    Off
-                  </button>
+          <div style={isDecoderSelect ? styles.khmerBoxCompact : styles.khmerBox}>
+            <div style={styles.khmerLabel}>Khmer</div>
+            {isDecoderSelect ? (
+              <div style={styles.decoderBlock}>
+                <div style={styles.decoderHintRow}>
+                  <span style={styles.decoderHint}>
+                    Tap letters to hear them. Selected letters stay highlighted.
+                  </span>
+                  {selectionIds.length ? (
+                    <button
+                      type="button"
+                      onClick={handleResetSelection}
+                      style={styles.resetButton}
+                      aria-label="Reset selection"
+                    >
+                      <RotateCcw size={14} />
+                      Reset
+                    </button>
+                  ) : null}
                 </div>
-                <div
-                  className="flex items-center justify-center"
-                  style={{ fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif" }}
-                >
-                  <VisualDecoder
-                    data={{ ...d, word: khmer }}
-                    highlightMode={highlightMode}
-                    interactionMode="find_consonant"
-                    onLetterClick={(file) => onPlayAudio?.(file)}
-                    hideDefaultButton={true}
-                  />
-                </div>
-              </>
-            ) : showDecoderSelect ? (
-              <div
-                className="flex items-center justify-center"
-                style={{ fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif" }}
-              >
                 <VisualDecoder
-                  data={{ ...d, word: khmer }}
+                  data={d}
+                  text={khmer}
                   highlightMode={HIGHLIGHT_MODES.OFF}
-                  interactionMode="persistent_select"
-                  onLetterClick={(file) => onPlayAudio?.(file)}
-                  resetSelectionKey={resetToken}
+                  interactionMode="decoder_select"
+                  selectionMode="multi"
+                  compact={true}
+                  viewBoxPad={55}
+                  resetSelectionKey={selectionResetSeed}
+                  onSelectionChange={setSelectionIds}
+                  onLetterClick={handleLetterClick}
                   hideDefaultButton={true}
                 />
+                {translation ? (
+                  <div style={styles.inlineTranslation}>
+                    <span style={styles.inlineTranslationLabel}>Meaning:</span>
+                    {translation}
+                  </div>
+                ) : null}
               </div>
             ) : (
-              <div
-                className="text-2xl leading-relaxed text-slate-100"
-                style={{ fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif" }}
-              >
-                {renderHighlightedKhmer(khmer)}
-              </div>
+              <div style={styles.khmerText}>{renderHighlightedKhmer(khmer)}</div>
             )}
-            {showDecoderSelect ? (
-              <div className="mt-3 flex items-end justify-between gap-3 text-xs text-slate-400">
-                <div className="text-[11px] uppercase tracking-[0.3em] text-slate-500">
-                  Tap the heroes
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setResetToken((prev) => prev + 1)}
-                  className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-[11px] uppercase tracking-widest text-slate-200 hover:bg-white/10"
-                >
-                  Reset
-                </button>
-              </div>
-            ) : null}
-            {showDecoderSelect && translation ? (
-              <div className="mt-3 text-xs text-slate-300">
-                <span className="uppercase tracking-[0.2em] text-slate-500">Meaning: </span>
-                {translation}
-              </div>
-            ) : null}
           </div>
         ) : null}
 
-        {translation && !showDecoderSelect ? (
-          <div className="mt-4 p-4 rounded-2xl border border-white/10 bg-black/30">
-            <div className="text-[11px] uppercase tracking-[0.3em] text-slate-400 mb-2">Meaning</div>
-            <div className="text-sm text-slate-100 leading-relaxed">{translation}</div>
+        {!isDecoderSelect && translation ? (
+          <div style={styles.translationBox}>
+            <div style={styles.khmerLabel}>Meaning</div>
+            <div style={styles.translationText}>{translation}</div>
           </div>
         ) : null}
 
@@ -340,11 +292,43 @@ const styles = {
     borderRadius: "14px",
     border: "1px solid rgba(0,0,0,0.10)",
   },
+  khmerBoxCompact: {
+    marginTop: "8px",
+    padding: "10px",
+    borderRadius: "14px",
+    border: "1px solid rgba(0,0,0,0.10)",
+  },
   translationBox: {
     marginTop: "10px",
     padding: "12px",
     borderRadius: "14px",
     border: "1px solid rgba(0,0,0,0.10)",
+  },
+  decoderBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  decoderHintRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "8px",
+  },
+  decoderHint: {
+    fontSize: "12px",
+    opacity: 0.7,
+  },
+  resetButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "4px 8px",
+    borderRadius: "999px",
+    border: "1px solid rgba(0,0,0,0.12)",
+    background: "white",
+    fontSize: "11px",
+    cursor: "pointer",
   },
   khmerLabel: {
     fontSize: "12px",
@@ -359,6 +343,15 @@ const styles = {
   translationText: {
     fontSize: "15px",
     lineHeight: 1.35,
+  },
+  inlineTranslation: {
+    fontSize: "14px",
+    lineHeight: 1.4,
+    opacity: 0.75,
+  },
+  inlineTranslationLabel: {
+    fontWeight: 600,
+    marginRight: "6px",
   },
   note: {
     marginTop: "12px",
