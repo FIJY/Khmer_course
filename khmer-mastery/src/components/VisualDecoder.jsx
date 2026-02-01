@@ -92,6 +92,7 @@ export default function VisualDecoder({
   onComplete,
   hideDefaultButton = true,
   highlightMode = HIGHLIGHT_MODES.ALL,
+  resetSelectionKey,
   interactionMode = "default",
   selectionMode = "single",
   onSelectionChange,
@@ -116,6 +117,11 @@ export default function VisualDecoder({
   useEffect(() => {
     hitRefs.current = [];
   }, [text]);
+
+  useEffect(() => {
+    if (interactionMode !== "persistent_select") return;
+    setSelectedGlyphIds(new Set());
+  }, [interactionMode, resetSelectionKey, text]);
 
   useEffect(() => {
     let active = true;
@@ -341,7 +347,7 @@ export default function VisualDecoder({
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
 
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
-      return isKhmerConsonant(resolved) ? getKhmerGlyphColor(resolved) : FALLBACK.MUTED;
+      return isKhmerConsonant(resolved) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
     }
 
     // OFF
@@ -384,7 +390,15 @@ export default function VisualDecoder({
           let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
           let outlineWidth = isSelected ? 5 : 0;
 
-          if (interactionMode === "find_consonant" && selectedId !== null) {
+          if (interactionMode === "persistent_select") {
+            if (isSelected && isConsonant) {
+              outlineWidth = 4;
+              outlineColor = isSubscript ? "#facc15" : "#22c55e";
+            } else {
+              outlineWidth = 0;
+              outlineColor = "transparent";
+            }
+          } else if (interactionMode === "find_consonant" && selectedId !== null) {
             outlineWidth = 4;
             if (isSelected) {
               outlineColor = "#22c55e";
