@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { fetchLessonById, fetchLessonItemsByLessonId } from '../data/lessons';
 import { fetchCurrentUser } from '../data/auth';
 import { markLessonCompleted } from '../data/progress';
+// ПРАВИЛЬНЫЙ ИМПОРТ: используем тот же путь, что в твоих файлах lessons.js и auth.js
+import { supabase } from '../supabaseClient';
 
 export default function useLessonPlayer() {
   const { id } = useParams();
@@ -20,6 +22,10 @@ export default function useLessonPlayer() {
   const [lessonPassed, setLessonPassed] = useState(false);
   const [error, setError] = useState(null);
   const [lessonId, setLessonId] = useState(id);
+
+  // Добавляем состояние для словаря алфавита
+  const [alphabetDb, setAlphabetDb] = useState({});
+
   const audioRef = useRef(null);
   const audioTimeoutRef = useRef(null);
 
@@ -65,39 +71,46 @@ export default function useLessonPlayer() {
 
       const resolvedIdentifier = resolveLessonIdentifier(id);
 
-      // 1. Загружаем сам урок
-      let lesson = null;
-      if (resolvedIdentifier !== null) {
-        lesson = await fetchLessonById(resolvedIdentifier);
+      // Загружаем всё параллельно, добавляя запрос к таблице alphabet
+      const [lesson, rawItemsResponse, alphabetResponse] = await Promise.all([
+        resolvedIdentifier !== null ? fetchLessonById(resolvedIdentifier) : (id === 'sandbox' ? fallbackLesson.current : null),
+        fetchLessonItemsByLessonId(resolvedIdentifier || id),
+        supabase.from('alphabet').select('*')
+      ]);
+
+      // Создаем карту (словарь) для мгновенного поиска типа символа
+      const alphaMap = {};
+      if (alphabetResponse.data) {
+        alphabetResponse.data.forEach(charEntry => {
+          alphaMap[charEntry.id] = charEntry;
+        });
+      }
+      setAlphabetDb(alphaMap);
+
+      let lessonData = lesson;
+      if (!lessonData && id === 'sandbox') {
+        lessonData = fallbackLesson.current;
       }
 
-      if (!lesson && id === 'sandbox') {
-        lesson = fallbackLesson.current;
-      }
-
-      if (!lesson) {
+      if (!lessonData) {
         setError('Lesson not found.');
         return;
       }
 
-      setLessonInfo(lesson);
-      const resolvedLessonId = lesson?.lesson_id ?? lesson?.id ?? resolvedIdentifier ?? id;
+      setLessonInfo(lessonData);
+      const resolvedLessonId = lessonData?.lesson_id ?? lessonData?.id ?? resolvedIdentifier ?? id;
       setLessonId(resolvedLessonId);
 
-      // 2. Пробуем загрузить элементы из таблицы lesson_items
-      let rawItems = await fetchLessonItemsByLessonId(resolvedLessonId);
+      let rawItems = rawItemsResponse;
 
-      // 3. ФОЛБЭК: Если таблица lesson_items пуста, ищем контент внутри самого урока (JSON)
-      if ((!rawItems || rawItems.length === 0) && lesson.content && Array.isArray(lesson.content)) {
-          console.log("Using fallback content from lesson table");
-          rawItems = lesson.content.map((item, index) => ({
+      if ((!rawItems || rawItems.length === 0) && lessonData.content && Array.isArray(lessonData.content)) {
+          rawItems = lessonData.content.map((item, index) => ({
             ...item,
             id: index,
             data: item.data || item
           }));
       }
 
-      // 4. Нормализуем данные
       const normalizedItems = (Array.isArray(rawItems) ? rawItems : []).map(item => {
         const itemContent = item.data ? normalizeItemData(item.data) : item;
         const rawType = item.type || itemContent.type;
@@ -146,7 +159,7 @@ export default function useLessonPlayer() {
         };
       });
 
-      const fallbackItems = id === 'sandbox' && normalizedItems.length === 0
+      const finalItems = id === 'sandbox' && normalizedItems.length === 0
         ? [{
             type: 'theory',
             data: {
@@ -156,8 +169,8 @@ export default function useLessonPlayer() {
           }]
         : normalizedItems;
 
-      setItems(fallbackItems);
-      setQuizCount(fallbackItems.filter(i => String(i.type).toLowerCase() === 'quiz').length || 0);
+      setItems(finalItems);
+      setQuizCount(finalItems.filter(i => String(i.type).toLowerCase() === 'quiz').length || 0);
     } catch (err) {
       console.error(err);
       setError('Unable to load this lesson.');
@@ -168,24 +181,18 @@ export default function useLessonPlayer() {
 
   useEffect(() => { fetchLessonData(); }, [fetchLessonData]);
 
-  // Логика разблокировки кнопки "Далее"
   useEffect(() => {
       setCanAdvance(false);
       setSelectedOption(null);
       setIsFlipped(false);
       if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
 
-      const currentType = items[step]?.type ? String(items[step]?.type).toLowerCase() : '';
+      const currentItem = items[step];
+      const currentType = currentItem?.type ? String(currentItem?.type).toLowerCase() : '';
 
       const autoUnlockTypes = [
-        'theory',
-        'learn_char',
-        'word_breakdown',
-        'title',
-        'meet-teams',
-        'rule',
-        'reading-algorithm',
-        'ready'
+        'theory', 'learn_char', 'word_breakdown', 'title',
+        'meet-teams', 'rule', 'reading-algorithm', 'ready', 'analysis'
       ];
 
       if (autoUnlockTypes.includes(currentType)) {
@@ -221,43 +228,18 @@ export default function useLessonPlayer() {
     }
   };
 
-  // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗВУКА ---
   const playLocalAudio = (audioFile) => {
-    if (!audioFile) {
-        console.warn("Audio file name is missing");
-        return;
-    }
-
-    console.log("playLocalAudio received filename:", audioFile);
-    console.trace("playLocalAudio call stack");
-
+    if (!audioFile) return;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-
-    // 1. Приводим к строке и чистим пробелы
-    let fileName = String(audioFile).trim();
-
-    // 2. ЯДЕРНОЕ РЕШЕНИЕ: Убираем ВСЕ .mp3 с конца строки (один или много раз)
-    // (\.mp3)+ означает "группа .mp3 повторяется 1 или более раз"
-    // Флаг 'i' делает поиск нечувствительным к регистру (.MP3 тоже уйдет)
-    fileName = fileName.replace(/(\.mp3)+$/i, '');
-
-    // 3. Теперь fileName гарантированно чистый (например "vowel_aa").
-    // Добавляем .mp3 ровно ОДИН раз.
+    let fileName = String(audioFile).trim().replace(/(\.mp3)+$/i, '');
     const audioPath = `/sounds/${fileName}.mp3`;
-
-    console.log('Playing clean path:', audioPath);
-
     const audio = new Audio(audioPath);
     audioRef.current = audio;
-
-    audio.play().catch((e) => {
-      console.error(`Audio play failed for ${audioPath}:`, e);
-    });
+    audio.play().catch((e) => console.error(`Audio failed: ${audioPath}`, e));
   };
-  // ------------------------------------------------
 
   const handleVocabCardFlip = (audioFile) => {
     if (!isFlipped) playLocalAudio(audioFile);
@@ -267,22 +249,15 @@ export default function useLessonPlayer() {
 
   const handleQuizAnswer = (option, correctAnswer, selectedAudio) => {
     if (selectedOption) return;
-
     const optionValue = option && typeof option === 'object' ? option.value ?? option.text ?? option.answer ?? '' : option;
     const correctValue = correctAnswer && typeof correctAnswer === 'object'
       ? correctAnswer.value ?? correctAnswer.text ?? correctAnswer.answer ?? ''
       : correctAnswer;
-
     setSelectedOption(optionValue);
     setCanAdvance(true);
-
-    const cleanOption = String(optionValue).trim();
-    const cleanCorrect = String(correctValue).trim();
-    const correct = cleanOption === cleanCorrect;
-
+    const correct = String(optionValue).trim() === String(correctValue).trim();
     if (correct) setScore(s => s + 1);
     playLocalAudio(correct ? 'success.mp3' : 'error.mp3');
-
     if (selectedAudio) {
         if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
         audioTimeoutRef.current = setTimeout(() => {
@@ -297,6 +272,10 @@ export default function useLessonPlayer() {
     id, navigate, lessonInfo, items, step, score, quizCount, canAdvance, isFlipped,
     loading, error, selectedOption, isFinished, lessonPassed, handleNext,
     playLocalAudio, handleVocabCardFlip, handleQuizAnswer, goBack, setCanAdvance,
+    alphabetDb,
+    current: items[step],
+    currentIndex: step,
+    total: items.length,
     refresh: fetchLessonData
   };
 }

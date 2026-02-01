@@ -19,9 +19,8 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
   const [selectionResetSeed, setSelectionResetSeed] = useState(0);
   const [renderedGlyphs, setRenderedGlyphs] = useState([]);
 
-  // Для подсказок
-  const [tooltipData, setTooltipData] = useState(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  // НОВОЕ: состояние для постоянной подсказки
+  const [activeCharData, setActiveCharData] = useState(null);
 
   const title = d.title ?? "Analysis";
   const subtitle = d.subtitle ?? "";
@@ -39,24 +38,15 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
     return String(d.text).split("\n").map((s) => s.trim()).filter(Boolean);
   }, [d.text]);
 
-  // ОБНОВЛЕННЫЙ СЧЕТЧИК СОГЛАСНЫХ
   const consonantStats = useMemo(() => {
     if (!khmer) return { total: 0, selected: 0, percentage: 0 };
-
     const chars = Array.from(khmer);
     const total = chars.filter(isKhmerConsonant).length;
-
-    // Считаем только те выбранные ID, которые соответствуют согласным в renderedGlyphs
     const selected = selectionIds.filter(id => {
       const glyph = renderedGlyphs[id];
       return glyph && isKhmerConsonant(glyph.char);
     }).length;
-
-    return {
-      total,
-      selected,
-      percentage: total > 0 ? Math.round((selected / total) * 100) : 0,
-    };
+    return { total, selected, percentage: total > 0 ? Math.round((selected / total) * 100) : 0 };
   }, [khmer, selectionIds, renderedGlyphs]);
 
   function playAudio() {
@@ -68,27 +58,24 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
     if (onPlayAudio && fileName) onPlayAudio(fileName);
   }
 
-  function handleGlyphClick(glyphChar, clickEvent) {
-    let tip = null;
+  // ОБНОВЛЕНО: теперь данные сохраняются и не исчезают
+  function handleGlyphClick(glyphChar) {
     if (alphabetDb && alphabetDb.has(glyphChar)) {
       const charData = alphabetDb.get(glyphChar);
-      tip = charData.type || charData.hint || `${glyphChar} (${charData.name || 'unknown'})`;
+      setActiveCharData({
+        char: glyphChar,
+        type: charData.type || "",
+        hint: charData.hint || charData.name || ""
+      });
     } else {
-      tip = glyphChar;
+      setActiveCharData({ char: glyphChar, type: "Unknown", hint: "" });
     }
-
-    const rect = clickEvent?.currentTarget?.getBoundingClientRect?.();
-    const x = rect ? rect.left + rect.width / 2 : clickEvent?.clientX || 0;
-    const y = rect ? rect.top : clickEvent?.clientY || 0;
-
-    setTooltipData(tip);
-    setTooltipPosition({ x, y });
-    setTimeout(() => setTooltipData(null), 2000);
   }
 
   function handleResetSelection() {
     setSelectionIds([]);
     setSelectionResetSeed((prev) => prev + 1);
+    setActiveCharData(null); // Сбрасываем инфо при очистке
   }
 
   function renderHighlightedKhmer(str) {
@@ -158,7 +145,7 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
             {isDecoderSelect ? (
               <div style={styles.decoderBlock}>
                 <div style={styles.decoderHintRow}>
-                  <span style={styles.decoderHint}>Tap letters to hear them. Selected letters stay highlighted.</span>
+                  <span style={styles.decoderHint}>Tap letters to see details.</span>
                   {selectionIds.length ? (
                     <button type="button" onClick={handleResetSelection} style={styles.resetButton}>
                       <RotateCcw size={14} />Reset
@@ -183,16 +170,11 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
                   resetSelectionKey={selectionResetSeed}
                   onSelectionChange={setSelectionIds}
                   onLetterClick={handleLetterClick}
-                  onGlyphsRendered={setRenderedGlyphs} // ПЕРЕДАЕМ ГЛИФЫ РОДИТЕЛЮ
+                  onGlyphsRendered={setRenderedGlyphs}
                   hideDefaultButton={true}
                   onGlyphClick={handleGlyphClick}
                   alphabetDb={alphabetDb}
                 />
-                {translation ? (
-                  <div style={styles.inlineTranslation}>
-                    <span style={styles.inlineTranslationLabel}>Meaning:</span>{translation}
-                  </div>
-                ) : null}
               </div>
             ) : (
               <div style={styles.khmerText}>{renderHighlightedKhmer(khmer)}</div>
@@ -200,53 +182,61 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
           </div>
         ) : null}
 
-        {!isDecoderSelect && translation ? (
-          <div style={styles.translationBox}>
-            <div style={styles.khmerLabel}>Meaning</div>
-            <div style={styles.translationText}>{translation}</div>
-          </div>
-        ) : null}
-
-        {note ? <div style={styles.note}>{note}</div> : null}
-      </div>
-
-      {tooltipData && (
-        <div style={{...styles.tooltip, left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px`}}>
-          {tooltipData}
+        {/* НИЖНЯЯ ПАНЕЛЬ: либо инфо о букве, либо перевод */}
+        <div style={styles.infoPanel}>
+          {activeCharData ? (
+            <div style={styles.charDetailBox}>
+              <div style={styles.charLarge}>{activeCharData.char}</div>
+              <div style={styles.charInfoText}>
+                <div style={styles.charType}>{activeCharData.type}</div>
+                <div style={styles.charHint}>{activeCharData.hint}</div>
+              </div>
+            </div>
+          ) : (
+            translation && (
+              <div style={styles.translationContainer}>
+                <div style={styles.khmerLabel}>Meaning</div>
+                <div style={styles.translationText}>{translation}</div>
+              </div>
+            )
+          )}
         </div>
-      )}
+
+        {note && !activeCharData ? <div style={styles.note}>{note}</div> : null}
+      </div>
     </div>
   );
 }
 
 const styles = {
-  wrap: { width: "100%", display: "flex", justifyContent: "center", padding: "16px", boxSizing: "border-box", position: "relative" },
-  card: { width: "100%", maxWidth: "760px", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "28px", padding: "18px", boxShadow: "0 12px 40px rgba(0,0,0,0.35)", background: "rgba(15, 23, 42, 0.92)", boxSizing: "border-box", color: "rgba(226,232,240,0.95)" },
-  headerRow: { display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start", marginBottom: "10px" },
-  iconRow: { display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" },
-  badge: { display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 10px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", fontSize: "12px", opacity: 0.9 },
-  audioBtn: { display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 10px", borderRadius: "999px", border: "1px solid rgba(34, 211, 238, 0.45)", background: "rgba(34, 211, 238, 0.12)", cursor: "pointer", fontSize: "13px", color: "rgba(207,250,254,0.95)" },
-  title: { fontSize: "20px", fontWeight: 800, lineHeight: 1.15 },
-  subtitle: { marginTop: "4px", fontSize: "13px", opacity: 0.7 },
-  textBlock: { marginTop: "10px", marginBottom: "12px" },
-  textLine: { fontSize: "15px", lineHeight: 1.35, marginBottom: "6px" },
-  khmerBox: { marginTop: "10px", padding: "12px", borderRadius: "18px", border: "1px solid rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.25)" },
-  khmerBoxCompact: { marginTop: "8px", padding: "10px", borderRadius: "18px", border: "1px solid rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.22)" },
-  translationBox: { marginTop: "10px", padding: "12px", borderRadius: "18px", border: "1px solid rgba(255,255,255,0.10)", background: "rgba(0,0,0,0.25)" },
+  wrap: { width: "100%", display: "flex", justifyContent: "center", padding: "16px", boxSizing: "border-box" },
+  card: { width: "100%", maxWidth: "760px", border: "1px solid rgba(255,255,255,0.10)", borderRadius: "28px", padding: "18px", boxShadow: "0 12px 40px rgba(0,0,0,0.35)", background: "rgba(15, 23, 42, 0.92)", color: "rgba(226,232,240,0.95)" },
+  headerRow: { display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "10px" },
+  iconRow: { display: "flex", gap: "10px", alignItems: "center" },
+  badge: { display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 10px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", fontSize: "12px" },
+  audioBtn: { display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 10px", borderRadius: "999px", border: "1px solid rgba(34, 211, 238, 0.45)", background: "rgba(34, 211, 238, 0.12)", color: "white", cursor: "pointer" },
+  title: { fontSize: "20px", fontWeight: 800 },
+  subtitle: { fontSize: "13px", opacity: 0.7 },
+  textBlock: { marginBottom: "12px" },
+  textLine: { fontSize: "15px", marginBottom: "6px" },
+  khmerBox: { padding: "12px", borderRadius: "18px", background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)" },
+  khmerBoxCompact: { padding: "10px", borderRadius: "18px", background: "rgba(0,0,0,0.22)", border: "1px solid rgba(255,255,255,0.1)" },
   decoderBlock: { display: "flex", flexDirection: "column", gap: "8px" },
-  decoderHintRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" },
-  decoderHint: { fontSize: "12px", opacity: 0.7 },
-  consonantCounter: { display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "10px", background: "rgba(34, 211, 238, 0.1)", border: "1px solid rgba(34, 211, 238, 0.2)", fontSize: "13px" },
-  counterLabel: { opacity: 0.7, fontWeight: 500 },
-  counterValue: { fontWeight: 700, color: "rgba(34, 211, 238, 0.95)" },
-  counterPercentage: { opacity: 0.6, fontSize: "12px" },
-  resetButton: { display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(15,23,42,0.55)", fontSize: "11px", cursor: "pointer", color: "rgba(226,232,240,0.9)" },
-  khmerLabel: { fontSize: "12px", opacity: 0.65, marginBottom: "8px" },
-  khmerText: { fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif", fontSize: "28px", lineHeight: 1.25 },
-  translationText: { fontSize: "15px", lineHeight: 1.35 },
-  inlineTranslation: { fontSize: "14px", lineHeight: 1.4, opacity: 0.75 },
-  inlineTranslationLabel: { fontWeight: 600, marginRight: "6px" },
+  consonantCounter: { display: "flex", gap: "8px", padding: "8px 10px", borderRadius: "10px", background: "rgba(34, 211, 238, 0.1)", border: "1px solid rgba(34, 211, 238, 0.2)", fontSize: "13px" },
+  counterValue: { fontWeight: 700, color: "#22d3ee" },
+  resetButton: { display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "999px", background: "rgba(15,23,42,0.55)", border: "1px solid rgba(255,255,255,0.12)", color: "white", cursor: "pointer", fontSize: "11px" },
+  khmerLabel: { fontSize: "12px", opacity: 0.65, marginBottom: "4px" },
+  khmerText: { fontFamily: "KhmerFont, sans-serif", fontSize: "28px" },
+  infoPanel: { marginTop: "12px", minHeight: "80px" },
+  charDetailBox: { display: "flex", alignItems: "center", gap: "20px", padding: "15px", borderRadius: "18px", background: "rgba(34, 211, 238, 0.15)", border: "1px solid rgba(34, 211, 238, 0.3)" },
+  charLarge: { fontFamily: "KhmerFont, sans-serif", fontSize: "48px", color: "#22d3ee" },
+  charInfoText: { display: "flex", flexDirection: "column", gap: "4px" },
+  charType: { fontSize: "18px", fontWeight: 700, color: "white", textTransform: "uppercase" },
+  charHint: { fontSize: "14px", opacity: 0.8 },
+  translationContainer: { padding: "12px", borderRadius: "18px", background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.1)" },
+  translationText: { fontSize: "16px", fontWeight: 500 },
   note: { marginTop: "12px", fontSize: "12px", opacity: 0.65 },
-  hot: { outline: "2px solid rgba(34,211,238,0.55)", borderRadius: "8px", padding: "0 4px", margin: "0 2px" },
-  tooltip: { position: "fixed", transform: "translate(-50%, -120%)", backgroundColor: "rgba(34, 211, 238, 0.9)", color: "rgba(15, 23, 42, 0.95)", padding: "8px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 600, whiteSpace: "nowrap", pointerEvents: "none", zIndex: 1000, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)", animation: "fadeInOut 2s ease-in-out" },
+  hot: { outline: "2px solid #22d3ee", borderRadius: "8px", padding: "0 4px" },
+  decoderHintRow: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  decoderHint: { fontSize: "12px", opacity: 0.7 }
 };
