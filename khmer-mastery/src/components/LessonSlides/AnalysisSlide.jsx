@@ -1,7 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Volume2, ScanSearch } from "lucide-react";
-import LessonCard from "../UI/LessonCard";
-import VisualDecoder, { HIGHLIGHT_MODES } from "../VisualDecoder";
 
 const DEFAULT_KHMER_FONT_URL =
   import.meta.env.VITE_KHMER_FONT_URL ??
@@ -50,15 +48,18 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
 
   function playAudio() {
     if (!onPlayAudio) return;
-    if (!phraseAudio) return;
-    onPlayAudio(phraseAudio);
+    if (!audio) return;
+    onPlayAudio(audio);
   }
 
+  // очень простая “подсветка” без парсинга графем:
+  // подсвечиваем точные совпадения строк из highlight
   function renderHighlightedKhmer(str) {
     if (!str) return null;
-    const highlight = Array.isArray(d.highlight) ? d.highlight : [];
     if (!highlight.length) return str;
 
+    // грубо, но достаточно для теста типов:
+    // делаем последовательные split для каждого маркера
     let parts = [{ text: str, hot: false }];
 
     highlight.forEach((token) => {
@@ -83,10 +84,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
       <>
         {parts.map((p, i) =>
           p.hot ? (
-            <span
-              key={i}
-              className="outline outline-2 outline-cyan-400/60 rounded-lg px-1 mx-0.5"
-            >
+            <span key={i} style={styles.hot}>
               {p.text}
             </span>
           ) : (
@@ -98,7 +96,7 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
   }
 
   return (
-    <div className="w-full flex justify-center px-4">
+    <div style={styles.wrap}>
       <style>{`
         @font-face {
           font-family: "KhmerFont";
@@ -107,25 +105,32 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
         }
       `}</style>
 
-      <LessonCard className="max-w-[760px]">
-        <div className="flex items-start justify-between gap-3">
+      <div style={styles.card}>
+        <div style={styles.headerRow}>
           <div>
-            <div className="text-lg font-black uppercase tracking-[0.08em]">{title}</div>
-            {subtitle ? <div className="text-xs text-slate-400 mt-1">{subtitle}</div> : null}
+            <div style={styles.title}>{title}</div>
+            {subtitle ? <div style={styles.subtitle}>{subtitle}</div> : null}
           </div>
 
-          <div className="flex gap-2 flex-wrap items-center justify-end">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 text-xs uppercase tracking-widest text-slate-200/80">
-              <ScanSearch size={14} />
+          <div style={styles.iconRow}>
+            <div style={styles.badge}>
+              <ScanSearch size={16} />
               <span>analysis</span>
             </div>
+
+            {audio ? (
+              <button type="button" style={styles.audioBtn} onClick={playAudio}>
+                <Volume2 size={16} />
+                <span>Play</span>
+              </button>
+            ) : null}
           </div>
         </div>
 
         {textLines.length ? (
-          <div className="mt-4 space-y-2 text-sm text-slate-200">
+          <div style={styles.textBlock}>
             {textLines.map((line, idx) => (
-              <div key={idx} className="leading-relaxed">
+              <div key={idx} style={styles.textLine}>
                 {line}
               </div>
             ))}
@@ -249,8 +254,121 @@ export default function AnalysisSlide({ data, onPlayAudio }) {
           </div>
         ) : null}
 
-        {note ? <div className="mt-4 text-xs text-slate-400">{note}</div> : null}
-      </LessonCard>
+        {note ? <div style={styles.note}>{note}</div> : null}
+      </div>
     </div>
   );
 }
+
+const styles = {
+  wrap: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "center",
+    padding: "16px",
+    boxSizing: "border-box",
+  },
+  card: {
+    width: "100%",
+    maxWidth: "760px",
+    border: "1px solid rgba(0,0,0,0.08)",
+    borderRadius: "18px",
+    padding: "18px",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+    background: "white",
+    boxSizing: "border-box",
+
+
+  },
+  headerRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "12px",
+    alignItems: "flex-start",
+    marginBottom: "10px",
+  },
+  iconRow: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+  },
+  badge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    border: "1px solid rgba(0,0,0,0.12)",
+    fontSize: "12px",
+    opacity: 0.85,
+  },
+  audioBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "8px 10px",
+    borderRadius: "12px",
+    border: "1px solid rgba(0,0,0,0.15)",
+    background: "white",
+    cursor: "pointer",
+    fontSize: "13px",
+  },
+  title: {
+    fontSize: "20px",
+    fontWeight: 800,
+    lineHeight: 1.15,
+  },
+  subtitle: {
+    marginTop: "4px",
+    fontSize: "13px",
+    opacity: 0.7,
+  },
+  textBlock: {
+    marginTop: "10px",
+    marginBottom: "12px",
+  },
+  textLine: {
+    fontSize: "15px",
+    lineHeight: 1.35,
+    marginBottom: "6px",
+  },
+  khmerBox: {
+    marginTop: "10px",
+    padding: "12px",
+    borderRadius: "14px",
+    border: "1px solid rgba(0,0,0,0.10)",
+  },
+  translationBox: {
+    marginTop: "10px",
+    padding: "12px",
+    borderRadius: "14px",
+    border: "1px solid rgba(0,0,0,0.10)",
+  },
+  khmerLabel: {
+    fontSize: "12px",
+    opacity: 0.65,
+    marginBottom: "8px",
+  },
+  khmerText: {
+    fontFamily: "KhmerFont, Noto Sans Khmer, sans-serif",
+    fontSize: "28px",
+    lineHeight: 1.25,
+  },
+  translationText: {
+    fontSize: "15px",
+    lineHeight: 1.35,
+  },
+  note: {
+    marginTop: "12px",
+    fontSize: "12px",
+    opacity: 0.65,
+  },
+  hot: {
+    outline: "2px solid rgba(0,0,0,0.55)",
+    borderRadius: "8px",
+    padding: "0 4px",
+    margin: "0 2px",
+  },
+};
