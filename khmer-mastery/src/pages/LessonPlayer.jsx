@@ -79,7 +79,8 @@ export default function LessonPlayer() {
       'reading-algorithm',
       'ready',
       'intro',
-      'analysis'
+      'analysis',
+      'comparison_audio'
     ];
 
 
