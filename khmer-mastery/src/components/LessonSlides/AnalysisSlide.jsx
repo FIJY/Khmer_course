@@ -14,6 +14,32 @@ const isKhmerConsonant = (ch) => {
   return code >= 0x1780 && code <= 0x17a2;
 };
 
+const COENG_CHAR = "្";
+
+const countBaseConsonants = (text) => {
+  if (!text) return 0;
+  const chars = Array.from(text);
+  let count = 0;
+  let skipNextConsonant = false;
+
+  for (const char of chars) {
+    if (char === COENG_CHAR) {
+      skipNextConsonant = true;
+      continue;
+    }
+
+    if (isKhmerConsonant(char)) {
+      if (!skipNextConsonant) count += 1;
+      skipNextConsonant = false;
+      continue;
+    }
+
+    if (skipNextConsonant) skipNextConsonant = false;
+  }
+
+  return count;
+};
+
 export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
   const d = data || {};
   const [selectionIds, setSelectionIds] = useState([]);
@@ -39,16 +65,54 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
     return String(d.text).split("\n").map((s) => s.trim()).filter(Boolean);
   }, [d.text]);
 
+  const subscriptGlyphIndices = useMemo(() => {
+    const indices = new Set();
+    if (!renderedGlyphs || renderedGlyphs.length === 0) return indices;
+
+    renderedGlyphs.forEach((glyph, idx) => {
+      if (glyph.isSubscript) {
+        const resolved = glyph.resolvedChar || glyph.char || "";
+        if (isKhmerConsonant(resolved)) indices.add(idx);
+        return;
+      }
+
+      if (glyph.char !== COENG_CHAR) return;
+      const next = renderedGlyphs[idx + 1];
+      if (!next) return;
+      const resolved = next.resolvedChar || next.char || "";
+      if (isKhmerConsonant(resolved)) indices.add(idx + 1);
+    });
+
+    return indices;
+  }, [renderedGlyphs]);
+
+  const glyphIdToIndex = useMemo(() => {
+    const map = new Map();
+    renderedGlyphs.forEach((glyph, idx) => {
+      const id = glyph.id ?? idx;
+      map.set(id, idx);
+    });
+    return map;
+  }, [renderedGlyphs]);
+
   const consonantStats = useMemo(() => {
     if (!khmer) return { total: 0, selected: 0, percentage: 0 };
-    const chars = Array.from(khmer);
-    const total = chars.filter(isKhmerConsonant).length;
-    const selected = selectionIds.filter(id => {
-      const glyph = renderedGlyphs[id];
-      return glyph && isKhmerConsonant(glyph.char);
+    const total = renderedGlyphs.length
+      ? renderedGlyphs.filter((glyph, idx) => {
+          const resolved = glyph.resolvedChar || glyph.char || "";
+          if (!isKhmerConsonant(resolved)) return false;
+          return !subscriptGlyphIndices.has(idx);
+        }).length
+      : countBaseConsonants(khmer);
+    const selected = selectionIds.filter((id) => {
+      const index = glyphIdToIndex.get(id);
+      if (index === undefined) return false;
+      const glyph = renderedGlyphs[index];
+      const resolved = glyph?.resolvedChar || glyph?.char || "";
+      return glyph && isKhmerConsonant(resolved) && !subscriptGlyphIndices.has(index);
     }).length;
     return { total, selected, percentage: total > 0 ? Math.round((selected / total) * 100) : 0 };
-  }, [khmer, selectionIds, renderedGlyphs]);
+  }, [khmer, selectionIds, renderedGlyphs, subscriptGlyphIndices, glyphIdToIndex]);
 
   function playAudio() {
     if (!onPlayAudio || !audio) return;
