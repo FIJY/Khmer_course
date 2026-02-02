@@ -209,11 +209,13 @@ export default function useLessonPlayer() {
       if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
 
       const currentItem = items[step];
-      const currentType = currentItem?.type ? String(currentItem?.type).toLowerCase() : '';
+      const currentType = currentItem?.type
+        ? String(currentItem?.type).toLowerCase().trim().replace(/[\s-]+/g, '_')
+        : '';
 
       const autoUnlockTypes = [
         'theory', 'learn_char', 'word_breakdown', 'title',
-        'meet-teams', 'rule', 'reading-algorithm', 'ready', 'analysis'
+        'meet_teams', 'rule', 'reading_algorithm', 'ready', 'analysis', 'comparison_audio'
       ];
 
       if (autoUnlockTypes.includes(currentType)) {

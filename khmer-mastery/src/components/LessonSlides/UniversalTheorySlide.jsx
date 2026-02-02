@@ -4,7 +4,7 @@ import { Volume2, Sun, Moon, BookOpen, Lightbulb, Zap, ListOrdered } from 'lucid
 export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
   // 1. Нормализация типа: пропс > данные > пусто
   const effectiveType = type || data?.type || '';
-  const mode = effectiveType.toLowerCase();
+  const mode = effectiveType.toLowerCase().trim().replace(/[\s-]+/g, '_');
 
   // Хелпер для звука
   const play = (file) => {
@@ -34,6 +34,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
       );
 
     case 'meet-teams':
+    case 'meet_teams':
       return (
         <div className="w-full flex flex-col items-center text-center animate-in zoom-in duration-500">
            <h2 className="text-3xl font-black text-white mb-8 uppercase italic">{data.title || 'Meet the Teams'}</h2>
@@ -147,6 +148,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
       );
 
     case 'reading-algorithm':
+    case 'reading_algorithm':
       return (
         <div className="w-full animate-in fade-in duration-500">
             <div className="flex justify-center mb-6">
