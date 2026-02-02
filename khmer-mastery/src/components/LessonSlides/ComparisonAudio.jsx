@@ -55,6 +55,8 @@ export default function ComparisonAudio({
     const path = getSoundPath(audioFile);
     if (!path) return;
 
+    if (onComplete) onComplete();
+
     if (audioRef.current) {
       audioRef.current.src = path;
       audioRef.current.onended = () => {
@@ -73,6 +75,7 @@ export default function ComparisonAudio({
           console.error("Audio playback failed:", e);
           setPlayingIndex(null);
           setPlayingSide(null);
+          if (onComplete) onComplete();
         });
     }
   };
