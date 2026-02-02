@@ -67,16 +67,18 @@ export default function LessonPlayer() {
     setRevealedConsonants(new Set());
 
     const rawType = safeItems[step]?.type;
-    const currentType = rawType ? rawType.toLowerCase() : '';
+    const currentType = rawType
+      ? rawType.toLowerCase().trim().replace(/[\s-]+/g, '_')
+      : '';
 
     const autoUnlockTypes = [
       'theory',
       'learn_char',
       'word_breakdown',
       'title',
-      'meet-teams',
+      'meet_teams',
       'rule',
-      'reading-algorithm',
+      'reading_algorithm',
       'ready',
       'intro',
       'analysis',
@@ -96,7 +98,9 @@ export default function LessonPlayer() {
   const current = safeItems[step]?.data;
 
   const rawType = safeItems[step]?.type;
-  const type = rawType ? rawType.toLowerCase() : '';
+  const type = rawType
+    ? rawType.toLowerCase().trim().replace(/[\s-]+/g, '_')
+    : '';
 
   const handleConsonantClick = (index, char) => {
     setRevealedConsonants((prev) => {
@@ -347,7 +351,7 @@ export default function LessonPlayer() {
       )}
 
       {/* УНИВЕРСАЛЬНАЯ ТЕОРИЯ */}
-      {(type === 'theory' || type === 'title' || type === 'meet-teams' || type === 'rule' || type === 'reading-algorithm' || type === 'ready' || type === 'intro') && (
+      {(type === 'theory' || type === 'title' || type === 'meet_teams' || type === 'rule' || type === 'reading_algorithm' || type === 'ready' || type === 'intro') && (
         <UniversalTheorySlide
           type={type}
           data={current}
@@ -371,7 +375,7 @@ export default function LessonPlayer() {
       )}
 
 
-      {type === 'no-spaces' && (
+      {type === 'no_spaces' && (
         <div className="w-full flex flex-col items-center">
           <h2 className="text-3xl font-black text-white mb-2 text-center uppercase italic">{current.title}</h2>
           <p className="text-gray-400 mb-6 text-center text-sm font-medium">{current.subtitle}</p>
