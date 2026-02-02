@@ -1,0 +1,117 @@
+{
+  "chapter_id": 10000,
+  "lessons": [
+    {
+      "lesson_id": 10102,
+      "title": "UNIT R1.2 — Sun vs Moon (Visual Teams)",
+      "desc": "Learn to spot the two visual teams (Sun vs Moon) and meet the K‑group letters.",
+      "module_id": 10000,
+      "order_index": 1,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "The Two Teams: Sun ☀️ vs Moon 🌑",
+            "text": "All consonants are divided into two teams:\n\n☀️ SUN TEAM\n- Smoother, rounder shapes\n- Simpler appearance\n- Light, open sound from the front teeth\n\n🌑 MOON TEAM\n- More complex, detailed shapes\n- More hair, spikes, hooks\n- Deep, heavy sound from the throat\n\nYou can read 80% of Khmer just by knowing which team a letter belongs to.\n\nVISUAL ANCHORS:\n🥚 Smooth egg head = Sun Team\n🦅 Complicated bird hair = Moon Team",
+            "sublesson_title": "Visual Classification"
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "ក",
+            "target_char": "ក",
+            "hint": "Ka (Smooth Egg Head) = SUN TEAM ☀️",
+            "char_split": [
+              "ក"
+            ],
+            "english_translation": "Ka (Sun, smooth)",
+            "letter_series": 1,
+            "word_audio": "letter_ka.mp3",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "ខ",
+            "target_char": "ខ",
+            "hint": "Kha (Snail Spiral) = SUN TEAM ☀️ (smooth with one decoration)",
+            "char_split": [
+              "ខ"
+            ],
+            "english_translation": "Kha (Sun, with antenna)",
+            "letter_series": 1,
+            "word_audio": "letter_kha.mp3",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "គ",
+            "target_char": "គ",
+            "hint": "Ko (Bird with Hair) = MOON TEAM 🌑 (BIG hairstyle, complex)",
+            "char_split": [
+              "គ"
+            ],
+            "english_translation": "Ko (Moon, complicated hair)",
+            "letter_series": 2,
+            "word_audio": "letter_ko.mp3",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "ឃ",
+            "target_char": "ឃ",
+            "hint": "Kho (Bowl with Deep Pit) = MOON TEAM 🌑 (deep indent)",
+            "char_split": [
+              "ឃ"
+            ],
+            "english_translation": "Kho (Moon, with pit)",
+            "letter_series": 2,
+            "word_audio": "letter_kho.mp3",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "ង",
+            "target_char": "ង",
+            "hint": "Ngo (Snake Tail Down) = ALWAYS MOON 🌑 (ALWAYS!)",
+            "char_split": [
+              "ង"
+            ],
+            "english_translation": "Ngo (Moon, tail always present)",
+            "letter_series": 2,
+            "word_audio": "letter_ngo.mp3",
+            "char_audio_map": {}
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Hair/Teeth Check: Which of these K-group letters is MOON TEAM?",
+            "options": [
+              "ក",
+              "ខ",
+              "គ",
+              "ឃ"
+            ],
+            "correct_answer": "គ",
+            "explanation": "គ (Ko) has a big hairstyle with complex details. That's MOON TEAM 🌑. ក and ខ are smooth (Sun). ឃ also has details but the primary example here is គ.",
+            "pronunciation_map": {
+              "ក": "ka (Sun)",
+              "ខ": "kha (Sun)",
+              "គ": "ko (Moon) ← MOON TEAM",
+              "ឃ": "kho (Moon)"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

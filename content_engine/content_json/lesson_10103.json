@@ -1,0 +1,96 @@
+{
+  "chapter_id": 10000,
+  "lessons": [
+    {
+      "lesson_id": 10103,
+      "title": "UNIT R1.3 — The Commander Principle",
+      "desc": "One consonant (the commander) decides how the vowel is read. You’ll start reading syllables.",
+      "module_id": 10000,
+      "order_index": 2,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "The Commander Principle: One rule that explains everything",
+            "text": "Here's the magic:\n\nThe consonant (the Hero) decides how the vowel will sound.\n\nSame vowel mark.\nDifferent consonant = Different sound.\n\nWhy? Because the consonant is the COMMANDER.\nIt controls the tone.\n\nSun consonant + vowel = vowel sounds CLEAN\nMoon consonant + same vowel = vowel sounds ALTERED (with E or O coloring)",
+            "sublesson_title": "Commander Principle"
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Will they sound the same? Look at: ក + ា (Sun) vs គ + ា (Moon). Same vowel mark, different commander.",
+            "options": [
+              "Same sound",
+              "Different sounds"
+            ],
+            "correct_answer": "Different sounds",
+            "explanation": "Same vowel mark, but different commanders → different sounds.\nSun consonant (ក) → sound stays clear/light (kaa)\nMoon consonant (គ) → sound changes, gets 'colored' by the deep tone (kea)"
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "Right-side Vowels (Inventory)",
+            "text": "Some vowel marks sit to the RIGHT of the consonant like a cane.\n\nIn R1 you learn three:\n\n• ា (Aa) — the most common\n• ះ (Ah) — short, sharp stop\n• ាំ (Am) — nasal tone\n\nWith Sun letters: ា→-aa, ះ→-ah, ាំ→-am\nWith Moon letters: ា→-ea, ះ→-eah, ាំ→-oam\n\nCore rule: Sun + vowel = vowel sound stays clean; Moon + vowel = vowel shifts with E/O coloring.",
+            "sublesson_title": "Right-side Vowels"
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Which pair matches the correct Sun vs Moon reading for ា (Aa)?",
+            "options": [
+              "កា = kaa, គា = kea",
+              "កា = kea, គា = kaa",
+              "កា = kaa, គា = kaa",
+              "កា = kea, គា = kea"
+            ],
+            "correct_answer": "កា = kaa, គា = kea",
+            "explanation": "Sun (ក) keeps ា as -aa: កា = kaa\nMoon (គ) shifts ា to -ea: គា = kea",
+            "pronunciation_map": {
+              "កា = kaa, គា = kea": "Correct ✓",
+              "កា = kea, គា = kaa": "Backwards",
+              "កា = kaa, គា = kaa": "Both same (wrong)",
+              "កា = kea, គា = kea": "Both same (wrong)"
+            }
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "កា",
+            "target_char": "ក",
+            "hint": "Sun Ka + ា (Aa mark) = kaa",
+            "char_split": [
+              "កា"
+            ],
+            "english_translation": "basic syllable (kaa)",
+            "letter_series": 1,
+            "word_audio": "letter_ka_aa.mp3",
+            "char_audio_map": {
+              "កា": "letter_ka_aa.mp3"
+            }
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "គា",
+            "target_char": "គ",
+            "hint": "Moon Ko + ា (Aa mark) → Moon shift = kea",
+            "char_split": [
+              "គា"
+            ],
+            "english_translation": "basic syllable (kea)",
+            "letter_series": 2,
+            "word_audio": "letter_ko_aa.mp3",
+            "char_audio_map": {
+              "គា": "letter_ko_aa.mp3"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

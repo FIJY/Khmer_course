@@ -50,17 +50,20 @@
           "type": "analysis",
           "data": {
             "mode": "decoder_select",
-            "title": "Find the center.",
-            "text": "One letter per block.",
+            "title": "R1.1.3 — Find the Hero",
+            "subtitle": "One main consonant per block",
+            "text": "You may have noticed something.\n\nEvery Khmer block is built around **one main letter**.\nThat letter is a consonant.\n\nIt's like a game of **“find me”**.\n\n**The mechanic:**\n1) Tap a letter.\n2) A frame lights up.\n3) First you hear the consonant sound.\n4) Then you hear its name.\n\nNo strict rules yet. Only observation.",
             "word": "ខ្ញុំចង់ញ៉ាំបាយ",
-            "translation": "I want to eat rice"
+            "translation": "I want to eat rice",
+            "note": "Tap the big ‘heroes’. Ignore the decorations."
           }
         },
         {
           "type": "drill_choice",
           "data": {
-            "title": "Ignore the noise.",
-            "prompt": "Find the main letters.",
+            "title": "Select only the Heroes",
+            "subtitle": "Tap the main big letters.",
+            "prompt": "Khmer text is full of noise. Smooth shapes. Complex shapes. Decorations.\n\n**Task:** Find only the main letters (Heroes).\n\n(Tap a letter to hear the consonant sound).",
             "layout": "grid",
             "mode": "multi",
             "options": [
@@ -89,15 +92,16 @@
               "ka",
               "kha"
             ],
-            "success_text": "Yes.",
-            "fail_text": "Not decorations."
+            "success_text": "✅ Correct! Heroes are the big ones.",
+            "fail_text": "❌ decorations are not heroes."
           }
         },
         {
           "type": "drill_choice",
           "data": {
-            "title": "More noise.",
-            "prompt": "Same rule.",
+            "title": "Select only the Heroes (Harder)",
+            "subtitle": "Let's add more noise.",
+            "prompt": "Same principle.\nThe Main Letter is always ONE.\n\nDo not count the decorations.",
             "layout": "grid",
             "mode": "multi",
             "options": [
@@ -132,42 +136,45 @@
               "kho",
               "ngo"
             ],
-            "success_text": "Correct.",
-            "fail_text": "Focus."
+            "success_text": "✅ You found them.",
+            "fail_text": "❌ Focus on the baseline."
           }
         },
         {
           "type": "meet-teams",
           "data": {
-            "title": "Same or different?",
-            "text": "ប vs ព\n\nDifferent."
+            "title": "Same or Different?",
+            "text": "Look at this pair:\n\n**ប** vs **ព**\n\n**Answer:** Different.\n\nThese two letters look similar.\nBut they belong to different groups.\n\nMixing them changes how a word sounds."
           }
         },
         {
           "type": "comparison_audio",
           "data": {
-            "title": "Listen.",
+            "title": "Listen closely",
             "pairs": [
               {
-                "instruction": "Tap both.",
+                "instruction": "Tap the first one. Tap the second one. Different sounds = Different letters.",
                 "left": {
                   "text": "ប",
-                  "audio": "letter_ba"
+                  "audio": "letter_ba",
+                  "label": "BA"
                 },
                 "right": {
                   "text": "ព",
-                  "audio": "letter_po"
+                  "audio": "letter_po",
+                  "label": "PO"
                 }
               }
             ],
-            "note": "Different sound → different letter."
+            "note": "They look like twins, but they are not."
           }
         },
         {
           "type": "drill_choice",
           "data": {
-            "title": "Find ខ",
-            "prompt": "Snail shape.",
+            "title": "Find the letter ខ",
+            "subtitle": "The letter is hidden inside words.",
+            "prompt": "Tap the letter **ខ** in the list below.\n\n**Hint:** It looks like a snail with a spiral.",
             "layout": "grid",
             "mode": "multi",
             "options": [
@@ -196,15 +203,16 @@
               "khang",
               "kha"
             ],
-            "success_text": "Yes.",
-            "fail_text": "Spiral."
+            "success_text": "✅ Found the snail!",
+            "fail_text": "❌ Look for the spiral shape."
           }
         },
         {
           "type": "drill_choice",
           "data": {
-            "title": "Again.",
-            "prompt": "Same hunt.",
+            "title": "Find the letter ខ (Again)",
+            "subtitle": "Different set. Same principle.",
+            "prompt": "Remember the shape (Snail).\nFind it.",
             "layout": "grid",
             "mode": "multi",
             "options": [
@@ -233,41 +241,41 @@
               "khak",
               "kham"
             ],
-            "success_text": "Good.",
-            "fail_text": "Look again."
+            "success_text": "✅ Excellent.",
+            "fail_text": "❌ Try again."
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "Every Khmer block is built around:",
+            "question": "Every Khmer block is built around...",
             "options": [
               "Decorations",
-              "A main consonant",
-              "A vowel"
+              "A Main Consonant (Hero)",
+              "A Vowel"
             ],
-            "correct_answer": "A main consonant",
-            "explanation": "The consonant is the center."
+            "correct_answer": "A Main Consonant (Hero)",
+            "explanation": "Correct. The consonant is the skeleton. Everything else hangs on it."
           }
         },
         {
           "type": "quiz",
           "data": {
-            "question": "When we tap a letter, first we hear:",
+            "question": "When we tap a letter, first we hear...",
             "options": [
-              "A vowel",
-              "A consonant",
+              "The vowel sound",
+              "The Consonant sound",
               "The word name"
             ],
-            "correct_answer": "A consonant",
-            "explanation": "Sound first."
+            "correct_answer": "The Consonant sound",
+            "explanation": "Correct. First the sound, then the name."
           }
         },
         {
           "type": "ready",
           "data": {
-            "title": "Good.",
-            "text": "You see the heroes now."
+            "title": "Summary",
+            "text": "Letters may look similar, but sound different.\n\nAlways look for the Hero."
           }
         }
       ]

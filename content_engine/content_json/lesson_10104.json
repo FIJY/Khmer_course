@@ -1,0 +1,207 @@
+{
+  "chapter_id": 10000,
+  "lessons": [
+    {
+      "lesson_id": 10104,
+      "title": "UNIT R1.4 — Right-side Vowels: ា, ះ, ាំ",
+      "desc": "Learn the right-side vowel inventory and how it changes sound: -ា, -ះ, -ាំ.",
+      "module_id": 10000,
+      "order_index": 3,
+      "content": [
+        {
+          "type": "theory",
+          "data": {
+            "title": "New mark: ះ (Ah) — short, sharp stop",
+            "text": "This vowel mark makes the sound SHORT and SHARP.\n\nIt's like adding a full stop to the vowel.\n\nCompare:\n- កា = kaa (long, open)\n- កះ = kah (short, stops abruptly)\n\nMoon team works the same way:\n- គា = kea (long)\n- គះ = keah (short)\n\nThe pattern is consistent: the vowel mark changes the LENGTH and QUALITY, but the consonant still controls the TEAM color.",
+            "sublesson_title": "The Ah Mark"
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Read the syllable: What is ក + ះ (Ah mark) in Sun series?",
+            "options": [
+              "kah (short)",
+              "kaa (long)",
+              "keah",
+              "kam"
+            ],
+            "correct_answer": "kah (short)",
+            "explanation": "Sun letters keep vowels clean. ះ makes a short, sharp stop.\nSo: កះ = kah (short)"
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "កះ",
+            "target_char": "ក",
+            "hint": "Sun Ka + ះ (Ah mark) = kah (short)",
+            "char_split": [
+              "កះ"
+            ],
+            "english_translation": "basic syllable (kah - short)",
+            "letter_series": 1,
+            "word_audio": "letter_ka_ah.mp3",
+            "char_audio_map": {
+              "កះ": "letter_ka_ah.mp3"
+            }
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "គះ",
+            "target_char": "គ",
+            "hint": "Moon Ko + ះ (Ah mark) → Moon shift = keah (short)",
+            "char_split": [
+              "គះ"
+            ],
+            "english_translation": "basic syllable (keah - short)",
+            "letter_series": 2,
+            "word_audio": "letter_ko_ah.mp3",
+            "char_audio_map": {
+              "គះ": "letter_ko_ah.mp3"
+            }
+          }
+        },
+        {
+          "type": "theory",
+          "data": {
+            "title": "New mark: ាំ (Am) — nasal tone",
+            "text": "This vowel mark adds a NASAL quality to the vowel.\n\nIt's like the vowel passes through the nose.\n\nCompare:\n- កា = kaa (clear, open)\n- កាំ = kam (nasal quality)\n\nMoon team:\n- គា = kea (clear)\n- គាំ = koam (nasal with O-coloring)\n\nNotice: the nasal mark ាំ combines with the vowel ា, and Moon team still adds the O-coloring.",
+            "sublesson_title": "The Am Mark"
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Right-side vowels reference: What is the Moon team reading of ាំ (Am)?",
+            "options": [
+              "-am",
+              "-oam",
+              "-eam",
+              "-um"
+            ],
+            "correct_answer": "-oam",
+            "explanation": "Moon letters add O-coloring: ាំ with Moon consonant → -oam\nExample: ង + ាំ = ngoam (not ngam)"
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "កាំ",
+            "target_char": "ក",
+            "hint": "Sun Ka + ាំ (Am mark) = kam (nasal)",
+            "char_split": [
+              "កាំ"
+            ],
+            "english_translation": "basic syllable (kam - nasal)",
+            "letter_series": 1,
+            "word_audio": "letter_ka_am.mp3",
+            "char_audio_map": {
+              "កាំ": "letter_ka_am.mp3"
+            }
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "គាំ",
+            "target_char": "គ",
+            "hint": "Moon Ko + ាំ (Am mark) → Moon shift = koam (nasal)",
+            "char_split": [
+              "គាំ"
+            ],
+            "english_translation": "basic syllable (koam - nasal)",
+            "letter_series": 2,
+            "word_audio": "letter_ko_am.mp3",
+            "char_audio_map": {
+              "គាំ": "letter_ko_am.mp3"
+            }
+          }
+        },
+        {
+          "type": "quiz",
+          "data": {
+            "question": "Pattern transfer: You learned ក, គ, ខ. Now apply the rule: What is ខាំ (Sun Kha + nasal)?",
+            "options": [
+              "khaam",
+              "kham",
+              "khoam",
+              "keam"
+            ],
+            "correct_answer": "kham",
+            "explanation": "ខ is Sun team (like ក). So it keeps the vowel clean.\nខ + ាំ = kham (not khoam, that would be Moon)"
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "កាហ្វេ",
+            "target_char": "ក",
+            "hint": "REAL WORLD WIN: Coffee. First syllable ក + ា = kaa. You can read this now!",
+            "char_split": [
+              "កា",
+              "ហ្វេ"
+            ],
+            "english_translation": "coffee (☕)",
+            "letter_series": 1,
+            "word_audio": "word_coffee.mp3",
+            "char_audio_map": {
+              "កា": "letter_ka_aa.mp3"
+            }
+          }
+        },
+        {
+          "type": "visual_decoder",
+          "data": {
+            "word": "ហាង",
+            "target_char": "ហ",
+            "hint": "REAL WORLD WIN: Shop sign. You'll see this on streets everywhere!",
+            "char_split": [
+              "ហា",
+              "ង"
+            ],
+            "english_translation": "shop / store / stall",
+            "letter_series": 1,
+            "word_audio": "word_shop.mp3",
+            "char_audio_map": {
+              "ហា": "letter_ha_aa.mp3",
+              "ង": "letter_ngo.mp3"
+            }
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Sun + ា (Aa mark)",
+            "back": "កា",
+            "pronunciation": "kaa",
+            "item_type": "syllable",
+            "audio": "letter_ka_aa.mp3"
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Moon + ា (Aa mark)",
+            "back": "គា",
+            "pronunciation": "kea",
+            "item_type": "syllable",
+            "audio": "letter_ko_aa.mp3"
+          }
+        },
+        {
+          "type": "vocab_card",
+          "data": {
+            "front": "Sun Kha + ា",
+            "back": "ខា",
+            "pronunciation": "khaa",
+            "item_type": "syllable",
+            "audio": "letter_kha_aa.mp3"
+          }
+        }
+      ]
+    }
+  ]
+}
