@@ -55,6 +55,41 @@ function findNextConsonantAfterCoeng(textChars, startIndex) {
   return { char: "", index: -1 };
 }
 
+function resolveGlyphMeta(glyphs, text) {
+  const textChars = Array.from(text || "");
+  let textIndex = 0;
+
+  return (glyphs || []).map((glyph) => {
+    let resolvedChar = glyph.char || "";
+    let resolvedIndex = -1;
+
+    if (resolvedChar === COENG_CHAR) {
+      const { char, index } = findNextConsonantAfterCoeng(textChars, textIndex);
+      if (char) {
+        resolvedChar = char;
+        resolvedIndex = index;
+        textIndex = index + 1;
+      }
+    } else if (resolvedChar) {
+      const nextIndex = textChars.indexOf(resolvedChar, textIndex);
+      if (nextIndex !== -1) {
+        resolvedIndex = nextIndex;
+        textIndex = nextIndex + 1;
+      }
+    }
+
+    const isSubscript =
+      resolvedIndex > 0 && textChars[resolvedIndex - 1] === COENG_CHAR;
+
+    return {
+      ...glyph,
+      resolvedChar: resolvedChar || glyph.char || "",
+      resolvedIndex,
+      isSubscript,
+    };
+  });
+}
+
 function bboxArea(bb) {
   const w = (bb?.x2 ?? 0) - (bb?.x1 ?? 0);
   const h = (bb?.y2 ?? 0) - (bb?.y1 ?? 0);
@@ -141,7 +176,6 @@ export default function VisualDecoder(props) {
         if (!active) return;
         const arr = Array.isArray(json) ? json : [];
         setGlyphs(arr);
-        if (onGlyphsRendered) onGlyphsRendered(arr);
         setLoading(false);
       })
       .catch((err) => {
@@ -155,6 +189,16 @@ export default function VisualDecoder(props) {
       active = false;
     };
   }, [text, onGlyphsRendered]);
+
+  const resolvedGlyphMeta = useMemo(
+    () => resolveGlyphMeta(glyphs, text),
+    [glyphs, text]
+  );
+
+  useEffect(() => {
+    if (!onGlyphsRendered) return;
+    onGlyphsRendered(resolvedGlyphMeta);
+  }, [onGlyphsRendered, resolvedGlyphMeta]);
 
   useEffect(() => {
     if (!glyphs.length || !data?.char_split) return;
@@ -216,27 +260,10 @@ export default function VisualDecoder(props) {
       .sort((a, b) => a.area - b.area);
   }, [glyphs]);
 
-  const resolvedGlyphChars = useMemo(() => {
-    const textChars = Array.from(text || "");
-    let textIndex = 0;
-
-    return (glyphs || []).map((glyph) => {
-      let resolvedChar = glyph.char || "";
-
-      if (resolvedChar === COENG_CHAR) {
-        const { char, index } = findNextConsonantAfterCoeng(textChars, textIndex);
-        if (char) {
-          resolvedChar = char;
-          textIndex = index + 1;
-        }
-      } else if (resolvedChar) {
-        const nextIndex = textChars.indexOf(resolvedChar, textIndex);
-        if (nextIndex !== -1) textIndex = nextIndex + 1;
-      }
-
-      return resolvedChar || glyph.char || "";
-    });
-  }, [glyphs, text]);
+  const resolvedGlyphChars = useMemo(
+    () => resolvedGlyphMeta.map((glyph) => glyph.resolvedChar || glyph.char || ""),
+    [resolvedGlyphMeta]
+  );
 
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
@@ -327,16 +354,14 @@ export default function VisualDecoder(props) {
 
   const subscriptConsonantIndices = useMemo(() => {
     const indices = new Set();
-    if (!glyphs || glyphs.length === 0) return indices;
-    glyphs.forEach((glyph, idx) => {
-      if (glyph.char !== COENG_CHAR) return;
-      const next = glyphs[idx + 1];
-      if (!next) return;
-      const resolved = resolvedGlyphChars[idx + 1] || next.char || "";
-      if (isKhmerConsonant(resolved)) indices.add(idx + 1);
+    if (!resolvedGlyphMeta || resolvedGlyphMeta.length === 0) return indices;
+    resolvedGlyphMeta.forEach((glyph, idx) => {
+      if (glyph.isSubscript && isKhmerConsonant(glyph.resolvedChar || glyph.char)) {
+        indices.add(idx);
+      }
     });
     return indices;
-  }, [glyphs, resolvedGlyphChars]);
+  }, [resolvedGlyphMeta]);
 
   function colorForGlyph(glyph, idx) {
     const resolved = resolvedGlyphChars[idx] || glyph.char || "";
