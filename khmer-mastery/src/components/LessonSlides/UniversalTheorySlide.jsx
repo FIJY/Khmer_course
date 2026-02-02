@@ -1,5 +1,6 @@
 import React from 'react';
 import { Volume2, Sun, Moon, BookOpen, Lightbulb, Zap, ListOrdered } from 'lucide-react';
+import LessonCard from '../UI/LessonCard';
 
 export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
   // 1. Нормализация типа: пропс > данные > пусто
@@ -59,7 +60,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
     case 'theory':
     case 'rule':
       return (
-        <div className="w-full bg-gray-900 border border-white/10 p-6 md:p-8 rounded-[3.5rem] text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <LessonCard className="p-6 md:p-8 text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="hidden sm:flex justify-center mb-4">
                 <div className="p-1.5 bg-cyan-500/10 rounded-full">
                     {mode === 'rule' ? <Lightbulb className="text-amber-400" size={12} /> : <BookOpen className="text-cyan-400" size={12} />}
@@ -138,13 +139,13 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
             {data.audio && (
                 <button
                     onClick={() => play(data.audio)}
-                    className="mt-6 flex items-center gap-3 px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-full text-cyan-400 font-bold transition-all mx-auto border border-white/5"
+                    className="mt-6 flex items-center gap-3 px-6 py-3 bg-slate-900/80 hover:bg-slate-800 rounded-full text-cyan-200 font-bold transition-all mx-auto border border-cyan-500/30"
                 >
                     <Volume2 size={20} />
                     <span>Listen</span>
                 </button>
             )}
-        </div>
+        </LessonCard>
       );
 
     case 'reading-algorithm':

@@ -197,9 +197,9 @@ export default function LessonPlayer() {
       score={score}
       onClose={() => navigate('/map')}
       footer={(
-        <footer className="p-6 border-t border-white/5 bg-black/80">
+        <footer className="p-6 border-t border-white/10 bg-slate-950/80 backdrop-blur-xl">
           <div className="flex gap-3">
-            <button onClick={goBack} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`} type="button">
+            <button onClick={goBack} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-slate-900/80 border-white/10 text-white hover:border-cyan-400/40 hover:text-cyan-200'}`} type="button">
               <ChevronLeft size={24} />
             </button>
             <Button onClick={handleNext} disabled={!canAdvance} className="flex-1">

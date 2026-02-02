@@ -16,22 +16,22 @@ const SessionFrame = ({
 
   return (
     <MobileLayout withNav={true} footer={footer}>
-      <header className="p-4 border-b border-white/5 bg-gray-900/20">
+      <header className="p-4 border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
         <div className="flex justify-between items-center">
-          <button onClick={onClose} className="p-2 text-gray-500" type="button">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white transition-colors" type="button">
             <X size={24} />
           </button>
           <div className="text-center flex-1 px-4">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-cyan-500 mb-1 truncate">{title}</h2>
-            <div className="w-24 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden">
-              <div className="h-full bg-cyan-500 transition-all" style={{ width: `${progress}%` }} />
+            <div className="w-28 h-1.5 bg-slate-800/80 rounded-full mx-auto overflow-hidden">
+              <div className="h-full bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.6)] transition-all" style={{ width: `${progress}%` }} />
             </div>
             {progressLabel && (
-              <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest mt-2">{progressLabel}</p>
+              <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mt-2">{progressLabel}</p>
             )}
           </div>
           {typeof score === 'number' ? (
-            <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs w-10">
+            <div className="flex items-center gap-1 text-emerald-400 font-bold text-xs w-10">
               <CheckCircle2 size={16}/> {score}
             </div>
           ) : (
