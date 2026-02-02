@@ -22,7 +22,6 @@
                 "kind": "label",
                 "text": "English without spaces:"
               },
-
               {
                 "kind": "latin",
                 "text": "HaveYouEverSeenATextWallLikeThis",
@@ -41,21 +40,23 @@
         {
           "type": "analysis",
           "data": {
-            "mode": "visual_decoder",
+            "mode": "decoder_select",
             "title": "Khmer is like Lego",
             "text": "Good news: Khmer is like Lego.\n\nYou don't need to know thousands of heroes.\nLet's not study the language yet.\nLet's just observe how it works.\n\nToday we will learn to find the Consonants in the text.\n\nThis unit starts slowly.\nSit on the same line.\n\nReady?",
-            "mode": "decoder_select",
             "word": "ខ្ញុំចង់ញ៉ាំបាយ",
             "translation": "I want to eat rice"
-
           }
         },
-
         {
-          "type": "rule",
+          "type": "analysis",
           "data": {
-            "title": "Center of Gravity",
-            "text": "You may have noticed something.\n\nEvery Khmer block is built around **one main letter**.\nThat letter is a consonant.\n\nIt's like a game of 'Find Me'.\n\n**The Mechanic:**\n1. We tap a letter.\n2. A frame lights up.\n3. First you hear the consonant sound, then its name.\n\nNo strict rules yet. Only observation."
+            "mode": "decoder_select",
+            "title": "R1.1.3 — Find the Hero",
+            "subtitle": "One main consonant per block",
+            "text": "You may have noticed something.\n\nEvery Khmer block is built around **one main letter**.\nThat letter is a consonant.\n\nIt's like a game of **“find me”**.\n\n**The mechanic:**\n1) Tap a letter.\n2) A frame lights up.\n3) First you hear the consonant sound.\n4) Then you hear its name.\n\nNo strict rules yet. Only observation.",
+            "word": "ខ្ញុំចង់ញ៉ាំបាយ",
+            "translation": "I want to eat rice",
+            "note": "Tap the big ‘heroes’. Ignore the decorations."
           }
         },
         {
