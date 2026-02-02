@@ -31,7 +31,11 @@ const SessionCompletion = ({
           </p>
         )}
         {actionLabel && onAction && (
-          <Button variant={isSuccess ? 'primary' : 'danger'} onClick={onAction}>
+          <Button
+            variant={isSuccess ? 'primary' : 'danger'}
+            onClick={onAction}
+            className={isFailure ? 'w-auto px-10' : ''}
+          >
             {actionLabel}
           </Button>
         )}
