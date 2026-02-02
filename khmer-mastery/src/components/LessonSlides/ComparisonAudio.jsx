@@ -1,5 +1,5 @@
 // src/components/LessonSlides/ComparisonAudio.jsx
-import React, { useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Volume2, Pause } from "lucide-react";
 import { getSoundFileForChar } from "../../data/audioMap";
 import LessonCard from "../UI/LessonCard";
@@ -29,6 +29,7 @@ export default function ComparisonAudio({
 
   const [playingIndex, setPlayingIndex] = useState(null);
   const [playingSide, setPlayingSide] = useState(null); // "left" or "right"
+  const [playedSides, setPlayedSides] = useState(() => new Map());
   const audioRef = useRef(null);
 
   const SOUNDS_URL = import.meta.env.VITE_SOUNDS_URL || "/sounds";
@@ -48,14 +49,43 @@ export default function ComparisonAudio({
     return null;
   };
 
+  useEffect(() => {
+    setPlayedSides(new Map());
+  }, [pairs]);
+
+  const hasCompletedPair = useMemo(() => {
+    return pairs.some((pair, pairIdx) => {
+      const leftAudio = getAudio(pair.left);
+      const rightAudio = getAudio(pair.right);
+      const progress = playedSides.get(pairIdx);
+      const leftDone = !leftAudio || progress?.left;
+      const rightDone = !rightAudio || progress?.right;
+      return leftDone && rightDone;
+    });
+  }, [pairs, playedSides]);
+
+  useEffect(() => {
+    if (hasCompletedPair && onComplete) {
+      onComplete();
+    }
+  }, [hasCompletedPair, onComplete]);
+
+  const markPlayed = (pairIdx, side) => {
+    setPlayedSides((prev) => {
+      const next = new Map(prev);
+      const current = next.get(pairIdx) || { left: false, right: false };
+      next.set(pairIdx, { ...current, [side]: true });
+      return next;
+    });
+  };
+
   // Воспроизвести звук
   const playSound = (audioFile, pairIdx, side) => {
     if (!audioFile) return;
 
     const path = getSoundPath(audioFile);
     if (!path) return;
-
-    if (onComplete) onComplete();
+    markPlayed(pairIdx, side);
 
     if (audioRef.current) {
       audioRef.current.src = path;
@@ -69,13 +99,11 @@ export default function ComparisonAudio({
         .then(() => {
           setPlayingIndex(pairIdx);
           setPlayingSide(side);
-          if (onComplete) onComplete();
         })
         .catch((e) => {
           console.error("Audio playback failed:", e);
           setPlayingIndex(null);
           setPlayingSide(null);
-          if (onComplete) onComplete();
         });
     }
   };
