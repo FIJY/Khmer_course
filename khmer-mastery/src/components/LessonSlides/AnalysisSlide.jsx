@@ -45,6 +45,7 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
   const [selectionIds, setSelectionIds] = useState([]);
   const [selectionResetSeed, setSelectionResetSeed] = useState(0);
   const [renderedGlyphs, setRenderedGlyphs] = useState([]);
+  const showSelectionStats = true;
 
   // НОВОЕ: состояние для постоянной подсказки
   const [activeCharData, setActiveCharData] = useState(null);
@@ -296,14 +297,16 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
                   ) : null}
                 </div>
 
-                <div style={styles.consonantCounter}>
-                  <span style={styles.counterLabel}>Consonants:</span>
-                  <span style={styles.counterValue}>{consonantStats.selected} / {consonantStats.total}</span>
-                  {consonantStats.total > 0 && <span style={styles.counterPercentage}>({consonantStats.percentage}%)</span>}
-                  <span style={styles.counterDivider} />
-                  <span style={styles.counterLabel}>Subscripts:</span>
-                  <span style={styles.subscriptValue}>{consonantStats.subscriptSelected} / {consonantStats.subscriptTotal}</span>
-                </div>
+                {!showSelectionStats && (
+                  <div style={styles.consonantCounter}>
+                    <span style={styles.counterLabel}>Consonants:</span>
+                    <span style={styles.counterValue}>{consonantStats.selected} / {consonantStats.total}</span>
+                    {consonantStats.total > 0 && <span style={styles.counterPercentage}>({consonantStats.percentage}%)</span>}
+                    <span style={styles.counterDivider} />
+                    <span style={styles.counterLabel}>Subscripts:</span>
+                    <span style={styles.subscriptValue}>{consonantStats.subscriptSelected} / {consonantStats.subscriptTotal}</span>
+                  </div>
+                )}
 
                 <VisualDecoder
                   data={d}
@@ -320,6 +323,7 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
                   onGlyphClick={handleGlyphClick}
                   highlightSubscripts={true}
                   alphabetDb={alphabetDb}
+                  showSelectionStats={showSelectionStats}
                 />
               </div>
             ) : (
