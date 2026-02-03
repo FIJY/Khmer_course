@@ -2,7 +2,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Volume2, Pause } from "lucide-react";
 import { getSoundFileForChar } from "../../data/audioMap";
-import LessonCard from "../UI/LessonCard";
+import LessonFrame from "../UI/LessonFrame";
+import LessonHeader from "../UI/LessonHeader";
+import VisualDecoder, { HIGHLIGHT_MODES } from "../VisualDecoder";
 
 /**
  * ComparisonAudio Component
@@ -113,14 +115,12 @@ export default function ComparisonAudio({
   };
 
   return (
-    <LessonCard className="space-y-6">
+    <LessonFrame className="space-y-6 p-6">
       <audio ref={audioRef} crossOrigin="anonymous" />
 
       {/* Title */}
       {title && (
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-cyan-300 mb-2">{title}</h2>
-        </div>
+        <LessonHeader title={title} />
       )}
 
       {/* Pairs */}
@@ -142,16 +142,18 @@ export default function ComparisonAudio({
               <div className="grid grid-cols-2 gap-4">
                 {/* LEFT */}
                 <div className="flex flex-col items-center space-y-3">
-                  {/* Khmer text */}
+                  {/* Khmer glyph */}
                   <div
-                    className="text-6xl font-bold text-white drop-shadow-lg"
-                    style={{
-                      textShadow: isPlaying(pairIdx, "left")
-                        ? "0 0 20px rgba(34, 211, 238, 0.8)"
-                        : "none",
-                    }}
+                    className={`w-full rounded-2xl p-3 ${isPlaying(pairIdx, "left") ? "bg-cyan-500/10 border border-cyan-400/40" : "bg-black/20 border border-white/10"}`}
                   >
-                    {pair.left?.text}
+                    <VisualDecoder
+                      text={pair.left?.text}
+                      compact={true}
+                      hideDefaultButton={true}
+                      viewBoxPad={50}
+                      highlightMode={HIGHLIGHT_MODES.ALL}
+                      onGlyphClick={() => playSound(leftAudio, pairIdx, "left")}
+                    />
                   </div>
 
                   {/* Label */}
@@ -193,16 +195,18 @@ export default function ComparisonAudio({
 
                 {/* RIGHT */}
                 <div className="flex flex-col items-center space-y-3">
-                  {/* Khmer text */}
+                  {/* Khmer glyph */}
                   <div
-                    className="text-6xl font-bold text-white drop-shadow-lg"
-                    style={{
-                      textShadow: isPlaying(pairIdx, "right")
-                        ? "0 0 20px rgba(34, 211, 238, 0.8)"
-                        : "none",
-                    }}
+                    className={`w-full rounded-2xl p-3 ${isPlaying(pairIdx, "right") ? "bg-cyan-500/10 border border-cyan-400/40" : "bg-black/20 border border-white/10"}`}
                   >
-                    {pair.right?.text}
+                    <VisualDecoder
+                      text={pair.right?.text}
+                      compact={true}
+                      hideDefaultButton={true}
+                      viewBoxPad={50}
+                      highlightMode={HIGHLIGHT_MODES.ALL}
+                      onGlyphClick={() => playSound(rightAudio, pairIdx, "right")}
+                    />
                   </div>
 
                   {/* Label */}
@@ -265,6 +269,6 @@ export default function ComparisonAudio({
           </button>
         </div>
       )}
-    </LessonCard>
+    </LessonFrame>
   );
 }

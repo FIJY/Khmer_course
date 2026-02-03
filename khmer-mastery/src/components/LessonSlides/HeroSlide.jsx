@@ -1,6 +1,8 @@
 import React from 'react';
-import { Zap, Volume2 } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import KhmerColoredText from '../KhmerColoredText';
+import { getSoundFileForChar } from '../../data/audioMap';
+import LessonFrame from '../UI/LessonFrame';
 
 // Получаем URL шрифта из переменных окружения или дефолтный
 const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
@@ -9,11 +11,13 @@ const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
 export default function HeroSlide({ data, onPlayAudio }) {
   // data соответствует структуре learn_char из JSON
 
+  const audioFile = data.audio || getSoundFileForChar(data.char);
+
   return (
     <div className="w-full flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
 
       {/* Карточка Героя */}
-      <div className="bg-gray-900 border-2 border-cyan-500/20 rounded-[3rem] p-10 w-full relative overflow-visible mb-6">
+      <LessonFrame className="p-10 relative overflow-visible mb-6" variant="full">
 
         {/* Фоновый эффект свечения */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50" />
@@ -26,13 +30,22 @@ export default function HeroSlide({ data, onPlayAudio }) {
         </div>
 
         {/* Большая анимированная буква */}
-        <div className="mb-8 scale-150 origin-center flex justify-center">
-          <KhmerColoredText
-            text={data.char}
-            fontUrl={DEFAULT_KHMER_FONT_URL}
-            fontSize={96}
-            className="animate-pulse-slow drop-shadow-[0_0_15px_rgba(6,182,212,0.5)]"
-          />
+        <div className="mb-4 scale-150 origin-center flex flex-col items-center gap-4">
+          <button
+            type="button"
+            onClick={() => audioFile && onPlayAudio(audioFile)}
+            className="group"
+          >
+            <KhmerColoredText
+              text={data.char}
+              fontUrl={DEFAULT_KHMER_FONT_URL}
+              fontSize={96}
+              className="animate-pulse-slow drop-shadow-[0_0_15px_rgba(6,182,212,0.5)] group-hover:drop-shadow-[0_0_22px_rgba(6,182,212,0.75)] transition-all"
+            />
+          </button>
+          <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400">
+            Tap the letter to hear it
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -42,26 +55,17 @@ export default function HeroSlide({ data, onPlayAudio }) {
           </p>
         </div>
 
-        {data.audio && (
-           <button
-             onClick={() => onPlayAudio(data.audio)}
-             className="mt-8 p-4 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 transition-transform active:scale-95 shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-           >
-             <Volume2 size={32} />
-           </button>
-        )}
-      </div>
-
-      {/* Блок мнемоники (Visual Hook) */}
-      <div className="bg-gray-800/40 border border-white/5 rounded-3xl p-6 w-full text-left flex gap-5 items-start">
-         <div className="p-3 bg-black/40 rounded-2xl border border-white/5 shrink-0 text-2xl">
-           🧠
-         </div>
-         <div>
-           <h3 className="text-white font-bold mb-1 uppercase text-xs tracking-wider text-cyan-500">Visual Hook</h3>
-           <p className="text-gray-300 text-sm leading-relaxed font-medium">{data.hook}</p>
-         </div>
-      </div>
+        {/* Блок мнемоники (Visual Hook) */}
+        <div className="mt-8 bg-gray-800/40 rounded-3xl p-6 w-full text-left flex gap-5 items-start">
+           <div className="p-3 bg-black/40 rounded-2xl shrink-0 text-2xl">
+             🧠
+           </div>
+           <div>
+             <h3 className="text-white font-bold mb-1 uppercase text-xs tracking-wider text-cyan-500">Visual Hook</h3>
+             <p className="text-gray-300 text-sm leading-relaxed font-medium">{data.hook}</p>
+           </div>
+        </div>
+      </LessonFrame>
     </div>
   );
 }

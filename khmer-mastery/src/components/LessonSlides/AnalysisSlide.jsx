@@ -111,7 +111,24 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
       const resolved = glyph?.resolvedChar || glyph?.char || "";
       return glyph && isKhmerConsonant(resolved) && !subscriptGlyphIndices.has(index);
     }).length;
-    return { total, selected, percentage: total > 0 ? Math.round((selected / total) * 100) : 0 };
+    const subscriptTotal = renderedGlyphs.filter((glyph, idx) => {
+      const resolved = glyph.resolvedChar || glyph.char || "";
+      return isKhmerConsonant(resolved) && subscriptGlyphIndices.has(idx);
+    }).length;
+    const subscriptSelected = selectionIds.filter((id) => {
+      const index = glyphIdToIndex.get(id);
+      if (index === undefined) return false;
+      const glyph = renderedGlyphs[index];
+      const resolved = glyph?.resolvedChar || glyph?.char || "";
+      return glyph && isKhmerConsonant(resolved) && subscriptGlyphIndices.has(index);
+    }).length;
+    return {
+      total,
+      selected,
+      percentage: total > 0 ? Math.round((selected / total) * 100) : 0,
+      subscriptTotal,
+      subscriptSelected,
+    };
   }, [khmer, selectionIds, renderedGlyphs, subscriptGlyphIndices, glyphIdToIndex]);
 
   function playAudio() {
@@ -177,17 +194,21 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
   };
 
   // ОБНОВЛЕНО: теперь данные сохраняются и не исчезают
-  function handleGlyphClick(glyphChar) {
+  function handleGlyphClick(glyphChar, glyphMeta) {
     const charData = lookupAlphabetEntry(glyphChar);
+    const isSubscript = glyphMeta?.isSubscript;
+    const normalized = normalizeLookupChar(glyphChar);
+    const subscriptForm = `${COENG_CHAR}${normalized}`;
+    const displayChar = isSubscript ? `${normalized} / ${subscriptForm}` : glyphChar;
     if (charData) {
       setActiveCharData({
-        char: glyphChar,
+        char: displayChar,
         type: charData.type || fallbackTypeFromChar(glyphChar) || "",
         hint: charData.hint || charData.name_en || charData.name || charData.description || ""
       });
     } else {
       setActiveCharData({
-        char: glyphChar,
+        char: displayChar,
         type: fallbackTypeFromChar(glyphChar) || "Unknown",
         hint: ""
       });
@@ -279,6 +300,9 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
                   <span style={styles.counterLabel}>Consonants:</span>
                   <span style={styles.counterValue}>{consonantStats.selected} / {consonantStats.total}</span>
                   {consonantStats.total > 0 && <span style={styles.counterPercentage}>({consonantStats.percentage}%)</span>}
+                  <span style={styles.counterDivider} />
+                  <span style={styles.counterLabel}>Subscripts:</span>
+                  <span style={styles.subscriptValue}>{consonantStats.subscriptSelected} / {consonantStats.subscriptTotal}</span>
                 </div>
 
                 <VisualDecoder
@@ -295,6 +319,7 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
                   onGlyphsRendered={setRenderedGlyphs}
                   hideDefaultButton={true}
                   onGlyphClick={handleGlyphClick}
+                  highlightSubscripts={true}
                   alphabetDb={alphabetDb}
                 />
               </div>
@@ -346,6 +371,8 @@ const styles = {
   decoderBlock: { display: "flex", flexDirection: "column", gap: "8px" },
   consonantCounter: { display: "flex", gap: "8px", padding: "8px 10px", borderRadius: "10px", background: "rgba(34, 211, 238, 0.1)", border: "1px solid rgba(34, 211, 238, 0.2)", fontSize: "13px" },
   counterValue: { fontWeight: 700, color: "#22d3ee" },
+  subscriptValue: { fontWeight: 700, color: "#facc15" },
+  counterDivider: { width: "1px", background: "rgba(255,255,255,0.12)", margin: "0 6px" },
   resetButton: { display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "999px", background: "rgba(15,23,42,0.55)", border: "1px solid rgba(255,255,255,0.12)", color: "white", cursor: "pointer", fontSize: "11px" },
   khmerLabel: { fontSize: "12px", opacity: 0.65, marginBottom: "4px" },
   khmerText: { fontFamily: "KhmerFont, sans-serif", fontSize: "28px" },

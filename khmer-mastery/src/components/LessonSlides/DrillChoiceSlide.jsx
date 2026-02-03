@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import LessonCard from "../UI/LessonCard";
+import LessonFrame from "../UI/LessonFrame";
+import LessonHeader from "../UI/LessonHeader";
+import { getSoundFileForChar } from "../../data/audioMap";
 
 /**
  * DrillChoiceSlide
@@ -57,10 +59,24 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
   }, [correct_ids]);
 
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const correctSelectedCount = useMemo(() => {
+    let count = 0;
+    selectedIds.forEach((id) => {
+      if (correctSet.has(id)) count += 1;
+    });
+    return count;
+  }, [selectedIds, correctSet]);
 
   function play(option) {
     if (!onPlayAudio) return;
-    if (option?.audio) onPlayAudio(option.audio);
+    if (option?.audio) {
+      onPlayAudio(option.audio);
+      return;
+    }
+    if (option?.text) {
+      const fallbackAudio = getSoundFileForChar(option.text);
+      if (fallbackAudio) onPlayAudio(fallbackAudio);
+    }
   }
 
   function toggle(id, option) {
@@ -119,9 +135,9 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
   if (!data) {
     return (
       <div className="w-full flex justify-center px-4">
-        <LessonCard className="max-w-[720px]">
+        <LessonFrame className="max-w-[720px] p-6">
           <div className="text-lg font-black uppercase tracking-[0.08em]">Missing data</div>
-        </LessonCard>
+        </LessonFrame>
       </div>
     );
   }
@@ -129,12 +145,12 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
   if (layout !== "grid") {
     return (
       <div className="w-full flex justify-center px-4">
-        <LessonCard className="max-w-[720px]">
-          <div className="text-lg font-black uppercase tracking-[0.08em]">{title || "Drill"}</div>
+        <LessonFrame className="max-w-[720px] p-6">
+          <LessonHeader title={title || "Drill"} />
           <div className="text-sm text-slate-300 mt-2">
             layout="{layout}" пока не реализован. (Сделаем следующим шагом)
           </div>
-        </LessonCard>
+        </LessonFrame>
       </div>
     );
   }
@@ -143,27 +159,36 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
     "border border-slate-500/30 rounded-2xl px-3 py-4 min-h-[84px] flex flex-col items-center justify-center bg-slate-900/60 text-white transition-all";
   const selectedOptionClass =
     "border-cyan-400 shadow-[0_0_0_2px_rgba(34,211,238,0.2)] bg-cyan-500/15";
+  const selectedCorrectClass =
+    "border-emerald-400 shadow-[0_0_0_2px_rgba(52,211,153,0.25)] bg-emerald-500/15";
+  const selectedWrongClass =
+    "border-rose-400 shadow-[0_0_0_2px_rgba(248,113,113,0.25)] bg-rose-500/10";
   const lockedOptionClass = "opacity-60 cursor-default";
+  const showCorrectness = correctSet.size > 0;
 
   return (
     <div className="w-full flex justify-center px-4">
-      <LessonCard className="max-w-[720px]">
-        {title ? <div className="text-lg font-black uppercase tracking-[0.08em]">{title}</div> : null}
-        {subtitle ? (
-          <div className="text-xs text-slate-400 uppercase tracking-[0.3em] mt-1">{subtitle}</div>
-        ) : null}
-        {prompt ? (
-          <div className="text-sm text-slate-300 leading-relaxed mt-4">{prompt}</div>
-        ) : null}
+      <LessonFrame className="max-w-[720px] p-6">
+        <LessonHeader title={title} subtitle={subtitle} hint={prompt} align="left" />
+
+        <div className="flex items-center justify-between text-xs text-slate-400 uppercase tracking-[0.3em] mt-4">
+          <span>Selected</span>
+          <span className="text-cyan-300 font-black">{selectedIds.length}</span>
+          <span>Correct</span>
+          <span className="text-emerald-300 font-black">{correctSelectedCount} / {correctSet.size}</span>
+        </div>
 
         <div className="grid grid-cols-3 gap-3 mt-4 mb-5">
           {shuffledOptions.map((opt) => {
             const id = opt?.id;
             const text = opt?.text ?? "";
             const isSelected = id ? selectedSet.has(id) : false;
+            const isCorrect = id ? correctSet.has(id) : false;
             const optionClassName = [
               baseOptionClass,
-              isSelected ? selectedOptionClass : "",
+              isSelected && showCorrectness && isCorrect ? selectedCorrectClass : "",
+              isSelected && showCorrectness && !isCorrect ? selectedWrongClass : "",
+              isSelected && !showCorrectness ? selectedOptionClass : "",
               completed ? lockedOptionClass : "hover:border-cyan-400/60",
             ]
               .filter(Boolean)
@@ -225,7 +250,7 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
             ? "Нужно выбрать ровно правильный набор (лишнее = ошибка)."
             : "Нужно выбрать ровно один правильный вариант."}
         </div>
-      </LessonCard>
+      </LessonFrame>
     </div>
   );
 }
