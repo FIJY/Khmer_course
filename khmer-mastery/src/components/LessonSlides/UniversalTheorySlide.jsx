@@ -1,6 +1,6 @@
 import React from 'react';
 import { Volume2, Sun, Moon, BookOpen, Lightbulb, Zap, ListOrdered } from 'lucide-react';
-import VisualDecoder, { HIGHLIGHT_MODES } from '../VisualDecoder';
+import VisualDecoder from '../VisualDecoder';
 import { getSoundFileForChar } from '../../data/audioMap';
 import LessonFrame from '../UI/LessonFrame';
 
@@ -70,7 +70,6 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
                           compact={true}
                           hideDefaultButton={true}
                           viewBoxPad={40}
-                          highlightMode={HIGHLIGHT_MODES.ALL}
                           onGlyphClick={() => play(audio || fallbackAudio)}
                         />
                       </div>
