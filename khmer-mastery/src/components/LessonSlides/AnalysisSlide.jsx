@@ -1,7 +1,7 @@
 // src/components/AnalysisSlide.jsx
 import React, { useMemo, useState } from "react";
 import { RotateCcw, ScanSearch, Volume2 } from "lucide-react";
-import VisualDecoder, { HIGHLIGHT_MODES } from "../VisualDecoder";
+import VisualDecoder from "../VisualDecoder";
 import { getKhmerGlyphCategory } from "../../lib/khmerGlyphRenderer";
 
 const DEFAULT_KHMER_FONT_URL =
@@ -308,7 +308,6 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
                 <VisualDecoder
                   data={d}
                   text={khmer}
-                  highlightMode={HIGHLIGHT_MODES.OFF}
                   interactionMode="persistent_select"
                   selectionMode="multi"
                   compact={true}
