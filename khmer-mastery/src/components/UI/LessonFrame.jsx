@@ -13,7 +13,7 @@ export default function LessonFrame({
   const variantClass = VARIANT_STYLES[variant] || VARIANT_STYLES.card;
 
   return (
-    <div className={`w-full ${variantClass} ${className}`}>
+    <div className={`w-full min-h-[60vh] flex flex-col overflow-hidden ${variantClass} ${className}`}>
       {children}
     </div>
   );
