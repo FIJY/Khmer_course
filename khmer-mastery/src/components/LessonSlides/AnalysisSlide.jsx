@@ -1,7 +1,7 @@
 // src/components/AnalysisSlide.jsx
 import React, { useMemo, useState } from "react";
 import { RotateCcw, ScanSearch, Volume2 } from "lucide-react";
-import VisualDecoder, { HIGHLIGHT_MODES } from "../VisualDecoder";
+import LessonGlyphDecoder from "../LessonGlyphDecoder";
 import { getKhmerGlyphCategory } from "../../lib/khmerGlyphRenderer";
 
 const DEFAULT_KHMER_FONT_URL =
@@ -305,10 +305,9 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
                   <span style={styles.subscriptValue}>{consonantStats.subscriptSelected} / {consonantStats.subscriptTotal}</span>
                 </div>
 
-                <VisualDecoder
+                <LessonGlyphDecoder
                   data={d}
                   text={khmer}
-                  highlightMode={HIGHLIGHT_MODES.OFF}
                   interactionMode="persistent_select"
                   selectionMode="multi"
                   compact={true}

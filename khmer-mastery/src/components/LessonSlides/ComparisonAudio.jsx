@@ -4,7 +4,7 @@ import { Volume2, Pause } from "lucide-react";
 import { getSoundFileForChar } from "../../data/audioMap";
 import LessonFrame from "../UI/LessonFrame";
 import LessonHeader from "../UI/LessonHeader";
-import VisualDecoder, { HIGHLIGHT_MODES } from "../VisualDecoder";
+import LessonGlyphDecoder from "../LessonGlyphDecoder";
 
 /**
  * ComparisonAudio Component
@@ -146,12 +146,11 @@ export default function ComparisonAudio({
                   <div
                     className={`w-full rounded-2xl p-3 ${isPlaying(pairIdx, "left") ? "bg-cyan-500/10 border border-cyan-400/40" : "bg-black/20 border border-white/10"}`}
                   >
-                    <VisualDecoder
+                    <LessonGlyphDecoder
                       text={pair.left?.text}
                       compact={true}
                       hideDefaultButton={true}
                       viewBoxPad={50}
-                      highlightMode={HIGHLIGHT_MODES.ALL}
                       onGlyphClick={() => playSound(leftAudio, pairIdx, "left")}
                     />
                   </div>
@@ -199,12 +198,11 @@ export default function ComparisonAudio({
                   <div
                     className={`w-full rounded-2xl p-3 ${isPlaying(pairIdx, "right") ? "bg-cyan-500/10 border border-cyan-400/40" : "bg-black/20 border border-white/10"}`}
                   >
-                    <VisualDecoder
+                    <LessonGlyphDecoder
                       text={pair.right?.text}
                       compact={true}
                       hideDefaultButton={true}
                       viewBoxPad={50}
-                      highlightMode={HIGHLIGHT_MODES.ALL}
                       onGlyphClick={() => playSound(rightAudio, pairIdx, "right")}
                     />
                   </div>

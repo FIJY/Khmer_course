@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import VisualDecoder from '../VisualDecoder';
+import LessonGlyphDecoder from '../LessonGlyphDecoder';
 import { ArrowRight, ChevronLeft, MousePointerClick, Volume2 } from 'lucide-react';
 import { THEORY_SLIDES } from './BootcampSession.slides';
 import Button from '../UI/Button';
@@ -718,7 +718,7 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
       )}
 
       {activeDrills.length ? (
-        <VisualDecoder
+        <LessonGlyphDecoder
           key={drillIndex}
           data={(activeDrills[drillIndex]?.data) ?? activeDrills[drillIndex]}
           onComplete={handleDrillComplete}
