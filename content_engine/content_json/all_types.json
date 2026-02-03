@@ -1,0 +1,181 @@
+{
+  "lesson_id": 99999,
+  "title": "All Screen Types Demo",
+  "desc": "A single lesson that showcases every supported screen type.",
+  "module_id": 10000,
+  "order_index": 99,
+  "content": [
+    {
+      "type": "theory",
+      "data": {
+        "title": "Welcome to the Demo (theory)",
+        "text": "This lesson is a guided tour of every screen type available in the app. We will touch each interaction once so you can see the full set.",
+        "footer": "Let’s explore them in a simple, compact flow."
+      }
+    },
+    {
+      "type": "learn_char",
+      "data": {
+        "char": "ក",
+        "name": "Ka (learn_char)",
+        "group": "high",
+        "hook": "Looks like a crab claw grabbing the air.",
+        "audio": "ka.mp3"
+      }
+    },
+    {
+      "type": "word_breakdown",
+      "data": {
+        "word": "កា",
+        "pronunciation": "ka",
+        "translation": "Tea (word_breakdown)",
+        "chars": [
+          "ក",
+          "ា"
+        ]
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "Tea (vocab_card)",
+        "back": "កា",
+        "pronunciation": "ka",
+        "item_type": "word",
+        "audio": "",
+        "audio_alt": {}
+      }
+    },
+    {
+      "type": "visual_decoder",
+      "data": {
+        "word": "អរគុណ",
+        "word_pronunciation": "or-kun",
+        "target_char": "ណ",
+        "char_split": [
+          "អ",
+          "រ",
+          "គុ",
+          "ណ"
+        ],
+        "char_position": "end",
+        "english_translation": "Thank you (visual_decoder)",
+        "letter_series": 1,
+        "word_audio": "",
+        "char_audio_map": {}
+      }
+    },
+    {
+      "type": "analysis",
+      "data": {
+        "mode": "decoder_select",
+        "title": "Find the Main Consonant (analysis)",
+        "text": "Tap the main consonant in the word. This screen highlights the core letter in a Khmer block.",
+        "word": "ខ្មែរ",
+        "translation": "Khmer"
+      }
+    },
+    {
+      "type": "drill_choice",
+      "data": {
+        "title": "Select the Heroes (drill_choice)",
+        "subtitle": "Choose only consonants.",
+        "prompt": "Tap only the main consonant letters. Ignore the vowel marks.",
+        "layout": "grid",
+        "mode": "multi",
+        "options": [
+          {
+            "id": "ka",
+            "text": "ក",
+            "audio": "letter_ka"
+          },
+          {
+            "id": "aa",
+            "text": "ា",
+            "audio": null
+          },
+          {
+            "id": "ba",
+            "text": "ប",
+            "audio": "letter_ba"
+          },
+          {
+            "id": "am",
+            "text": "ំ",
+            "audio": null
+          }
+        ],
+        "correct_ids": [
+          "ka",
+          "ba"
+        ],
+        "success_text": "✅ Correct — the consonants are the heroes.",
+        "fail_text": "❌ Try again. Vowel marks are not heroes."
+      }
+    },
+    {
+      "type": "meet-teams",
+      "data": {
+        "title": "Meet the Team (meet-teams)",
+        "text": "These are a few A-series consonants. Tap to hear them.",
+        "caption": "A-series sample.",
+        "k_team": [
+          {
+            "char": "ក",
+            "audio": "letter_ka"
+          },
+          {
+            "char": "ខ",
+            "audio": "letter_kha"
+          },
+          {
+            "char": "ច",
+            "audio": "letter_cha"
+          }
+        ]
+      }
+    },
+    {
+      "type": "comparison_audio",
+      "data": {
+        "title": "Listen and Compare (comparison_audio)",
+        "pairs": [
+          {
+            "instruction": "Tap both letters. Notice the sound difference.",
+            "left": {
+              "text": "ប",
+              "audio": "letter_ba",
+              "label": "BA"
+            },
+            "right": {
+              "text": "ព",
+              "audio": "letter_po",
+              "label": "PO"
+            }
+          }
+        ],
+        "note": "They look similar, but the sounds are different."
+      }
+    },
+    {
+      "type": "quiz",
+      "data": {
+        "question": "Which item is a vowel mark (not a consonant)? (quiz)",
+        "options": [
+          "ក",
+          "ា",
+          "ប"
+        ],
+        "correct_answer": "ា",
+        "explanation": "The mark \"ា\" is a vowel sign."
+      }
+    },
+    {
+      "type": "ready",
+      "data": {
+        "title": "Demo Complete (ready)",
+        "text": "You have seen every screen type. This lesson is ready to use as a reference."
+      }
+    }
+  ]
+}
