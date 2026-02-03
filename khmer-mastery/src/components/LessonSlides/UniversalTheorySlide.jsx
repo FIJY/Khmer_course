@@ -36,14 +36,43 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
     case 'meet-teams':
     case 'meet_teams':
       {
+        const kTeam = Array.isArray(data?.k_team) ? data.k_team : [];
         const leftTeam = data?.left_team || data?.leftTeam;
         const rightTeam = data?.right_team || data?.rightTeam;
         const leftLetters = leftTeam?.letters || leftTeam?.examples || [];
         const rightLetters = rightTeam?.letters || rightTeam?.examples || [];
-      return (
-        <div className="w-full flex flex-col items-center text-center animate-in zoom-in duration-500">
-           <h2 className="text-3xl font-black text-white mb-8 uppercase italic">{data.title || 'Meet the Teams'}</h2>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        if (kTeam.length > 0) {
+          return (
+            <div className="w-full flex flex-col items-center text-center animate-in zoom-in duration-500">
+              <h2 className="text-3xl font-black text-white mb-4 uppercase italic">{data.title || 'K-Team'}</h2>
+              {data.caption && (
+                <p className="text-sm text-gray-300 mb-6 max-w-md">{data.caption}</p>
+              )}
+              <div className="grid grid-cols-5 gap-3 w-full max-w-xl">
+                {kTeam.map((entry, idx) => {
+                  const letter = typeof entry === 'string' ? entry : entry?.char;
+                  const audio = typeof entry === 'string' ? null : entry?.audio;
+                  const buttonProps = audio
+                    ? { onClick: () => play(audio), type: 'button' }
+                    : {};
+                  return (
+                    <button
+                      key={`${letter}-${idx}`}
+                      className="rounded-2xl bg-black/40 border border-cyan-500/20 py-4 text-3xl text-cyan-100 font-khmer hover:border-cyan-400 hover:text-cyan-200 transition-colors"
+                      {...buttonProps}
+                    >
+                      {letter}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div className="w-full flex flex-col items-center text-center animate-in zoom-in duration-500">
+             <h2 className="text-3xl font-black text-white mb-8 uppercase italic">{data.title || 'Meet the Teams'}</h2>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
               {/* Команда Солнца */}
               <div className="bg-gradient-to-br from-amber-500/20 to-orange-900/20 border border-amber-500/30 p-6 rounded-3xl">
                  <Sun size={48} className="text-amber-400 mx-auto mb-4" />
