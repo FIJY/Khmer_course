@@ -36,25 +36,6 @@ function isKhmerConsonant(ch) {
   }
 }
 
-function findNextConsonantAfterCoeng(textChars, startIndex) {
-  let coengIndex = -1;
-  for (let i = startIndex; i < textChars.length; i++) {
-    if (textChars[i] === COENG_CHAR) {
-      coengIndex = i;
-      break;
-    }
-  }
-
-  const searchStart = coengIndex >= 0 ? coengIndex + 1 : startIndex;
-  for (let i = searchStart; i < textChars.length; i++) {
-    if (isKhmerConsonant(textChars[i])) {
-      return { char: textChars[i], index: i };
-    }
-  }
-
-  return { char: "", index: -1 };
-}
-
 function resolveGlyphMeta(glyphs, text) {
   const textChars = Array.from(text || "");
   let textIndex = 0;
@@ -64,11 +45,10 @@ function resolveGlyphMeta(glyphs, text) {
     let resolvedIndex = -1;
 
     if (resolvedChar === COENG_CHAR) {
-      const { char, index } = findNextConsonantAfterCoeng(textChars, textIndex);
-      if (char) {
-        resolvedChar = char;
-        resolvedIndex = index;
-        textIndex = index + 1;
+      const nextIndex = textChars.indexOf(resolvedChar, textIndex);
+      if (nextIndex !== -1) {
+        resolvedIndex = nextIndex;
+        textIndex = nextIndex + 1;
       }
     } else if (resolvedChar) {
       const nextIndex = textChars.indexOf(resolvedChar, textIndex);
@@ -78,8 +58,9 @@ function resolveGlyphMeta(glyphs, text) {
       }
     }
 
-    const isSubscript =
+    const inferredSubscript =
       resolvedIndex > 0 && textChars[resolvedIndex - 1] === COENG_CHAR;
+    const isSubscript = Boolean(glyph.isSubscript) || inferredSubscript;
 
     return {
       ...glyph,
@@ -378,14 +359,21 @@ export default function VisualDecoder(props) {
       selectionMode === "multi"
         ? selectedIds.includes(glyphId)
         : selectedId === glyphId;
+    const isSubscript = subscriptConsonantIndices.has(idx);
 
     if (revealOnSelect && !isSelected) {
       return FALLBACK.MUTED;
     }
 
+    if (highlightSubscripts && isSubscript) {
+      return "#facc15";
+    }
+
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
-      return isKhmerConsonant(resolved) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
+      return isKhmerConsonant(resolved) && !isSubscript
+        ? FALLBACK.NEUTRAL
+        : FALLBACK.MUTED;
     }
     return FALLBACK.NEUTRAL;
   }

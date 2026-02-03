@@ -175,7 +175,7 @@ export default function useLessonPlayer() {
           data: {
             ...itemContent,
             options: shuffledOptions,
-            correct_answer: normalizedCorrect?.value ?? normalizedCorrect?.text ?? ''
+            correct_answer: String(normalizedCorrect?.value ?? normalizedCorrect?.text ?? '').trim()
           }
         };
       });
