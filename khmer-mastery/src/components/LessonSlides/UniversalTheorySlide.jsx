@@ -1,5 +1,7 @@
 import React from 'react';
 import { Volume2, Sun, Moon, BookOpen, Lightbulb, Zap, ListOrdered } from 'lucide-react';
+import VisualDecoder, { HIGHLIGHT_MODES } from '../VisualDecoder';
+import { getSoundFileForChar } from '../../data/audioMap';
 
 export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
   // 1. Нормализация типа: пропс > данные > пусто
@@ -35,25 +37,84 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
 
     case 'meet-teams':
     case 'meet_teams':
-      return (
-        <div className="w-full flex flex-col items-center text-center animate-in zoom-in duration-500">
-           <h2 className="text-3xl font-black text-white mb-8 uppercase italic">{data.title || 'Meet the Teams'}</h2>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+      {
+        const kTeam = Array.isArray(data?.k_team) ? data.k_team : [];
+        const leftTeam = data?.left_team || data?.leftTeam;
+        const rightTeam = data?.right_team || data?.rightTeam;
+        const leftLetters = leftTeam?.letters || leftTeam?.examples || [];
+        const rightLetters = rightTeam?.letters || rightTeam?.examples || [];
+        if (kTeam.length > 0) {
+          return (
+            <div className="w-full flex flex-col items-center text-center animate-in zoom-in duration-500">
+              <h2 className="text-3xl font-black text-white mb-4 uppercase italic">{data.title || 'K-Team'}</h2>
+              {data.caption && (
+                <p className="text-sm text-gray-300 mb-6 max-w-md">{data.caption}</p>
+              )}
+              <div className="flex flex-col gap-3 w-full max-w-xs">
+                {kTeam.map((entry, idx) => {
+                  const letter = typeof entry === 'string' ? entry : entry?.char;
+                  const audio = typeof entry === 'string' ? null : entry?.audio;
+                  const fallbackAudio = letter ? getSoundFileForChar(letter) : null;
+                  return (
+                    <div
+                      key={`${letter}-${idx}`}
+                      className="rounded-2xl bg-black/40 border border-cyan-500/20 px-4 py-3 text-cyan-100 hover:border-cyan-400 hover:text-cyan-200 transition-colors cursor-pointer"
+                    >
+                      <div className="w-full">
+                        <VisualDecoder
+                          text={letter}
+                          compact={true}
+                          hideDefaultButton={true}
+                          viewBoxPad={40}
+                          highlightMode={HIGHLIGHT_MODES.ALL}
+                          onGlyphClick={() => play(audio || fallbackAudio)}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div className="w-full flex flex-col items-center text-center animate-in zoom-in duration-500">
+             <h2 className="text-3xl font-black text-white mb-8 uppercase italic">{data.title || 'Meet the Teams'}</h2>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
               {/* Команда Солнца */}
               <div className="bg-gradient-to-br from-amber-500/20 to-orange-900/20 border border-amber-500/30 p-6 rounded-3xl">
                  <Sun size={48} className="text-amber-400 mx-auto mb-4" />
-                 <h3 className="text-xl font-bold text-amber-200 mb-2">Solar Team (A-Series)</h3>
-                 <p className="text-sm text-amber-100/80">Open mouth, natural voice. Like saying "Ahhh"</p>
+                 <h3 className="text-xl font-bold text-amber-200 mb-2">{leftTeam?.title || leftTeam?.name || 'Solar Team (A-Series)'}</h3>
+                 <p className="text-sm text-amber-100/80">{leftTeam?.caption || leftTeam?.voice || leftTeam?.visual || 'Open mouth, natural voice. Like saying "Ahhh"'}</p>
+                 {leftLetters.length > 0 && (
+                   <div className="mt-4 grid grid-cols-4 gap-2 text-2xl text-amber-100 font-khmer">
+                     {leftLetters.map((letter, idx) => (
+                       <div key={`${letter}-${idx}`} className="rounded-xl bg-black/30 border border-amber-500/20 py-2">
+                         {letter}
+                       </div>
+                     ))}
+                   </div>
+                 )}
               </div>
               {/* Команда Луны */}
               <div className="bg-gradient-to-br from-indigo-500/20 to-blue-900/20 border border-indigo-500/30 p-6 rounded-3xl">
                  <Moon size={48} className="text-indigo-400 mx-auto mb-4" />
-                 <h3 className="text-xl font-bold text-indigo-200 mb-2">Lunar Team (O-Series)</h3>
-                 <p className="text-sm text-indigo-100/80">Round mouth, deeper voice. Like saying "Ohhh"</p>
+                 <h3 className="text-xl font-bold text-indigo-200 mb-2">{rightTeam?.title || rightTeam?.name || 'Lunar Team (O-Series)'}</h3>
+                 <p className="text-sm text-indigo-100/80">{rightTeam?.caption || rightTeam?.voice || rightTeam?.visual || 'Round mouth, deeper voice. Like saying "Ohhh"'}</p>
+                 {rightLetters.length > 0 && (
+                   <div className="mt-4 grid grid-cols-4 gap-2 text-2xl text-indigo-100 font-khmer">
+                     {rightLetters.map((letter, idx) => (
+                       <div key={`${letter}-${idx}`} className="rounded-xl bg-black/30 border border-indigo-500/20 py-2">
+                         {letter}
+                       </div>
+                     ))}
+                   </div>
+                 )}
               </div>
            </div>
         </div>
       );
+      }
 
     // --- ВАЖНО: Обработка Theory и Rule в одном блоке ---
     case 'theory':
