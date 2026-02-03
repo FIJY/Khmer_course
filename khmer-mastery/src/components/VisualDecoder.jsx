@@ -78,8 +78,9 @@ function resolveGlyphMeta(glyphs, text) {
       }
     }
 
-    const isSubscript =
+    const inferredSubscript =
       resolvedIndex > 0 && textChars[resolvedIndex - 1] === COENG_CHAR;
+    const isSubscript = Boolean(glyph.isSubscript) || inferredSubscript;
 
     return {
       ...glyph,
@@ -378,14 +379,21 @@ export default function VisualDecoder(props) {
       selectionMode === "multi"
         ? selectedIds.includes(glyphId)
         : selectedId === glyphId;
+    const isSubscript = subscriptConsonantIndices.has(idx);
 
     if (revealOnSelect && !isSelected) {
       return FALLBACK.MUTED;
     }
 
+    if (highlightSubscripts && isSubscript) {
+      return "#facc15";
+    }
+
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
-      return isKhmerConsonant(resolved) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
+      return isKhmerConsonant(resolved) && !isSubscript
+        ? FALLBACK.NEUTRAL
+        : FALLBACK.MUTED;
     }
     return FALLBACK.NEUTRAL;
   }
