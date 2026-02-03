@@ -1,5 +1,7 @@
 import React from 'react';
 import { Volume2, Sun, Moon, BookOpen, Lightbulb, Zap, ListOrdered } from 'lucide-react';
+import VisualDecoder, { HIGHLIGHT_MODES } from '../VisualDecoder';
+import { getSoundFileForChar } from '../../data/audioMap';
 
 export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
   // 1. Нормализация типа: пропс > данные > пусто
@@ -48,21 +50,27 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
               {data.caption && (
                 <p className="text-sm text-gray-300 mb-6 max-w-md">{data.caption}</p>
               )}
-              <div className="grid grid-cols-5 gap-3 w-full max-w-xl">
+              <div className="flex flex-col gap-3 w-full max-w-xs">
                 {kTeam.map((entry, idx) => {
                   const letter = typeof entry === 'string' ? entry : entry?.char;
                   const audio = typeof entry === 'string' ? null : entry?.audio;
-                  const buttonProps = audio
-                    ? { onClick: () => play(audio), type: 'button' }
-                    : {};
+                  const fallbackAudio = letter ? getSoundFileForChar(letter) : null;
                   return (
-                    <button
+                    <div
                       key={`${letter}-${idx}`}
-                      className="rounded-2xl bg-black/40 border border-cyan-500/20 py-4 text-3xl text-cyan-100 font-khmer hover:border-cyan-400 hover:text-cyan-200 transition-colors"
-                      {...buttonProps}
+                      className="rounded-2xl bg-black/40 border border-cyan-500/20 px-4 py-3 text-cyan-100 hover:border-cyan-400 hover:text-cyan-200 transition-colors cursor-pointer"
                     >
-                      {letter}
-                    </button>
+                      <div className="w-full">
+                        <VisualDecoder
+                          text={letter}
+                          compact={true}
+                          hideDefaultButton={true}
+                          viewBoxPad={40}
+                          highlightMode={HIGHLIGHT_MODES.ALL}
+                          onGlyphClick={() => play(audio || fallbackAudio)}
+                        />
+                      </div>
+                    </div>
                   );
                 })}
               </div>
