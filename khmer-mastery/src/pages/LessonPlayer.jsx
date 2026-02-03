@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, ArrowRight, X, CheckCircle2, ChevronLeft } from 'lucide-react';
 import VisualDecoder, { HIGHLIGHT_MODES } from '../components/VisualDecoder';
-import KhmerColoredText from '../components/KhmerColoredText';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
@@ -13,6 +12,8 @@ import SessionFrame from '../components/Session/SessionFrame';
 import DrillChoiceSlide from "../components/LessonSlides/DrillChoiceSlide";
 import AnalysisSlide from '../components/LessonSlides/AnalysisSlide';
 import ComparisonAudio from '../components/LessonSlides/ComparisonAudio';
+import LessonFrame from '../components/UI/LessonFrame';
+import LessonHeader from '../components/UI/LessonHeader';
 
 
 
@@ -23,9 +24,6 @@ import UniversalTheorySlide from '../components/LessonSlides/UniversalTheorySlid
 import ConsonantStreamDrill from '../components/Drills/ConsonantStreamDrill';
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
-const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
-  ?? '/fonts/KhmerOS_siemreap.ttf';
-
 export default function LessonPlayer() {
   const {
     id,
@@ -60,11 +58,15 @@ export default function LessonPlayer() {
 
   // --- ВРЕМЕННЫЕ РЕЖИМЫ ПОДСВЕТКИ ДЛЯ DECODER ---
   const [highlightMode, setHighlightMode] = useState(HIGHLIGHT_MODES.ALL);
+  const [visualSelectedIds, setVisualSelectedIds] = useState([]);
+  const [visualGlyphCount, setVisualGlyphCount] = useState(0);
 
   // --- УПРАВЛЕНИЕ БЛОКИРОВКОЙ КНОПКИ "ДАЛЕЕ" ---
   useEffect(() => {
     setCanAdvance(false);
     setRevealedConsonants(new Set());
+    setVisualSelectedIds([]);
+    setVisualGlyphCount(0);
 
     const rawType = safeItems[step]?.type;
     const currentType = rawType
@@ -187,6 +189,15 @@ export default function LessonPlayer() {
   const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
   const quizOptions = Array.isArray(current?.options) ? current.options : [];
+  const playEnglishAudio = () => {
+    if (typeof window === 'undefined') return;
+    if (!englishText) return;
+    if (!window.speechSynthesis) return;
+    const utterance = new SpeechSynthesisUtterance(englishText);
+    utterance.lang = 'en-US';
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
 
   return (
     <SessionFrame
@@ -229,79 +240,64 @@ export default function LessonPlayer() {
 
       {/* --- ВИЗУАЛЬНЫЙ ДЕКОДЕР --- */}
       {type === 'visual_decoder' && (
-        <div className="w-full">
-          {/* ВРЕМЕННЫЕ ТАБЫ РЕЖИМОВ */}
-          <div className="flex justify-center gap-2 mb-4">
-            <button
-              type="button"
-              onClick={() => setHighlightMode(HIGHLIGHT_MODES.ALL)}
-              className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                highlightMode === HIGHLIGHT_MODES.ALL
-                  ? 'bg-cyan-500 text-black border-cyan-300'
-                  : 'bg-gray-900 text-white border-white/10'
-              }`}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => setHighlightMode(HIGHLIGHT_MODES.CONSONANTS)}
-              className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                highlightMode === HIGHLIGHT_MODES.CONSONANTS
-                  ? 'bg-cyan-500 text-black border-cyan-300'
-                  : 'bg-gray-900 text-white border-white/10'
-              }`}
-            >
-              Consonants
-            </button>
-            <button
-              type="button"
-              onClick={() => setHighlightMode(HIGHLIGHT_MODES.OFF)}
-              className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                highlightMode === HIGHLIGHT_MODES.OFF
-                  ? 'bg-cyan-500 text-black border-cyan-300'
-                  : 'bg-gray-900 text-white border-white/10'
-              }`}
-            >
-              Off
-            </button>
+        <LessonFrame className="p-6">
+          <LessonHeader
+            title="Visual Decoder"
+            hint={current?.instruction || current?.hint || 'Task: tap the glyphs to reveal and identify them.'}
+          />
+
+          <div className="flex items-center justify-between text-xs text-slate-400 uppercase tracking-[0.3em] mt-4">
+            <span>Selected</span>
+            <span className="text-cyan-300 font-black">{visualSelectedIds.length}</span>
+            <span>Total</span>
+            <span className="text-cyan-300 font-black">{visualGlyphCount}</span>
           </div>
 
-          <VisualDecoder
-            key={step}
-            data={current}
-            highlightMode={highlightMode}
-            onLetterClick={(fileName) => {
-              if (fileName) {
-                console.log("Playing audio file:", fileName);
-                playLocalAudio(fileName);
-              } else {
-                console.log("Silent character selected (no audio)");
-              }
-              setCanAdvance(true);
-            }}
-            hideDefaultButton={true}
-          />
-        </div>
+          <div className="mt-4">
+            <VisualDecoder
+              key={step}
+              data={current}
+              highlightMode={highlightMode}
+              interactionMode="decoder_select"
+              selectionMode="multi"
+              revealOnSelect={true}
+              onSelectionChange={setVisualSelectedIds}
+              onGlyphsRendered={(glyphs) => setVisualGlyphCount(glyphs?.length || 0)}
+              onLetterClick={(fileName) => {
+                if (fileName) {
+                  console.log("Playing audio file:", fileName);
+                  playLocalAudio(fileName);
+                } else {
+                  console.log("Silent character selected (no audio)");
+                }
+                setCanAdvance(true);
+              }}
+              hideDefaultButton={true}
+            />
+          </div>
+        </LessonFrame>
       )}
 
       {type === 'vocab_card' && (
-        <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
-          <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+        <div className="w-full h-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
+          <div className={`relative h-full min-h-[60vh] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
             <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
               <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardEnglish')}</p>
               <h2 className="text-3xl font-black italic text-white">{englishText}</h2>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); playEnglishAudio(); }}
+                className="mt-6 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-100 hover:bg-cyan-500/30 transition-colors"
+              >
+                <Volume2 size={18} />
+                <span className="text-xs font-semibold uppercase tracking-widest">English audio</span>
+              </button>
             </div>
             <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
               <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
               <div className="flex flex-col items-center gap-3 w-full">
                 <div className="min-h-[4.5rem] flex items-center justify-center">
-                  <KhmerColoredText
-                    text={khmerText}
-                    fontUrl={DEFAULT_KHMER_FONT_URL}
-                    fontSize={72}
-                    className="text-4xl font-black leading-[1.2]"
-                  />
+                  <span className="font-khmer text-5xl leading-[1.2] text-white">{khmerText}</span>
                 </div>
                 <p className="text-base text-cyan-100 font-semibold tracking-wide">
                   <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
