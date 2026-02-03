@@ -47,10 +47,13 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
           return (
             <div className="w-full flex flex-col items-center text-center animate-in zoom-in duration-500">
               <h2 className="text-3xl font-black text-white mb-4 uppercase italic">{data.title || 'K-Team'}</h2>
+              {data.text && (
+                <p className="text-sm text-gray-300 mb-4 max-w-md whitespace-pre-line">{data.text}</p>
+              )}
               {data.caption && (
                 <p className="text-sm text-gray-300 mb-6 max-w-md">{data.caption}</p>
               )}
-              <div className="flex flex-col gap-3 w-full max-w-xs">
+              <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
                 {kTeam.map((entry, idx) => {
                   const letter = typeof entry === 'string' ? entry : entry?.char;
                   const audio = typeof entry === 'string' ? null : entry?.audio;
@@ -120,7 +123,8 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
     case 'theory':
     case 'rule':
       return (
-        <div className="w-full bg-gray-900 border border-white/10 p-6 md:p-8 rounded-[3.5rem] text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="w-full flex-1 flex">
+          <div className="w-full flex-1 bg-gray-900 border border-white/10 p-6 md:p-8 rounded-[3.5rem] text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="hidden sm:flex justify-center mb-4">
                 <div className="p-1.5 bg-cyan-500/10 rounded-full">
                     {mode === 'rule' ? <Lightbulb className="text-amber-400" size={12} /> : <BookOpen className="text-cyan-400" size={12} />}
@@ -205,6 +209,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
                     <span>Listen</span>
                 </button>
             )}
+          </div>
         </div>
       );
 

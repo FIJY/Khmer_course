@@ -127,6 +127,8 @@ export default function VisualDecoder(props) {
     onComplete,
     hideDefaultButton = true,
     highlightMode = HIGHLIGHT_MODES.ALL,
+    revealOnSelect = false,
+    highlightSubscripts = false,
     interactionMode = "default",
     selectionMode = "single",
     onSelectionChange,
@@ -316,7 +318,12 @@ export default function VisualDecoder(props) {
     const resolvedChar = resolvedGlyphChars[hit.idx] || hit.g.char;
 
     if (onGlyphClick) {
-      onGlyphClick(resolvedChar, e);
+      const glyphMeta = resolvedGlyphMeta?.[hit.idx] || {};
+      onGlyphClick(resolvedChar, {
+        ...glyphMeta,
+        resolvedChar,
+        isSubscript: glyphMeta?.isSubscript ?? false,
+      });
     }
 
     if (selectionMode === "multi") {
@@ -366,6 +373,15 @@ export default function VisualDecoder(props) {
   function colorForGlyph(glyph, idx) {
     const resolved = resolvedGlyphChars[idx] || glyph.char || "";
     const base = getKhmerGlyphColor(glyph.char);
+    const glyphId = glyph.id ?? idx;
+    const isSelected =
+      selectionMode === "multi"
+        ? selectedIds.includes(glyphId)
+        : selectedId === glyphId;
+
+    if (revealOnSelect && !isSelected) {
+      return FALLBACK.MUTED;
+    }
 
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
@@ -407,6 +423,11 @@ export default function VisualDecoder(props) {
 
           let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
           let outlineWidth = isSelected ? 5 : 0;
+
+          if (highlightSubscripts && isSubscript && !isSelected) {
+            outlineColor = "#facc15";
+            outlineWidth = 2;
+          }
 
           if (interactionMode === "persistent_select") {
             if (isSelected) {
