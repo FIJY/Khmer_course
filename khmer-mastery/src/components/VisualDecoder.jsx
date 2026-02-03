@@ -36,23 +36,14 @@ function isKhmerConsonant(ch) {
   }
 }
 
-function findNextConsonantAfterCoeng(textChars, startIndex) {
-  let coengIndex = -1;
-  for (let i = startIndex; i < textChars.length; i++) {
-    if (textChars[i] === COENG_CHAR) {
-      coengIndex = i;
-      break;
+function findSubscriptIndex(textChars, startIndex, consonantChar) {
+  if (!consonantChar) return -1;
+  for (let i = Math.max(1, startIndex); i < textChars.length; i++) {
+    if (textChars[i] === consonantChar && textChars[i - 1] === COENG_CHAR) {
+      return i;
     }
   }
-
-  const searchStart = coengIndex >= 0 ? coengIndex + 1 : startIndex;
-  for (let i = searchStart; i < textChars.length; i++) {
-    if (isKhmerConsonant(textChars[i])) {
-      return { char: textChars[i], index: i };
-    }
-  }
-
-  return { char: "", index: -1 };
+  return -1;
 }
 
 function resolveGlyphMeta(glyphs, text) {
@@ -62,15 +53,27 @@ function resolveGlyphMeta(glyphs, text) {
   return (glyphs || []).map((glyph) => {
     let resolvedChar = glyph.char || "";
     let resolvedIndex = -1;
+    const hasCoeng = resolvedChar.includes(COENG_CHAR);
+    const baseChar = hasCoeng
+      ? Array.from(resolvedChar.replace(COENG_CHAR, "")).pop() || ""
+      : resolvedChar;
 
-    if (resolvedChar === COENG_CHAR) {
-      const { char, index } = findNextConsonantAfterCoeng(textChars, textIndex);
-      if (char) {
-        resolvedChar = char;
-        resolvedIndex = index;
-        textIndex = index + 1;
+    if ((glyph.isSubscript || hasCoeng) && baseChar) {
+      const subIndex = findSubscriptIndex(textChars, textIndex, baseChar);
+      if (subIndex !== -1) {
+        resolvedChar = baseChar;
+        resolvedIndex = subIndex;
+        textIndex = subIndex + 1;
       }
-    } else if (resolvedChar) {
+    }
+
+    if (resolvedIndex === -1 && resolvedChar === COENG_CHAR) {
+      const nextIndex = textChars.indexOf(resolvedChar, textIndex);
+      if (nextIndex !== -1) {
+        resolvedIndex = nextIndex;
+        textIndex = nextIndex + 1;
+      }
+    } else if (resolvedIndex === -1 && resolvedChar) {
       const nextIndex = textChars.indexOf(resolvedChar, textIndex);
       if (nextIndex !== -1) {
         resolvedIndex = nextIndex;
@@ -78,8 +81,9 @@ function resolveGlyphMeta(glyphs, text) {
       }
     }
 
-    const isSubscript =
+    const inferredSubscript =
       resolvedIndex > 0 && textChars[resolvedIndex - 1] === COENG_CHAR;
+    const isSubscript = Boolean(glyph.isSubscript) || inferredSubscript;
 
     return {
       ...glyph,
@@ -378,14 +382,21 @@ export default function VisualDecoder(props) {
       selectionMode === "multi"
         ? selectedIds.includes(glyphId)
         : selectedId === glyphId;
+    const isSubscript = subscriptConsonantIndices.has(idx);
 
     if (revealOnSelect && !isSelected) {
       return FALLBACK.MUTED;
     }
 
+    if (highlightSubscripts && isSubscript) {
+      return "#facc15";
+    }
+
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
-      return isKhmerConsonant(resolved) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
+      return isKhmerConsonant(resolved) && !isSubscript
+        ? FALLBACK.NEUTRAL
+        : FALLBACK.MUTED;
     }
     return FALLBACK.NEUTRAL;
   }
