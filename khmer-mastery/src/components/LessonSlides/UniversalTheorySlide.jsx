@@ -35,6 +35,11 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
 
     case 'meet-teams':
     case 'meet_teams':
+      {
+        const leftTeam = data?.left_team || data?.leftTeam;
+        const rightTeam = data?.right_team || data?.rightTeam;
+        const leftLetters = leftTeam?.letters || leftTeam?.examples || [];
+        const rightLetters = rightTeam?.letters || rightTeam?.examples || [];
       return (
         <div className="w-full flex flex-col items-center text-center animate-in zoom-in duration-500">
            <h2 className="text-3xl font-black text-white mb-8 uppercase italic">{data.title || 'Meet the Teams'}</h2>
@@ -42,18 +47,37 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
               {/* Команда Солнца */}
               <div className="bg-gradient-to-br from-amber-500/20 to-orange-900/20 border border-amber-500/30 p-6 rounded-3xl">
                  <Sun size={48} className="text-amber-400 mx-auto mb-4" />
-                 <h3 className="text-xl font-bold text-amber-200 mb-2">Solar Team (A-Series)</h3>
-                 <p className="text-sm text-amber-100/80">Open mouth, natural voice. Like saying "Ahhh"</p>
+                 <h3 className="text-xl font-bold text-amber-200 mb-2">{leftTeam?.title || leftTeam?.name || 'Solar Team (A-Series)'}</h3>
+                 <p className="text-sm text-amber-100/80">{leftTeam?.caption || leftTeam?.voice || leftTeam?.visual || 'Open mouth, natural voice. Like saying "Ahhh"'}</p>
+                 {leftLetters.length > 0 && (
+                   <div className="mt-4 grid grid-cols-4 gap-2 text-2xl text-amber-100 font-khmer">
+                     {leftLetters.map((letter, idx) => (
+                       <div key={`${letter}-${idx}`} className="rounded-xl bg-black/30 border border-amber-500/20 py-2">
+                         {letter}
+                       </div>
+                     ))}
+                   </div>
+                 )}
               </div>
               {/* Команда Луны */}
               <div className="bg-gradient-to-br from-indigo-500/20 to-blue-900/20 border border-indigo-500/30 p-6 rounded-3xl">
                  <Moon size={48} className="text-indigo-400 mx-auto mb-4" />
-                 <h3 className="text-xl font-bold text-indigo-200 mb-2">Lunar Team (O-Series)</h3>
-                 <p className="text-sm text-indigo-100/80">Round mouth, deeper voice. Like saying "Ohhh"</p>
+                 <h3 className="text-xl font-bold text-indigo-200 mb-2">{rightTeam?.title || rightTeam?.name || 'Lunar Team (O-Series)'}</h3>
+                 <p className="text-sm text-indigo-100/80">{rightTeam?.caption || rightTeam?.voice || rightTeam?.visual || 'Round mouth, deeper voice. Like saying "Ohhh"'}</p>
+                 {rightLetters.length > 0 && (
+                   <div className="mt-4 grid grid-cols-4 gap-2 text-2xl text-indigo-100 font-khmer">
+                     {rightLetters.map((letter, idx) => (
+                       <div key={`${letter}-${idx}`} className="rounded-xl bg-black/30 border border-indigo-500/20 py-2">
+                         {letter}
+                       </div>
+                     ))}
+                   </div>
+                 )}
               </div>
            </div>
         </div>
       );
+      }
 
     // --- ВАЖНО: Обработка Theory и Rule в одном блоке ---
     case 'theory':
