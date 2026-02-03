@@ -183,7 +183,30 @@
       "type": "meet-teams",
       "data": {
         "title": "R1.1.6 — Same or different?",
-        "text": "Same or different?\n\nប vs ព\n\nAnswer: Different.\n\nThey look similar.\nBut mixing them changes the sound."
+        "text": "Same or different?\n\nប vs ព\n\nAnswer: Different.\n\nThey look similar.\nBut mixing them changes the sound.",
+        "caption": "K-Team only. Tap a letter to hear its sound.",
+        "k_team": [
+          {
+            "char": "ក",
+            "audio": "letter_ka"
+          },
+          {
+            "char": "ខ",
+            "audio": "letter_kha"
+          },
+          {
+            "char": "គ",
+            "audio": "letter_ko"
+          },
+          {
+            "char": "ឃ",
+            "audio": "letter_kho"
+          },
+          {
+            "char": "ង",
+            "audio": "letter_ngo"
+          }
+        ]
       }
     },
     {
