@@ -76,11 +76,11 @@ function resolveGlyphMeta(glyphs, text) {
     });
   }
 
-  const findSubscriptConsonants = (chars) => {
+  const findSubscriptConsonantIndices = (chars) => {
     const subscripts = new Set();
     for (let i = 0; i < chars.length - 1; i += 1) {
       if (chars[i] === COENG_CHAR && isKhmerConsonant(chars[i + 1])) {
-        subscripts.add(chars[i + 1]);
+        subscripts.add(i + 1);
       }
     }
     return subscripts;
@@ -95,7 +95,7 @@ function resolveGlyphMeta(glyphs, text) {
 
     if (segment) {
       const { chars, start } = segment;
-      const subscriptSet = findSubscriptConsonants(chars);
+      const subscriptIndices = findSubscriptConsonantIndices(chars);
 
       if (resolvedChar === COENG_CHAR) {
         const { char, index } = findNextConsonantAfterCoeng(chars, 0);
@@ -109,7 +109,7 @@ function resolveGlyphMeta(glyphs, text) {
         if (localIndex !== -1) {
           resolvedIndex = localIndex + start;
         }
-        if (isKhmerConsonant(resolvedChar) && subscriptSet.has(resolvedChar)) {
+        if (isKhmerConsonant(resolvedChar) && subscriptIndices.has(localIndex)) {
           isSubscript = true;
         }
       }

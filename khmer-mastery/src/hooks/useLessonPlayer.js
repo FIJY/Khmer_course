@@ -5,6 +5,8 @@ import { fetchCurrentUser } from '../data/auth';
 import { markLessonCompleted } from '../data/progress';
 // ПРАВИЛЬНЫЙ ИМПОРТ: используем тот же путь, что в твоих файлах lessons.js и auth.js
 import { supabase } from '../supabaseClient';
+import { normalizeLessonType, normalizeLessonTypeKey, AUTO_UNLOCK_TYPES } from '../utils/lessonTypes';
+import { normalizeQuizData, resolveQuizOptionValue } from '../utils/quizUtils';
 
 export default function useLessonPlayer() {
   const { id } = useParams();
@@ -135,47 +137,19 @@ export default function useLessonPlayer() {
       const normalizedItems = (Array.isArray(rawItems) ? rawItems : []).map(item => {
         const itemContent = item.data ? normalizeItemData(item.data) : item;
         const rawType = item.type || itemContent.type;
-        const type = rawType ? String(rawType).toLowerCase() : rawType;
+        const typeKey = normalizeLessonTypeKey(rawType);
 
-        if (type !== 'quiz') {
-            return { type, data: itemContent };
+        if (typeKey !== 'quiz') {
+            return { type: rawType, data: itemContent };
         }
-
-        const normalizeQuizOption = (option) => {
-          if (option && typeof option === 'object') {
-            const value = option.value ?? option.text ?? option.answer ?? option.label ?? '';
-            return {
-              value: String(value).trim(),
-              text: option.text ?? option.label ?? option.value ?? option.answer ?? '',
-              audio: option.audio ?? null,
-              pronunciation: option.pronunciation ?? ''
-            };
-          }
-          const value = option ?? '';
-          return { value: String(value).trim(), text: String(value), audio: null, pronunciation: '' };
-        };
-
-        const options = Array.isArray(itemContent.options) ? itemContent.options.filter(Boolean) : [];
-        const correctAnswer = itemContent.correct_answer;
-        const normalizedOptions = options.map(normalizeQuizOption);
-        const normalizedCorrect = correctAnswer ? normalizeQuizOption(correctAnswer) : null;
-        const mergedOptions = normalizedCorrect
-          ? [...normalizedOptions, normalizedCorrect]
-          : normalizedOptions;
-        const uniqueOptionsMap = new Map();
-        mergedOptions.forEach((option) => {
-          if (!uniqueOptionsMap.has(option.value)) {
-            uniqueOptionsMap.set(option.value, option);
-          }
-        });
-        const shuffledOptions = shuffleArray(Array.from(uniqueOptionsMap.values()));
+        const { options, correct_answer } = normalizeQuizData(itemContent, shuffleArray);
 
         return {
-          type,
+          type: rawType,
           data: {
             ...itemContent,
-            options: shuffledOptions,
-            correct_answer: normalizedCorrect?.value ?? normalizedCorrect?.text ?? ''
+            options,
+            correct_answer
           }
         };
       });
@@ -191,7 +165,7 @@ export default function useLessonPlayer() {
         : normalizedItems;
 
       setItems(finalItems);
-      setQuizCount(finalItems.filter(i => String(i.type).toLowerCase() === 'quiz').length || 0);
+      setQuizCount(finalItems.filter(i => normalizeLessonTypeKey(i.type) === 'quiz').length || 0);
     } catch (err) {
       console.error(err);
       setError('Unable to load this lesson.');
@@ -209,16 +183,9 @@ export default function useLessonPlayer() {
       if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
 
       const currentItem = items[step];
-      const currentType = currentItem?.type
-        ? String(currentItem?.type).toLowerCase().trim().replace(/[\s-]+/g, '_')
-        : '';
+      const currentType = normalizeLessonType(currentItem?.type);
 
-      const autoUnlockTypes = [
-        'theory', 'learn_char', 'word_breakdown', 'title',
-        'meet-teams', 'rule', 'reading-algorithm', 'ready', 'analysis', 'comparison_audio'
-      ];
-
-      if (autoUnlockTypes.includes(currentType)) {
+      if (AUTO_UNLOCK_TYPES.includes(currentType)) {
           setCanAdvance(true);
       }
 
@@ -272,10 +239,8 @@ export default function useLessonPlayer() {
 
   const handleQuizAnswer = (option, correctAnswer, selectedAudio) => {
     if (selectedOption) return;
-    const optionValue = option && typeof option === 'object' ? option.value ?? option.text ?? option.answer ?? '' : option;
-    const correctValue = correctAnswer && typeof correctAnswer === 'object'
-      ? correctAnswer.value ?? correctAnswer.text ?? correctAnswer.answer ?? ''
-      : correctAnswer;
+    const optionValue = resolveQuizOptionValue(option);
+    const correctValue = resolveQuizOptionValue(correctAnswer);
     setSelectedOption(optionValue);
     setCanAdvance(true);
     const correct = String(optionValue).trim() === String(correctValue).trim();
