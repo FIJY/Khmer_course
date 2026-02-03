@@ -57,29 +57,79 @@ function findNextConsonantAfterCoeng(textChars, startIndex) {
 
 function resolveGlyphMeta(glyphs, text) {
   const textChars = Array.from(text || "");
-  let textIndex = 0;
+  const clusterIndices = (glyphs || [])
+    .map((glyph) => glyph.clusterIndex)
+    .filter((value) => Number.isFinite(value));
+  const uniqueClusters = Array.from(new Set(clusterIndices)).sort((a, b) => a - b);
+  const clusterSegments = new Map();
+
+  if (uniqueClusters.length > 0 && text) {
+    uniqueClusters.forEach((start, idx) => {
+      const end = uniqueClusters[idx + 1] ?? text.length;
+      const segmentText = text.slice(start, end);
+      clusterSegments.set(start, {
+        start,
+        end,
+        text: segmentText,
+        chars: Array.from(segmentText),
+      });
+    });
+  }
+
+  const findSubscriptConsonants = (chars) => {
+    const subscripts = new Set();
+    for (let i = 0; i < chars.length - 1; i += 1) {
+      if (chars[i] === COENG_CHAR && isKhmerConsonant(chars[i + 1])) {
+        subscripts.add(chars[i + 1]);
+      }
+    }
+    return subscripts;
+  };
 
   return (glyphs || []).map((glyph) => {
     let resolvedChar = glyph.char || "";
     let resolvedIndex = -1;
+    let isSubscript = false;
 
-    if (resolvedChar === COENG_CHAR) {
-      const { char, index } = findNextConsonantAfterCoeng(textChars, textIndex);
-      if (char) {
-        resolvedChar = char;
-        resolvedIndex = index;
-        textIndex = index + 1;
+    const segment = clusterSegments.get(glyph.clusterIndex);
+
+    if (segment) {
+      const { chars, start } = segment;
+      const subscriptSet = findSubscriptConsonants(chars);
+
+      if (resolvedChar === COENG_CHAR) {
+        const { char, index } = findNextConsonantAfterCoeng(chars, 0);
+        if (char) {
+          resolvedChar = char;
+          resolvedIndex = index + start;
+          isSubscript = true;
+        }
+      } else if (resolvedChar) {
+        const localIndex = chars.indexOf(resolvedChar);
+        if (localIndex !== -1) {
+          resolvedIndex = localIndex + start;
+        }
+        if (isKhmerConsonant(resolvedChar) && subscriptSet.has(resolvedChar)) {
+          isSubscript = true;
+        }
       }
-    } else if (resolvedChar) {
-      const nextIndex = textChars.indexOf(resolvedChar, textIndex);
-      if (nextIndex !== -1) {
-        resolvedIndex = nextIndex;
-        textIndex = nextIndex + 1;
+    } else {
+      if (resolvedChar === COENG_CHAR) {
+        const { char, index } = findNextConsonantAfterCoeng(textChars, 0);
+        if (char) {
+          resolvedChar = char;
+          resolvedIndex = index;
+        }
+      } else if (resolvedChar) {
+        const nextIndex = textChars.indexOf(resolvedChar);
+        if (nextIndex !== -1) {
+          resolvedIndex = nextIndex;
+        }
       }
+
+      isSubscript =
+        resolvedIndex > 0 && textChars[resolvedIndex - 1] === COENG_CHAR;
     }
-
-    const isSubscript =
-      resolvedIndex > 0 && textChars[resolvedIndex - 1] === COENG_CHAR;
 
     return {
       ...glyph,
@@ -126,11 +176,11 @@ export default function VisualDecoder(props) {
     onLetterClick,
     onComplete,
     hideDefaultButton = true,
-    highlightMode = HIGHLIGHT_MODES.ALL,
+    highlightMode = HIGHLIGHT_MODES.OFF,
     revealOnSelect = false,
-    highlightSubscripts = false,
-    interactionMode = "default",
-    selectionMode = "single",
+    highlightSubscripts = true,
+    interactionMode = "persistent_select",
+    selectionMode = "multi",
     onSelectionChange,
     resetSelectionKey,
     compact = false,
