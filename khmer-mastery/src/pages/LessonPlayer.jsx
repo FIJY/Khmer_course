@@ -22,8 +22,9 @@ import HeroSlide from '../components/LessonSlides/HeroSlide';
 import InventorySlide from '../components/LessonSlides/InventorySlide';
 import UniversalTheorySlide from '../components/LessonSlides/UniversalTheorySlide';
 import ConsonantStreamDrill from '../components/Drills/ConsonantStreamDrill';
-
-const KHMER_PATTERN = /[\u1780-\u17FF]/;
+import { AUTO_UNLOCK_TYPES, normalizeLessonType } from '../utils/lessonTypes';
+import { normalizeQuizOption } from '../utils/quizUtils';
+import { containsKhmer, getCardSides } from '../utils/textUtils';
 export default function LessonPlayer() {
   const {
     id,
@@ -68,27 +69,9 @@ export default function LessonPlayer() {
     setVisualSelectedIds([]);
     setVisualGlyphCount(0);
 
-    const rawType = safeItems[step]?.type;
-    const currentType = rawType
-      ? rawType.toLowerCase().trim().replace(/[\s-]+/g, '_')
-      : '';
+    const currentType = normalizeLessonType(safeItems[step]?.type);
 
-    const autoUnlockTypes = [
-      'theory',
-      'learn_char',
-      'word_breakdown',
-      'title',
-      'meet_teams',
-      'rule',
-      'reading_algorithm',
-      'ready',
-      'intro',
-      'analysis',
-      'comparison_audio'
-    ];
-
-
-    if (autoUnlockTypes.includes(currentType)) {
+    if (AUTO_UNLOCK_TYPES.includes(currentType)) {
       setCanAdvance(true);
     }
 
@@ -99,10 +82,7 @@ export default function LessonPlayer() {
 
   const current = safeItems[step]?.data;
 
-  const rawType = safeItems[step]?.type;
-  const type = rawType
-    ? rawType.toLowerCase().trim().replace(/[\s-]+/g, '_')
-    : '';
+  const type = normalizeLessonType(safeItems[step]?.type);
 
   const handleConsonantClick = (index, char) => {
     setRevealedConsonants((prev) => {
@@ -132,7 +112,7 @@ export default function LessonPlayer() {
       if (!data?.pronunciation) return;
       const front = data.front ?? '';
       const back = data.back ?? '';
-      const khmerWord = KHMER_PATTERN.test(front) ? front : (KHMER_PATTERN.test(back) ? back : '');
+      const khmerWord = containsKhmer(front) ? front : (containsKhmer(back) ? back : '');
       if (khmerWord) {
         map[khmerWord] = data.pronunciation;
       }
@@ -142,12 +122,7 @@ export default function LessonPlayer() {
 
   const getQuizOption = (opt) => {
     if (opt && typeof opt === 'object') {
-      return {
-        value: opt.value ?? opt.text ?? opt.label ?? opt.answer ?? '',
-        text: opt.text ?? opt.value ?? opt.label ?? opt.answer ?? '',
-        pronunciation: opt.pronunciation ?? '',
-        audio: opt.audio ?? null
-      };
+      return normalizeQuizOption(opt);
     }
     const metadata = current?.options_metadata?.[opt];
     if (metadata) {
@@ -182,12 +157,7 @@ export default function LessonPlayer() {
 
   if (!safeItems.length || !safeItems[step]) return <ErrorState title={t('errors.lessonEmpty')} message={t('empty.lessonContent')} onRetry={refresh} secondaryAction={<Button variant="outline" onClick={() => navigate('/map')}>{t('actions.backToMap')}</Button>} />;
 
-  const frontText = current?.front ?? '';
-  const backText = current?.back ?? '';
-  const frontHasKhmer = KHMER_PATTERN.test(frontText);
-  const backHasKhmer = KHMER_PATTERN.test(backText);
-  const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
-  const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
+  const { englishText, khmerText } = getCardSides(current?.front, current?.back);
   const quizOptions = Array.isArray(current?.options) ? current.options : [];
   const playEnglishAudio = () => {
     if (typeof window === 'undefined') return;
