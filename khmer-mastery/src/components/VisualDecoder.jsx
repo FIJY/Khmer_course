@@ -5,6 +5,7 @@ import {
   getKhmerGlyphColor,
   GLYPH_COLORS,
   isKhmerConsonantChar,
+  getKhmerGlyphStyle,
 } from "../lib/khmerGlyphRenderer";
 import { buildShapeApiUrl } from "../lib/apiConfig";
 
@@ -67,20 +68,28 @@ function resolveGlyphMeta(glyphs, text) {
     uniqueClusters.forEach((start, idx) => {
       const end = uniqueClusters[idx + 1] ?? text.length;
       const segmentText = text.slice(start, end);
+      const chars = Array.from(segmentText);
+      const charIndexMap = new Map();
+      chars.forEach((ch, index) => {
+        if (!charIndexMap.has(ch)) charIndexMap.set(ch, []);
+        charIndexMap.get(ch).push(index);
+      });
       clusterSegments.set(start, {
         start,
         end,
         text: segmentText,
-        chars: Array.from(segmentText),
+        chars,
+        charIndexMap,
+        charIndexCursor: new Map(),
       });
     });
   }
 
-  const findSubscriptConsonants = (chars) => {
+  const findSubscriptConsonantIndices = (chars) => {
     const subscripts = new Set();
     for (let i = 0; i < chars.length - 1; i += 1) {
       if (chars[i] === COENG_CHAR && isKhmerConsonant(chars[i + 1])) {
-        subscripts.add(chars[i + 1]);
+        subscripts.add(i + 1);
       }
     }
     return subscripts;
@@ -94,8 +103,8 @@ function resolveGlyphMeta(glyphs, text) {
     const segment = clusterSegments.get(glyph.clusterIndex);
 
     if (segment) {
-      const { chars, start } = segment;
-      const subscriptSet = findSubscriptConsonants(chars);
+      const { chars, start, charIndexMap, charIndexCursor } = segment;
+      const subscriptIndices = findSubscriptConsonantIndices(chars);
 
       if (resolvedChar === COENG_CHAR) {
         const { char, index } = findNextConsonantAfterCoeng(chars, 0);
@@ -105,11 +114,21 @@ function resolveGlyphMeta(glyphs, text) {
           isSubscript = true;
         }
       } else if (resolvedChar) {
-        const localIndex = chars.indexOf(resolvedChar);
+        let localIndex = -1;
+        const indexList = charIndexMap?.get(resolvedChar);
+        if (indexList && indexList.length) {
+          const cursor = charIndexCursor.get(resolvedChar) ?? 0;
+          if (cursor < indexList.length) {
+            localIndex = indexList[cursor];
+            charIndexCursor.set(resolvedChar, cursor + 1);
+          }
+        } else {
+          localIndex = chars.indexOf(resolvedChar);
+        }
         if (localIndex !== -1) {
           resolvedIndex = localIndex + start;
         }
-        if (isKhmerConsonant(resolvedChar) && subscriptSet.has(resolvedChar)) {
+        if (isKhmerConsonant(resolvedChar) && subscriptIndices.has(localIndex)) {
           isSubscript = true;
         }
       }
@@ -188,6 +207,7 @@ export default function VisualDecoder(props) {
     onGlyphClick,
     onGlyphsRendered,
     alphabetDb,
+    showSelectionStats = false,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
@@ -195,7 +215,7 @@ export default function VisualDecoder(props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const [glyphSoundMap, setGlyphSoundMap] = useState({});
 
@@ -208,7 +228,7 @@ export default function VisualDecoder(props) {
 
   useEffect(() => {
     if (interactionMode !== "persistent_select") return;
-    setSelectedIds([]);
+    setSelectedIds(new Set());
     setSelectedId(null);
   }, [interactionMode, resetSelectionKey, text]);
 
@@ -377,7 +397,16 @@ export default function VisualDecoder(props) {
     }
 
     if (selectionMode === "multi") {
-      setSelectedIds((prev) => (prev.includes(hitId) ? prev : [...prev, hitId]));
+      const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+      setSelectedIds((prev) => {
+        const next = additive ? new Set(prev) : new Set();
+        if (next.has(hitId)) {
+          next.delete(hitId);
+        } else {
+          next.add(hitId);
+        }
+        return next;
+      });
     } else {
       setSelectedId(hitId);
     }
@@ -395,7 +424,7 @@ export default function VisualDecoder(props) {
   useEffect(() => {
     if (!onSelectionChange) return;
     if (selectionMode === "multi") {
-      onSelectionChange(selectedIds);
+      onSelectionChange(Array.from(selectedIds));
     } else if (selectedId !== null) {
       onSelectionChange([selectedId]);
     } else {
@@ -406,7 +435,7 @@ export default function VisualDecoder(props) {
   useEffect(() => {
     if (resetSelectionKey === undefined) return;
     setSelectedId(null);
-    setSelectedIds([]);
+    setSelectedIds(new Set());
   }, [resetSelectionKey]);
 
   const subscriptConsonantIndices = useMemo(() => {
@@ -426,7 +455,7 @@ export default function VisualDecoder(props) {
     const glyphId = glyph.id ?? idx;
     const isSelected =
       selectionMode === "multi"
-        ? selectedIds.includes(glyphId)
+        ? selectedIds.has(glyphId)
         : selectedId === glyphId;
 
     if (revealOnSelect && !isSelected) {
@@ -440,6 +469,51 @@ export default function VisualDecoder(props) {
     return FALLBACK.NEUTRAL;
   }
 
+  const selectionStats = useMemo(() => {
+    if (!showSelectionStats) return null;
+    const totalByChar = new Map();
+    glyphs.forEach((glyph) => {
+      const ch = glyph.char || "<?>";
+      const style = getKhmerGlyphStyle(ch);
+      const prev = totalByChar.get(ch);
+      if (!prev) {
+        totalByChar.set(ch, {
+          char: ch,
+          total: 1,
+          fill: style.fill,
+          opacity: style.opacity,
+        });
+      } else {
+        prev.total += 1;
+        if (prev.fill !== style.fill) {
+          prev.fill = `${prev.fill} | ${style.fill}`;
+        }
+      }
+    });
+
+    const selectedByChar = new Map();
+    glyphs.forEach((glyph, idx) => {
+      const glyphId = glyph.id ?? idx;
+      if (!selectedIds.has(glyphId)) return;
+      const ch = glyph.char || "<?>";
+      selectedByChar.set(ch, (selectedByChar.get(ch) ?? 0) + 1);
+    });
+
+    const rows = Array.from(totalByChar.values()).map((row) => ({
+      char: row.char,
+      color: row.fill,
+      total: row.total,
+      selected: selectedByChar.get(row.char) || 0,
+    }));
+
+    rows.sort((a, b) => (b.selected - a.selected) || (b.total - a.total));
+
+    const selectedGlyphCount = Array.from(selectedIds).length;
+    const selectedUniqueChars = rows.filter((row) => row.selected > 0).length;
+
+    return { rows, selectedGlyphCount, selectedUniqueChars };
+  }, [glyphs, selectedIds, showSelectionStats]);
+
   if (loading) {
     return <div className="text-white animate-pulse text-center p-10">Deciphering...</div>;
   }
@@ -450,98 +524,132 @@ export default function VisualDecoder(props) {
 
   return (
     <div className={`w-full flex flex-col items-center ${compact ? "py-3" : "py-8"}`}>
-      <svg
-        ref={svgRef}
-        viewBox={`${vb.minX} ${vb.minY} ${vb.w} ${vb.h}`}
-        className={`${compact ? "max-h-[190px]" : "max-h-[250px]"} w-full overflow-visible select-none`}
-        style={{
-          touchAction: "manipulation",
-          WebkitTapHighlightColor: "transparent",
-          userSelect: "none",
-        }}
-        onPointerDown={handlePointerDown}
-      >
-        {glyphs.map((glyph, i) => {
-          const glyphId = glyph.id ?? i;
-          const isSelected =
-            selectionMode === "multi"
-              ? selectedIds.includes(glyphId)
-              : selectedId === glyphId;
-          const fillColor = colorForGlyph(glyph, i);
-          const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
-          const isSubscript = subscriptConsonantIndices.has(i);
+      <div className={`w-full ${showSelectionStats ? "flex flex-col gap-4" : ""}`}>
+        <svg
+          ref={svgRef}
+          viewBox={`${vb.minX} ${vb.minY} ${vb.w} ${vb.h}`}
+          className={`${compact ? "max-h-[190px]" : "max-h-[250px]"} w-full overflow-visible select-none`}
+          style={{
+            touchAction: "manipulation",
+            WebkitTapHighlightColor: "transparent",
+            userSelect: "none",
+          }}
+          onPointerDown={handlePointerDown}
+        >
+          {glyphs.map((glyph, i) => {
+            const glyphId = glyph.id ?? i;
+            const isSelected =
+              selectionMode === "multi"
+                ? selectedIds.has(glyphId)
+                : selectedId === glyphId;
+            const fillColor = colorForGlyph(glyph, i);
+            const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
+            const isSubscript = subscriptConsonantIndices.has(i);
 
-          let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
-          let outlineWidth = isSelected ? 5 : 0;
+            let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
+            let outlineWidth = isSelected ? 5 : 0;
 
-          if (highlightSubscripts && isSubscript && !isSelected) {
-            outlineColor = "#facc15";
-            outlineWidth = 2;
-          }
+            if (highlightSubscripts && isSubscript && !isSelected) {
+              outlineColor = "#facc15";
+              outlineWidth = 2;
+            }
 
-          if (interactionMode === "persistent_select") {
-            if (isSelected) {
+            if (interactionMode === "persistent_select") {
+              if (isSelected) {
+                outlineWidth = 4;
+                if (isConsonant) {
+                  outlineColor = isSubscript ? "#facc15" : "#22c55e";
+                } else {
+                  outlineColor = "#ef4444";
+                }
+              }
+            } else if (interactionMode === "find_consonant" && selectedId !== null) {
               outlineWidth = 4;
-              if (isConsonant) {
-                outlineColor = isSubscript ? "#facc15" : "#22c55e";
+              if (isSelected) {
+                outlineColor = "#22c55e";
+              } else if (isSubscript) {
+                outlineColor = "#facc15";
               } else {
                 outlineColor = "#ef4444";
               }
             }
-          } else if (interactionMode === "find_consonant" && selectedId !== null) {
-            outlineWidth = 4;
-            if (isSelected) {
-              outlineColor = "#22c55e";
-            } else if (isSubscript) {
-              outlineColor = "#facc15";
-            } else {
-              outlineColor = "#ef4444";
-            }
-          }
 
-          if (interactionMode === "decoder_select") {
-            outlineWidth = isSelected ? 4 : 0;
-            if (isSelected) {
-              if (isSubscript) {
-                outlineColor = "#facc15";
-              } else if (isConsonant) {
-                outlineColor = "#22c55e";
-              } else {
-                outlineColor = "#94a3b8";
+            if (interactionMode === "decoder_select") {
+              outlineWidth = isSelected ? 4 : 0;
+              if (isSelected) {
+                if (isSubscript) {
+                  outlineColor = "#facc15";
+                } else if (isConsonant) {
+                  outlineColor = "#22c55e";
+                } else {
+                  outlineColor = "#94a3b8";
+                }
               }
             }
-          }
 
-          return (
-            <g key={glyphId}>
-              <path
-                ref={(el) => (hitRefs.current[i] = el)}
-                d={glyph.d}
-                fill="transparent"
-                stroke="transparent"
-                strokeWidth="50"
-                pointerEvents="none"
-              />
-              <path
-                d={glyph.d}
-                fill={fillColor}
-                pointerEvents="none"
-                className="transition-all duration-200"
-                style={{
-                  stroke: outlineColor,
-                  strokeWidth: outlineWidth,
-                  vectorEffect: "non-scaling-stroke",
-                  paintOrder: "stroke fill",
-                  filter: isSelected
-                    ? `drop-shadow(0 0 10px ${outlineColor})`
-                    : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
-                  cursor: "pointer",
-                }}
-              />
-            </g>
-          );
-        })}
-      </svg>
+            return (
+              <g key={glyphId}>
+                <path
+                  ref={(el) => (hitRefs.current[i] = el)}
+                  d={glyph.d}
+                  fill="transparent"
+                  stroke="transparent"
+                  strokeWidth="50"
+                  pointerEvents="none"
+                />
+                <path
+                  d={glyph.d}
+                  fill={fillColor}
+                  pointerEvents="none"
+                  className="transition-all duration-200"
+                  style={{
+                    stroke: outlineColor,
+                    strokeWidth: outlineWidth,
+                    vectorEffect: "non-scaling-stroke",
+                    paintOrder: "stroke fill",
+                    filter: isSelected
+                      ? `drop-shadow(0 0 10px ${outlineColor})`
+                      : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
+                    cursor: "pointer",
+                  }}
+                />
+              </g>
+            );
+          })}
+        </svg>
+        {showSelectionStats && selectionStats ? (
+          <div className="w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-white">
+            <div className="text-xs uppercase tracking-[0.2em] text-white/70">
+              Selected glyphs: {selectionStats.selectedGlyphCount} · Unique: {selectionStats.selectedUniqueChars}
+            </div>
+            <div className="mt-3 max-h-48 overflow-auto rounded-xl border border-white/10 p-3 text-sm">
+              {selectionStats.rows.length === 0 ? (
+                <div className="text-white/60">
+                  Click glyphs to select. Hold Shift/Ctrl/Cmd to multi-select.
+                </div>
+              ) : (
+                selectionStats.rows.map((row) => (
+                  <div
+                    key={row.char}
+                    className="flex items-center justify-between gap-3 border-b border-white/10 py-2 last:border-b-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="inline-block h-3 w-3 rounded"
+                        style={{ background: row.color, opacity: row.opacity }}
+                      />
+                      <span className="text-lg">{row.char}</span>
+                    </div>
+                    <div className={`text-white/80 ${row.selected > 0 ? "font-semibold" : ""}`}>
+                      {row.selected} / {row.total}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
       {!hideDefaultButton && onComplete ? (
         <button
           type="button"
