@@ -320,6 +320,7 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
                   onGlyphClick={handleGlyphClick}
                   highlightSubscripts={true}
                   alphabetDb={alphabetDb}
+                  showSelectionStats={true}
                 />
               </div>
             ) : (
