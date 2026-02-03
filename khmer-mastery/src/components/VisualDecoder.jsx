@@ -36,106 +36,66 @@ function isKhmerConsonant(ch) {
   }
 }
 
-function findNextConsonantAfterCoeng(textChars, startIndex) {
-  let coengIndex = -1;
-  for (let i = startIndex; i < textChars.length; i++) {
-    if (textChars[i] === COENG_CHAR) {
-      coengIndex = i;
-      break;
-    }
-  }
-
-  const searchStart = coengIndex >= 0 ? coengIndex + 1 : startIndex;
-  for (let i = searchStart; i < textChars.length; i++) {
-    if (isKhmerConsonant(textChars[i])) {
-      return { char: textChars[i], index: i };
-    }
-  }
-
-  return { char: "", index: -1 };
-}
-
 function resolveGlyphMeta(glyphs, text) {
-  const textChars = Array.from(text || "");
-  const clusterIndices = (glyphs || [])
-    .map((glyph) => glyph.clusterIndex)
-    .filter((value) => Number.isFinite(value));
-  const uniqueClusters = Array.from(new Set(clusterIndices)).sort((a, b) => a - b);
-  const clusterSegments = new Map();
+  if (!glyphs || !text) return glyphs || [];
 
-  if (uniqueClusters.length > 0 && text) {
-    uniqueClusters.forEach((start, idx) => {
-      const end = uniqueClusters[idx + 1] ?? text.length;
-      const segmentText = text.slice(start, end);
-      clusterSegments.set(start, {
-        start,
-        end,
-        text: segmentText,
-        chars: Array.from(segmentText),
-      });
-    });
+  const textChars = Array.from(text);
+
+  // Шаг 1: Найти все позиции subscript согласных в тексте
+  const subscriptPositions = new Set();
+  for (let i = 0; i < textChars.length - 1; i++) {
+    if (textChars[i] === COENG_CHAR && isKhmerConsonant(textChars[i + 1])) {
+      subscriptPositions.add(i + 1); // Позиция согласной после COENG
+    }
   }
 
-  const findSubscriptConsonants = (chars) => {
-    const subscripts = new Set();
-    for (let i = 0; i < chars.length - 1; i += 1) {
-      if (chars[i] === COENG_CHAR && isKhmerConsonant(chars[i + 1])) {
-        subscripts.add(chars[i + 1]);
-      }
+  // Шаг 2: Создать список всех согласных из текста по порядку
+  const consonantsInText = [];
+  textChars.forEach((char, idx) => {
+    if (isKhmerConsonant(char)) {
+      consonantsInText.push({
+        char,
+        textIndex: idx,
+        isSubscript: subscriptPositions.has(idx)
+      });
     }
-    return subscripts;
-  };
+  });
 
-  return (glyphs || []).map((glyph) => {
-    let resolvedChar = glyph.char || "";
-    let resolvedIndex = -1;
-    let isSubscript = false;
+  // Шаг 3: Сопоставить глифы с согласными
+  let consonantCounter = 0;
 
-    const segment = clusterSegments.get(glyph.clusterIndex);
+  return glyphs.map((glyph, glyphIdx) => {
+    const glyphChar = glyph.char || "";
 
-    if (segment) {
-      const { chars, start } = segment;
-      const subscriptSet = findSubscriptConsonants(chars);
-
-      if (resolvedChar === COENG_CHAR) {
-        const { char, index } = findNextConsonantAfterCoeng(chars, 0);
-        if (char) {
-          resolvedChar = char;
-          resolvedIndex = index + start;
-          isSubscript = true;
-        }
-      } else if (resolvedChar) {
-        const localIndex = chars.indexOf(resolvedChar);
-        if (localIndex !== -1) {
-          resolvedIndex = localIndex + start;
-        }
-        if (isKhmerConsonant(resolvedChar) && subscriptSet.has(resolvedChar)) {
-          isSubscript = true;
-        }
-      }
-    } else {
-      if (resolvedChar === COENG_CHAR) {
-        const { char, index } = findNextConsonantAfterCoeng(textChars, 0);
-        if (char) {
-          resolvedChar = char;
-          resolvedIndex = index;
-        }
-      } else if (resolvedChar) {
-        const nextIndex = textChars.indexOf(resolvedChar);
-        if (nextIndex !== -1) {
-          resolvedIndex = nextIndex;
-        }
-      }
-
-      isSubscript =
-        resolvedIndex > 0 && textChars[resolvedIndex - 1] === COENG_CHAR;
+    // Если это не согласная, возвращаем как есть
+    if (!isKhmerConsonant(glyphChar)) {
+      return {
+        ...glyph,
+        resolvedChar: glyphChar,
+        resolvedIndex: -1,
+        isSubscript: false
+      };
     }
 
+    // Это согласная - берем следующую из списка
+    if (consonantCounter < consonantsInText.length) {
+      const consonantInfo = consonantsInText[consonantCounter];
+      consonantCounter++;
+
+      return {
+        ...glyph,
+        resolvedChar: consonantInfo.char,
+        resolvedIndex: consonantInfo.textIndex,
+        isSubscript: consonantInfo.isSubscript
+      };
+    }
+
+    // Fallback если что-то пошло не так
     return {
       ...glyph,
-      resolvedChar: resolvedChar || glyph.char || "",
-      resolvedIndex,
-      isSubscript,
+      resolvedChar: glyphChar,
+      resolvedIndex: -1,
+      isSubscript: false
     };
   });
 }
@@ -227,6 +187,18 @@ export default function VisualDecoder(props) {
       .then((json) => {
         if (!active) return;
         const arr = Array.isArray(json) ? json : [];
+
+        // DEBUG: Смотрим структуру данных от API
+        console.log("=== API RESPONSE для текста:", text);
+        console.log("Всего глифов:", arr.length);
+        arr.forEach((g, i) => {
+          console.log(`Глиф ${i}:`, {
+            char: g.char,
+            clusterIndex: g.clusterIndex,
+            id: g.id
+          });
+        });
+
         setGlyphs(arr);
         setLoading(false);
       })
@@ -242,10 +214,25 @@ export default function VisualDecoder(props) {
     };
   }, [text, onGlyphsRendered]);
 
-  const resolvedGlyphMeta = useMemo(
-    () => resolveGlyphMeta(glyphs, text),
-    [glyphs, text]
-  );
+  const resolvedGlyphMeta = useMemo(() => {
+    const resolved = resolveGlyphMeta(glyphs, text);
+
+    // DEBUG: Смотрим что получилось после resolve
+    console.log("=== RESOLVED GLYPH META ===");
+    console.log("Текст:", text);
+    resolved.forEach((g, i) => {
+      if (isKhmerConsonant(g.char)) {
+        console.log(`Глиф ${i}:`, {
+          char: g.char,
+          resolvedChar: g.resolvedChar,
+          resolvedIndex: g.resolvedIndex,
+          isSubscript: g.isSubscript
+        });
+      }
+    });
+
+    return resolved;
+  }, [glyphs, text]);
 
   useEffect(() => {
     if (!onGlyphsRendered) return;
