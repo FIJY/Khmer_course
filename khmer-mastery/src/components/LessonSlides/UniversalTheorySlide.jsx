@@ -26,7 +26,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
             {data.title}
           </h1>
           {data.subtitle && (
-            <p className="text-xl md:text-2xl text-amber-400 mb-8 font-mono bg-amber-900/20 px-4 py-2 rounded-lg border border-amber-500/20">
+            <p className="text-lg md:text-xl tracking-[0.25em] text-cyan-300/80 mb-8 font-mono bg-amber-900/20 px-4 py-2 rounded-lg border border-amber-500/20">
               {data.subtitle}
             </p>
           )}
@@ -124,14 +124,14 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
     case 'rule':
       return (
         <div className="w-full flex-1 flex">
-          <LessonFrame className="w-full flex-1 p-6 md:p-8 text-center animate-in fade-in slide-in-from-bottom-8 duration-700" variant="full">
+          <LessonFrame className="w-full flex-1 pt-5 md:pt-6 px-6 md:px-8 pb-14 md:pb-16 text-center animate-in fade-in slide-in-from-bottom-8 duration-700" variant="full">
             <div className="hidden sm:flex justify-center mb-4">
                 <div className="p-1.5 bg-cyan-500/10 rounded-full">
                     {mode === 'rule' ? <Lightbulb className="text-amber-400" size={12} /> : <BookOpen className="text-cyan-400" size={12} />}
                 </div>
             </div>
 
-            <h2 className="text-xs md:text-sm font-black uppercase text-cyan-300/80 mb-4 tracking-[0.3em]">
+            <h2 className="text-xs md:text-sm font-black uppercase text-cyan-300/80 mb-4 tracking-[0.25em]">
                 {data.title || 'Theory Block'}
             </h2>
 
@@ -144,7 +144,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
                     </p>
                   ))}
                   {data.description.length > 0 && (
-                    <p className="text-[clamp(1.3rem,4.2vw,1.9rem)] font-black text-white tracking-tight punchline-glow">
+                    <p className="text-[clamp(1.25rem,4vw,1.7rem)] text-white font-black tracking-tight text-center">
                       {data.description[data.description.length - 1]}
                     </p>
                   )}
@@ -154,7 +154,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
               )}
 
               {data.examples && (
-                <div className="mt-5 space-y-5">
+                <div className="mt-10 space-y-6 max-w-md mx-auto">
                   {data.examples.map((ex, i) => {
                     const obj = typeof ex === "string" ? { text: ex, kind: "plain" } : ex;
                     const isKhmer = obj.kind === "khmer";
@@ -162,14 +162,13 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
                     const isLatin = obj.kind === "latin";
 
                     const base =
-                      "w-full rounded-2xl border border-white/10 px-4 py-3 text-center";
+                      "w-full overflow-hidden rounded-2xl border border-white/5 px-4 py-3 text-center";
 
                     const labelCls =
                       "bg-transparent border-0 px-0 py-0 text-sm text-gray-400 tracking-wide";
-                    const latinCls =
-                      "bg-black/50 font-mono text-cyan-200 text-[clamp(0.78rem,2.6vw,0.98rem)] tracking-[0.18em] uppercase glitch-text";
+                    const latinCls = "bg-black/35 font-mono text-cyan-300/70 text-[clamp(0.95rem,3.2vw,1.15rem)] tracking-tight uppercase leading-tight break-all whitespace-normal";
                     const khmerCls =
-                      "bg-black/50 font-khmer text-cyan-100 text-[clamp(1.5rem,5vw,2.1rem)] leading-[1.35] tracking-wide khmer-hero";
+                      "bg-black/45 font-khmer text-cyan-50 text-2xl md:text-3xl leading-snug py-5 px-5";
 
                     const extra = obj.className ? ` ${obj.className}` : "";
                     const cls = (isLabel ? labelCls : `${base} ${isKhmer ? khmerCls : isLatin ? latinCls : "bg-black/40 text-cyan-200"}`) + extra;
@@ -203,7 +202,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
               )}
 
               {data.footer && (
-                <div className="mt-6 pt-6 border-t border-white/10 text-gray-300/80 text-sm md:text-base text-center italic whitespace-pre-line">
+                <div className="mt-6 pt-6 border-t border-white/10 text-slate-300 italic opacity-80 tracking-wide text-sm md:text-base text-center whitespace-pre-line">
                   {data.footer}
                 </div>
               )}
