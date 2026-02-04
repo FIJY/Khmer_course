@@ -131,73 +131,82 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
                 </div>
             </div>
 
-            <h2 className="text-xl md:text-2xl font-black italic uppercase text-white mb-4 tracking-wide">
+            <h2 className="text-xs md:text-sm font-black uppercase text-cyan-300/80 mb-4 tracking-[0.3em]">
                 {data.title || 'Theory Block'}
             </h2>
 
-            <div className="text-base md:text-lg text-gray-300 leading-relaxed space-y-3 font-medium text-left md:text-center">
-                {Array.isArray(data.description)
-                    ? data.description.map((line, i) => <p key={i}>{line}</p>)
-                    : <p>{data.description}</p>
-                }
+            <div className="text-base md:text-lg text-gray-300 leading-relaxed font-medium text-left md:text-center">
+              {Array.isArray(data.description) ? (
+                <div className="space-y-4">
+                  {data.description.slice(0, -1).map((line, i) => (
+                    <p key={`line-${i}`} className="text-[clamp(1.1rem,4vw,1.5rem)] font-semibold text-white/90">
+                      {line}
+                    </p>
+                  ))}
+                  {data.description.length > 0 && (
+                    <p className="text-[clamp(1.6rem,5vw,2.2rem)] font-black text-white tracking-tight punchline-glow">
+                      {data.description[data.description.length - 1]}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[clamp(1.1rem,4vw,1.5rem)] font-semibold text-white/90">{data.description}</p>
+              )}
 
-                {data.examples && (
-                  <div className="mt-8 space-y-4">
-                    {data.examples.map((ex, i) => {
-                      const obj = typeof ex === "string" ? { text: ex, kind: "plain" } : ex;
-                      const isKhmer = obj.kind === "khmer";
-                      const isLabel = obj.kind === "label";
-                      const isLatin = obj.kind === "latin";
+              {data.examples && (
+                <div className="mt-6 space-y-6">
+                  {data.examples.map((ex, i) => {
+                    const obj = typeof ex === "string" ? { text: ex, kind: "plain" } : ex;
+                    const isKhmer = obj.kind === "khmer";
+                    const isLabel = obj.kind === "label";
+                    const isLatin = obj.kind === "latin";
 
-                      const base =
-                        "w-full rounded-2xl border border-white/5 px-4 py-3 text-center";
+                    const base =
+                      "w-full rounded-2xl border border-white/10 px-4 py-4 text-center";
 
-                      const labelCls =
-                        "bg-transparent border-0 px-0 py-0 text-sm text-gray-400 tracking-wide";
-                      const latinCls =
-                        "bg-black/35 font-mono text-cyan-200 text-[clamp(0.95rem,3.4vw,1.25rem)] tracking-tight uppercase whitespace-nowrap";
-                      const khmerCls =
-                        "bg-black/45 font-khmer text-cyan-100 text-2xl md:text-3xl leading-relaxed";
+                    const labelCls =
+                      "bg-transparent border-0 px-0 py-0 text-sm text-gray-400 tracking-wide";
+                    const latinCls =
+                      "bg-black/50 font-mono text-cyan-200 text-[clamp(0.85rem,3vw,1.1rem)] tracking-[0.18em] uppercase whitespace-nowrap glitch-text";
+                    const khmerCls =
+                      "bg-black/50 font-khmer text-cyan-100 text-[clamp(2rem,6vw,2.8rem)] leading-[1.35] tracking-wide khmer-hero";
 
-                      const extra = obj.className ? ` ${obj.className}` : "";
-                      const cls = (isLabel ? labelCls : `${base} ${isKhmer ? khmerCls : isLatin ? latinCls : "bg-black/40 text-cyan-200"}`) + extra;
+                    const extra = obj.className ? ` ${obj.className}` : "";
+                    const cls = (isLabel ? labelCls : `${base} ${isKhmer ? khmerCls : isLatin ? latinCls : "bg-black/40 text-cyan-200"}`) + extra;
 
+                    const content = (
+                      <div className={cls}>
+                        {obj.text}
+                        {obj.audio && (
+                          <div className="mt-2 text-xs text-cyan-400/80">
+                            Tap to listen
+                          </div>
+                        )}
+                      </div>
+                    );
 
-                      const content = (
-                        <div className={cls}>
-                          {obj.text}
-                          {obj.audio && (
-                            <div className="mt-2 text-xs text-cyan-400/80">
-                              Tap to listen
-                            </div>
-                          )}
-                        </div>
+                    if (obj.audio) {
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => play(obj.audio)}
+                          className="w-full text-left"
+                        >
+                          {content}
+                        </button>
                       );
+                    }
 
-                      // если есть аудио — делаем кликабельным
-                      if (obj.audio) {
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => play(obj.audio)}
-                            className="w-full text-left"
-                          >
-                            {content}
-                          </button>
-                        );
-                      }
+                    return <div key={i}>{content}</div>;
+                  })}
+                </div>
+              )}
 
-                      return <div key={i}>{content}</div>;
-                    })}
-                  </div>
-                )}
-
-                {data.footer && (
-                  <div className="mt-6 pt-5 border-t border-white/10 text-gray-200 text-base md:text-lg text-center whitespace-pre-line">
-                    {data.footer}
-                  </div>
-                )}
-
+              {data.footer && (
+                <div className="mt-6 pt-6 border-t border-white/10 text-gray-300/80 text-sm md:text-base text-center italic whitespace-pre-line">
+                  {data.footer}
+                </div>
+              )}
             </div>
 
             {data.audio && (
