@@ -17,24 +17,42 @@ export default function HeroSlide({ data, onPlayAudio }) {
   const word = data?.word || "";
   const targetChar = data?.target || data?.target_char || data?.targetChar || "";
   const charSplit = data?.char_split || data?.charSplit || null;
+  const consonantCount = React.useMemo(() => {
+    const chars = Array.from(word);
+    let count = 0;
+    for (let i = 0; i < chars.length; i += 1) {
+      const ch = chars[i];
+      const cp = ch.codePointAt(0);
+      const isConsonant = cp >= 0x1780 && cp <= 0x17A2;
+      const isSubscript = chars[i - 1] === "្";
+      if (isConsonant && !isSubscript) count += 1;
+    }
+    return count;
+  }, [word]);
 
   // HUNT: твой текущий интерактивный режим оставляем (почти) как был
   if (mode === "hunt") {
     return (
       <div className="w-full flex flex-col items-center text-center animate-in fade-in duration-500">
-        <LessonFrame className="p-10" variant="full">
+        <LessonFrame className="p-4 sm:p-8" variant="full">
           <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-4">
             Find the Hero
           </h2>
 
+          <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-3">
+            Consonants: <span className="text-emerald-300 font-bold">{consonantCount}</span>
+          </div>
+
           <p className="text-gray-300 mb-6">Tap the main consonant.</p>
 
-          <div className="scale-125">
+          <div className="scale-[0.95] sm:scale-[1.05]">
             <VisualDecoder
               text={word}
               targetChar={targetChar}
               charSplit={charSplit}
-              onGlyphClick={onPlayAudio}
+              onLetterClick={onPlayAudio}
+              compact={true}
+              viewBoxPad={55}
             />
           </div>
         </LessonFrame>
@@ -52,11 +70,15 @@ export default function HeroSlide({ data, onPlayAudio }) {
 
   return (
     <div className="w-full flex flex-col items-center text-center animate-in fade-in duration-500">
-      <LessonFrame className="p-10" variant="full">
+      <LessonFrame className="p-4 sm:p-8" variant="full">
         {/* Маленький заголовок как в твоём дизайне */}
         <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-6">
           {title}
         </h2>
+
+        <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-4">
+          Consonants: <span className="text-emerald-300 font-bold">{consonantCount}</span>
+        </div>
 
         {/* Текст слева, как в макете */}
         <div className="w-full text-left">
@@ -70,8 +92,8 @@ export default function HeroSlide({ data, onPlayAudio }) {
                 key={idx}
                 className={
                   isLastStrong
-                    ? "text-2xl font-black text-white mt-2"
-                    : "text-2xl font-bold text-white/95"
+                    ? "text-lg sm:text-2xl font-black text-white mt-2"
+                    : "text-lg sm:text-2xl font-bold text-white/95"
                 }
               >
                 {t}
@@ -82,15 +104,17 @@ export default function HeroSlide({ data, onPlayAudio }) {
 
         {/* Пустое место -> VisualDecoder (кликабельные глифы) */}
         {word ? (
-          <div className="mt-8 flex justify-center">
+          <div className="mt-4 flex justify-center">
             <div className="w-full flex justify-center">
               <div className="max-w-[320px] w-full">
-                <div className="scale-[1.25] origin-top">
+                <div className="scale-[0.95] sm:scale-[1.05] origin-top">
                   <VisualDecoder
                     text={word}
                     targetChar={targetChar}
                     charSplit={charSplit}
-                    onGlyphClick={onPlayAudio}
+                    onLetterClick={onPlayAudio}
+                    compact={true}
+                    viewBoxPad={55}
                   />
                 </div>
               </div>
@@ -101,8 +125,8 @@ export default function HeroSlide({ data, onPlayAudio }) {
 
         {footer ? (
           <>
-            <div className="mt-8 h-px w-full bg-white/10" />
-            <p className="mt-4 text-sm italic text-white/60 pb-6">{footer}</p>
+            <div className="mt-6 h-px w-full bg-white/10" />
+            <p className="mt-3 text-xs sm:text-sm italic text-white/60 pb-4">{footer}</p>
           </>
         ) : null}
       </LessonFrame>
