@@ -106,6 +106,15 @@ function bboxArea(bb) {
   return Math.max(0, w) * Math.max(0, h);
 }
 
+function isPointInExpandedBox(p, bb, pad = 0) {
+  if (!p || !bb) return false;
+  const x1 = (bb.x1 ?? 0) - pad;
+  const y1 = (bb.y1 ?? 0) - pad;
+  const x2 = (bb.x2 ?? 0) + pad;
+  const y2 = (bb.y2 ?? 0) + pad;
+  return p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2;
+}
+
 function makeViewBoxFromGlyphs(glyphs, pad = 60) {
   if (!glyphs || glyphs.length === 0) {
     return { minX: 0, minY: 0, w: 300, h: 300 };
@@ -318,6 +327,20 @@ export default function VisualDecoder(props) {
   function pickGlyphAtPoint(p) {
     if (!p) return null;
 
+    const subscriptBBoxHits = [];
+    for (const item of hitOrder) {
+      const glyphMeta = resolvedGlyphMeta?.[item.idx];
+      if (!glyphMeta?.isSubscript) continue;
+      if (!isKhmerConsonant(glyphMeta.resolvedChar || item.g.char)) continue;
+      if (isPointInExpandedBox(p, item.g.bb, 18)) {
+        subscriptBBoxHits.push(item);
+      }
+    }
+
+    if (subscriptBBoxHits.length > 0) {
+      return subscriptBBoxHits[0];
+    }
+
     const hits = [];
     for (const item of hitOrder) {
       const pathEl = hitRefs.current[item.idx];
@@ -457,6 +480,7 @@ export default function VisualDecoder(props) {
           const fillColor = colorForGlyph(glyph, i);
           const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
           const isSubscript = subscriptConsonantIndices.has(i);
+          const hitStrokeWidth = isSubscript ? 90 : 50;
 
           let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
           let outlineWidth = isSelected ? 5 : 0;
@@ -506,7 +530,7 @@ export default function VisualDecoder(props) {
                 d={glyph.d}
                 fill="transparent"
                 stroke="transparent"
-                strokeWidth="50"
+                strokeWidth={hitStrokeWidth}
                 pointerEvents="none"
               />
               <path
