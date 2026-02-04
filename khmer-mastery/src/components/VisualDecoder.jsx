@@ -234,6 +234,17 @@ export default function VisualDecoder(props) {
     return resolved;
   }, [glyphs, text]);
 
+  const subscriptConsonantIndices = useMemo(() => {
+    const indices = new Set();
+    if (!resolvedGlyphMeta || resolvedGlyphMeta.length === 0) return indices;
+    resolvedGlyphMeta.forEach((glyph, idx) => {
+      if (glyph.isSubscript && isKhmerConsonant(glyph.resolvedChar || glyph.char)) {
+        indices.add(idx);
+      }
+    });
+    return indices;
+  }, [resolvedGlyphMeta]);
+
   useEffect(() => {
     if (!onGlyphsRendered) return;
     onGlyphsRendered(resolvedGlyphMeta);
@@ -337,6 +348,10 @@ export default function VisualDecoder(props) {
       const resolved = resolvedGlyphChars[item.idx] || item.g.char;
       return isKhmerConsonant(resolved);
     });
+    const subscriptHits = consonantHits.filter((item) =>
+      subscriptConsonantIndices.has(item.idx)
+    );
+    if (subscriptHits.length > 0) return subscriptHits[0];
     if (consonantHits.length > 0) return consonantHits[0];
 
     const nonCoengHits = hits.filter((item) => item.g.char !== COENG_CHAR);
@@ -396,17 +411,6 @@ export default function VisualDecoder(props) {
     setSelectedIds([]);
   }, [resetSelectionKey]);
 
-  const subscriptConsonantIndices = useMemo(() => {
-    const indices = new Set();
-    if (!resolvedGlyphMeta || resolvedGlyphMeta.length === 0) return indices;
-    resolvedGlyphMeta.forEach((glyph, idx) => {
-      if (glyph.isSubscript && isKhmerConsonant(glyph.resolvedChar || glyph.char)) {
-        indices.add(idx);
-      }
-    });
-    return indices;
-  }, [resolvedGlyphMeta]);
-
   function colorForGlyph(glyph, idx) {
     const resolved = resolvedGlyphChars[idx] || glyph.char || "";
     const base = getKhmerGlyphColor(glyph.char);
@@ -457,6 +461,7 @@ export default function VisualDecoder(props) {
           const fillColor = colorForGlyph(glyph, i);
           const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
           const isSubscript = subscriptConsonantIndices.has(i);
+          const hitStrokeWidth = isSubscript ? 90 : 50;
 
           let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
           let outlineWidth = isSelected ? 5 : 0;
@@ -506,7 +511,9 @@ export default function VisualDecoder(props) {
                 d={glyph.d}
                 fill="transparent"
                 stroke="transparent"
-                strokeWidth="50"
+                strokeWidth={hitStrokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 pointerEvents="none"
               />
               <path

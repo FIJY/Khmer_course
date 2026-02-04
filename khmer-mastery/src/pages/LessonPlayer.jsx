@@ -222,7 +222,11 @@ export default function LessonPlayer() {
       )}
     >
       {type === 'learn_char' && (
-        <HeroSlide data={current} onPlayAudio={playLocalAudio} />
+        <HeroSlide
+          data={current}
+          onPlayAudio={playLocalAudio}
+          onTargetFound={() => setCanAdvance(true)}
+        />
       )}
       {type === "drill_choice" && (
         <DrillChoiceSlide

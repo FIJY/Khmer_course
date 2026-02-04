@@ -2,7 +2,16 @@ import React from "react";
 import LessonFrame from "../UI/LessonFrame";
 import VisualDecoder from "../VisualDecoder";
 
-export default function HeroSlide({ data, onPlayAudio }) {
+const normalizeGlyph = (value = "") =>
+  String(value ?? "").replace(/\u25CC/g, "").trim().normalize("NFC");
+
+const isKhmerConsonant = (value = "") => {
+  if (!value) return false;
+  const cp = value.codePointAt(0);
+  return cp >= 0x1780 && cp <= 0x17a2;
+};
+
+export default function HeroSlide({ data, onPlayAudio, onTargetFound }) {
   const mode = data?.mode || "unlock"; // unlock | hunt
 
   // Общие поля (поддержим разные названия)
@@ -17,6 +26,17 @@ export default function HeroSlide({ data, onPlayAudio }) {
   const word = data?.word || "";
   const targetChar = data?.target || data?.target_char || data?.targetChar || "";
   const charSplit = data?.char_split || data?.charSplit || null;
+
+  const [hint, setHint] = React.useState("");
+
+  const normalizedTarget = React.useMemo(
+    () => normalizeGlyph(targetChar),
+    [targetChar]
+  );
+
+  React.useEffect(() => {
+    setHint("");
+  }, [word, normalizedTarget]);
 
   const consonantCount = React.useMemo(() => {
     const chars = Array.from(word);
@@ -53,14 +73,17 @@ export default function HeroSlide({ data, onPlayAudio }) {
               Find the Hero
             </h2>
 
-            <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-3">
-              Consonants:{" "}
-              <span className="text-emerald-300 font-bold">
+            <div className="flex items-center justify-center gap-3 text-[11px] uppercase tracking-[0.25em] text-slate-400 mb-3">
+              <span>Consonants</span>
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-base font-black text-emerald-300 tracking-normal">
                 {consonantCount}
               </span>
             </div>
 
             <p className="text-gray-300 mb-4">Tap the main consonant.</p>
+            {hint ? (
+              <p className="text-xs text-amber-200 mb-4 font-semibold">{hint}</p>
+            ) : null}
 
             {/* VisualDecoder занимает остаток высоты и центрируется */}
             <div className="flex-1 flex items-center justify-center">
@@ -71,6 +94,24 @@ export default function HeroSlide({ data, onPlayAudio }) {
                     targetChar={targetChar}
                     charSplit={charSplit}
                     onLetterClick={onPlayAudio}
+                    onGlyphClick={(resolvedChar, glyphMeta) => {
+                      const normalized = normalizeGlyph(resolvedChar);
+                      if (!normalizedTarget || !normalized) return;
+                      if (normalized === normalizedTarget) {
+                        setHint("Hero found. Tap Continue.");
+                        if (onTargetFound) onTargetFound();
+                        return;
+                      }
+                      if (glyphMeta?.isSubscript) {
+                        setHint("That's a subscript consonant. Tap the main one.");
+                        return;
+                      }
+                      if (isKhmerConsonant(normalized)) {
+                        setHint("That's another consonant. Tap the main (big) one.");
+                        return;
+                      }
+                      setHint("That's a modifier. Tap the main consonant.");
+                    }}
                     compact={true}
                     viewBoxPad={55}
                   />
@@ -92,9 +133,11 @@ export default function HeroSlide({ data, onPlayAudio }) {
             {title}
           </h2>
 
-          <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-4">
-            Consonants:{" "}
-            <span className="text-emerald-300 font-bold">{consonantCount}</span>
+          <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.25em] text-slate-400 mb-4">
+            <span>Consonants</span>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-base font-black text-emerald-300 tracking-normal">
+              {consonantCount}
+            </span>
           </div>
 
           {/* Текст слева, как в макете */}
@@ -118,6 +161,11 @@ export default function HeroSlide({ data, onPlayAudio }) {
               );
             })}
           </div>
+          {hint ? (
+            <p className="mt-4 text-xs text-amber-200 font-semibold text-left">
+              {hint}
+            </p>
+          ) : null}
 
           {/* VisualDecoder занимает остаток высоты, чтобы не давить футер вниз */}
           {word ? (
@@ -129,6 +177,24 @@ export default function HeroSlide({ data, onPlayAudio }) {
                     targetChar={targetChar}
                     charSplit={charSplit}
                     onLetterClick={onPlayAudio}
+                    onGlyphClick={(resolvedChar, glyphMeta) => {
+                      const normalized = normalizeGlyph(resolvedChar);
+                      if (!normalizedTarget || !normalized) return;
+                      if (normalized === normalizedTarget) {
+                        setHint("Hero found. Tap Continue.");
+                        if (onTargetFound) onTargetFound();
+                        return;
+                      }
+                      if (glyphMeta?.isSubscript) {
+                        setHint("That's a subscript consonant. Tap the main one.");
+                        return;
+                      }
+                      if (isKhmerConsonant(normalized)) {
+                        setHint("That's another consonant. Tap the main (big) one.");
+                        return;
+                      }
+                      setHint("That's a modifier. Tap the main consonant.");
+                    }}
                     compact={true}
                     viewBoxPad={55}
                   />
