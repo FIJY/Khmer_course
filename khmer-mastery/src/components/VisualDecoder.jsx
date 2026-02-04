@@ -4,9 +4,11 @@ import { getSoundFileForChar } from "../data/audioMap";
 import {
   getKhmerGlyphColor,
   GLYPH_COLORS,
+  getKhmerGlyphStyle,
   isKhmerConsonantChar,
 } from "../lib/khmerGlyphRenderer";
 import { buildShapeApiUrl } from "../lib/apiConfig";
+import { getKhmerGlyphHighlightConfig } from "../lib/khmerGlyphHighlightConfig";
 
 const COENG_CHAR = "្";
 
@@ -136,7 +138,7 @@ export default function VisualDecoder(props) {
     onLetterClick,
     onComplete,
     hideDefaultButton = true,
-    highlightMode = HIGHLIGHT_MODES.OFF,
+    highlightMode,
     revealOnSelect = false,
     highlightSubscripts = true,
     interactionMode = "persistent_select",
@@ -150,6 +152,8 @@ export default function VisualDecoder(props) {
     alphabetDb,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
+  const highlightConfig = getKhmerGlyphHighlightConfig();
+  const resolvedHighlightMode = highlightMode ?? highlightConfig.highlightMode;
 
   const [glyphs, setGlyphs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -407,6 +411,8 @@ export default function VisualDecoder(props) {
     return indices;
   }, [resolvedGlyphMeta]);
 
+  const STYLE_MODES = new Set(["series", "vowels", "structure", "frequency"]);
+
   function colorForGlyph(glyph, idx) {
     const resolved = resolvedGlyphChars[idx] || glyph.char || "";
     const base = getKhmerGlyphColor(glyph.char);
@@ -417,14 +423,25 @@ export default function VisualDecoder(props) {
         : selectedId === glyphId;
 
     if (revealOnSelect && !isSelected) {
-      return FALLBACK.MUTED;
+      return { fill: FALLBACK.MUTED, opacity: 1 };
     }
 
-    if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
-    if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
-      return isKhmerConsonant(resolved) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
+    if (STYLE_MODES.has(resolvedHighlightMode)) {
+      const style = getKhmerGlyphStyle(glyph.char, {
+        mode: resolvedHighlightMode,
+        frequencyByChar: highlightConfig.frequencyByChar ?? null,
+      });
+      return { fill: style.fill, opacity: style.opacity };
     }
-    return FALLBACK.NEUTRAL;
+
+    if (highlightMode === HIGHLIGHT_MODES.ALL) return { fill: base, opacity: 1 };
+    if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
+      return {
+        fill: isKhmerConsonant(resolved) ? FALLBACK.NEUTRAL : FALLBACK.MUTED,
+        opacity: 1,
+      };
+    }
+    return { fill: FALLBACK.NEUTRAL, opacity: 1 };
   }
 
   if (loading) {
@@ -454,7 +471,7 @@ export default function VisualDecoder(props) {
             selectionMode === "multi"
               ? selectedIds.includes(glyphId)
               : selectedId === glyphId;
-          const fillColor = colorForGlyph(glyph, i);
+          const glyphStyle = colorForGlyph(glyph, i);
           const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
           const isSubscript = subscriptConsonantIndices.has(i);
 
@@ -511,7 +528,8 @@ export default function VisualDecoder(props) {
               />
               <path
                 d={glyph.d}
-                fill={fillColor}
+                fill={glyphStyle.fill}
+                opacity={glyphStyle.opacity}
                 pointerEvents="none"
                 className="transition-all duration-200"
                 style={{

@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { GLYPH_COLORS, getKhmerGlyphStyle } from "../lib/khmerGlyphRenderer";
+import React, { useEffect, useMemo, useState } from "react";
 import { buildShapeApiUrl } from "../lib/apiConfig";
+import { getKhmerGlyphHighlightConfig } from "../lib/khmerGlyphHighlightConfig";
+import { GLYPH_COLORS, getKhmerGlyphStyle } from "../lib/khmerGlyphRenderer";
 
 const makeViewBoxFromGlyphs = (glyphs, padding = 60) => {
   if (!glyphs || glyphs.length === 0) return "0 0 100 100";
@@ -26,13 +27,16 @@ const makeViewBoxFromGlyphs = (glyphs, padding = 60) => {
 export default function KhmerColoredText({
   text,
   fontSize = 96,
-  highlightMode = "series",
+  highlightMode,
   frequencyByChar = null,
-  selectionStyle = "outline", // "outline" | "glow"
+  selectionStyle, // "outline" | "glow"
 }) {
   const [glyphs, setGlyphs] = useState([]);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const highlightConfig = getKhmerGlyphHighlightConfig();
+  const resolvedHighlightMode = highlightMode ?? highlightConfig.highlightMode;
+  const resolvedSelectionStyle = selectionStyle ?? highlightConfig.selectionStyle;
 
   useEffect(() => {
     let isMounted = true;
@@ -89,12 +93,12 @@ export default function KhmerColoredText({
           const isSelected = selectedId === glyph.id;
 
           const style = getKhmerGlyphStyle(glyph.char, {
-            mode: highlightMode,
+            mode: resolvedHighlightMode,
             frequencyByChar,
           });
 
           const selectedOutline =
-            isSelected && selectionStyle === "outline"
+            isSelected && resolvedSelectionStyle === "outline"
               ? {
                   stroke: GLYPH_COLORS.SELECTED,
                   strokeWidth: 55,
@@ -103,7 +107,7 @@ export default function KhmerColoredText({
               : {};
 
           const filter =
-            isSelected && selectionStyle === "glow"
+            isSelected && resolvedSelectionStyle === "glow"
               ? `drop-shadow(0 0 14px ${GLYPH_COLORS.SELECTED})`
               : "drop-shadow(0 2px 4px rgba(0,0,0,0.35))";
 
