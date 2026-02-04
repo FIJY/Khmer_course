@@ -39,10 +39,10 @@ export default function HeroSlide({ data, onPlayAudio }) {
     return -1;
   })();
 
-  // Общая “безопасная” высота карточки относительно экрана.
-  // 190px — запас под верхнюю панель + нижние кнопки/CTA (можно подкрутить)
+  // ПРАВКА: чуть меньше “резни” по высоте, ровнее паддинги
+  // (не трогаем область глифа — только общую рамку/типографику)
   const frameClass =
-    "p-4 sm:p-8 max-h-[calc(100dvh-190px)] overflow-hidden";
+    "pt-5 sm:pt-7 px-6 sm:px-8 pb-10 sm:pb-12 max-h-[calc(100dvh-175px)] overflow-hidden";
 
   if (mode === "hunt") {
     return (
@@ -53,16 +53,18 @@ export default function HeroSlide({ data, onPlayAudio }) {
               Find the Hero
             </h2>
 
-            <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-3">
+            <div className="text-[10px] uppercase tracking-[0.32em] text-slate-400 mb-4">
               Consonants:{" "}
               <span className="text-emerald-300 font-bold">
                 {consonantCount}
               </span>
             </div>
 
-            <p className="text-gray-300 mb-4">Tap the main consonant.</p>
+            <p className="text-slate-300 mb-5 text-[clamp(0.95rem,3vw,1.05rem)]">
+              Tap the main consonant.
+            </p>
 
-            {/* VisualDecoder занимает остаток высоты и центрируется */}
+            {/* VisualDecoder занимает остаток высоты и центрируется — НЕ ТРОГАЕМ */}
             <div className="flex-1 flex items-center justify-center">
               <div className="max-w-[360px] w-full">
                 <div className="scale-[0.95] sm:scale-[1.05] origin-top">
@@ -77,6 +79,15 @@ export default function HeroSlide({ data, onPlayAudio }) {
                 </div>
               </div>
             </div>
+
+            {footer ? (
+              <>
+                <div className="mt-7 h-px w-full bg-white/10" />
+                <p className="mt-3 text-xs sm:text-sm italic text-white/60 pb-4 leading-relaxed">
+                  {footer}
+                </p>
+              </>
+            ) : null}
           </div>
         </LessonFrame>
       </div>
@@ -88,17 +99,17 @@ export default function HeroSlide({ data, onPlayAudio }) {
       <LessonFrame className={frameClass} variant="full">
         <div className="h-full overflow-y-auto pr-2 flex flex-col">
           {/* Маленький заголовок как в твоём дизайне */}
-          <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-6">
+          <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-4">
             {title}
           </h2>
 
-          <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-4">
+          <div className="text-[10px] uppercase tracking-[0.32em] text-slate-400 mb-5">
             Consonants:{" "}
             <span className="text-emerald-300 font-bold">{consonantCount}</span>
           </div>
 
           {/* Текст слева, как в макете */}
-          <div className="w-full text-left flex-shrink-0">
+          <div className="w-full text-left flex-shrink-0 space-y-3">
             {description.map((line, idx) => {
               const t = String(line ?? "");
               if (!t.trim()) return <div key={idx} className="h-4" />;
@@ -109,8 +120,8 @@ export default function HeroSlide({ data, onPlayAudio }) {
                   key={idx}
                   className={
                     isLastStrong
-                      ? "text-lg sm:text-2xl font-black text-white mt-2"
-                      : "text-lg sm:text-2xl font-bold text-white/95"
+                      ? "text-[clamp(1.25rem,4vw,1.75rem)] font-black text-white mt-1 leading-snug tracking-tight"
+                      : "text-[clamp(1.1rem,3.6vw,1.5rem)] font-bold text-white/95 leading-snug"
                   }
                 >
                   {t}
@@ -119,9 +130,9 @@ export default function HeroSlide({ data, onPlayAudio }) {
             })}
           </div>
 
-          {/* VisualDecoder занимает остаток высоты, чтобы не давить футер вниз */}
+          {/* VisualDecoder занимает остаток высоты — НЕ ТРОГАЕМ */}
           {word ? (
-            <div className="flex-1 flex items-center justify-center mt-4">
+            <div className="flex-1 flex items-center justify-center mt-6">
               <div className="max-w-[320px] w-full">
                 <div className="scale-[0.95] sm:scale-[1.05] origin-top">
                   <VisualDecoder
@@ -141,8 +152,8 @@ export default function HeroSlide({ data, onPlayAudio }) {
 
           {footer ? (
             <>
-              <div className="mt-6 h-px w-full bg-white/10" />
-              <p className="mt-3 text-xs sm:text-sm italic text-white/60 pb-4">
+              <div className="mt-7 h-px w-full bg-white/10" />
+              <p className="mt-3 text-xs sm:text-sm italic text-white/60 pb-4 leading-relaxed">
                 {footer}
               </p>
             </>
