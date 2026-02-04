@@ -61,3 +61,46 @@ button {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.6);
 }
+
+@keyframes glitch-flicker {
+  0%,
+  100% {
+    text-shadow: 0 0 6px rgba(34, 211, 238, 0.35), 0 0 12px rgba(34, 211, 238, 0.2);
+    opacity: 0.9;
+  }
+  20% {
+    text-shadow: 2px 0 6px rgba(34, 211, 238, 0.5), -2px 0 10px rgba(34, 211, 238, 0.3);
+    opacity: 0.8;
+  }
+  40% {
+    text-shadow: -1px 0 4px rgba(34, 211, 238, 0.4), 1px 0 8px rgba(34, 211, 238, 0.25);
+    opacity: 1;
+  }
+  60% {
+    text-shadow: 3px 0 8px rgba(34, 211, 238, 0.45), -3px 0 12px rgba(34, 211, 238, 0.3);
+    opacity: 0.85;
+  }
+}
+
+@keyframes punchline-pulse {
+  0%,
+  100% {
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    text-shadow: 0 0 22px rgba(255, 255, 255, 0.35);
+  }
+}
+
+.glitch-text {
+  animation: glitch-flicker 2.4s infinite steps(2, end);
+}
+
+.khmer-hero {
+  letter-spacing: 0.12em;
+  padding: 0.9rem 1.2rem;
+}
+
+.punchline-glow {
+  animation: punchline-pulse 2.8s ease-in-out infinite;
+}
