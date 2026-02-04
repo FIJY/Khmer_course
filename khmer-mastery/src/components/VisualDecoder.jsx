@@ -138,7 +138,7 @@ export default function VisualDecoder(props) {
     hideDefaultButton = true,
     highlightMode = HIGHLIGHT_MODES.OFF,
     revealOnSelect = false,
-    highlightSubscripts = true,
+    highlightSubscripts = false,
     interactionMode = "persistent_select",
     selectionMode = "multi",
     onSelectionChange,

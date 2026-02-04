@@ -37,11 +37,11 @@ const THEORY_SLIDES = [
     consonantAudioMap: {
       // Put your real files in /public and keep these as relative URLs.
       // Example: public/khmer/consonants/ka.mp3  ->  "khmer/consonants/ka.mp3"
-      'ក': 'khmer/consonants/ka.mp3',
-      'ខ': 'khmer/consonants/kha.mp3',
-      'គ': 'khmer/consonants/ko.mp3',
-      'ឃ': 'khmer/consonants/kho.mp3',
-      'ង': 'khmer/consonants/ngo.mp3'
+      'ក': 'letter_ka.mp3',
+      'ខ': 'letter_kha.mp3',
+      'គ': 'letter_ko.mp3',
+      'ឃ': 'letter_kho.mp3',
+      'ង': 'letter_ngo.mp3'
     }
   },
   {
@@ -95,17 +95,17 @@ const THEORY_SLIDES = [
     microDrillText: 'ភាសាខ្មែរមិនដកឃ្លាទេវាជាស្ទ្រីមតែមួយ',
     microDrillCount: 6,
     consonantAudioMap: {
-      'ក': 'khmer/consonants/ka.mp3',
-      'ខ': 'khmer/consonants/kha.mp3',
-      'គ': 'khmer/consonants/ko.mp3',
-      'ឃ': 'khmer/consonants/kho.mp3',
-      'ង': 'khmer/consonants/ngo.mp3',
-      'ភ': 'khmer/consonants/pho.mp3',
-      'ស': 'khmer/consonants/sa.mp3',
-      'ម': 'khmer/consonants/mo.mp3',
-      'រ': 'khmer/consonants/ro.mp3',
-      'ទ': 'khmer/consonants/to.mp3',
-      'ជ': 'khmer/consonants/jo.mp3'
+      'ក': 'letter_ka.mp3',
+      'ខ': 'letter_kha.mp3',
+      'គ': 'letter_ko.mp3',
+      'ឃ': 'letter_kho.mp3',
+      'ង': 'letter_ngo.mp3',
+      'ភ': 'letter_pho.mp3',
+      'ស': 'letter_sa.mp3',
+      'ម': 'letter_mo.mp3',
+      'រ': 'letter_ro.mp3',
+      'ទ': 'letter_to.mp3',
+      'ជ': 'letter_cho.mp3'
     }
   },
   {
