@@ -8,27 +8,53 @@
     {
       "type": "theory",
       "data": {
-        "title": "R1.1.1 — Today we work with text",
-        "description": [
-          "Today we work with text.",
-          "Real Khmer text.",
-          "And yes — it looks like a wall."
-        ],
         "examples": [
           {
-            "kind": "khmer",
-            "text": "លាឈានឆាប់លឿងរហូតដល់ថ្ងៃ"
-          },
-          {
-            "kind": "label",
-            "text": "Tiny irony:"
-          },
-          {
             "kind": "latin",
-            "text": "Yes. This is normal. Get used to it."
+            "text": "HAVEYOUEVERSEENATEXTLIKETHISBEFORE"
+          },
+          {
+            "kind": "khmer",
+            "text": "ភាសាខ្មែរមិនមានចន្លោះរវាងពាក្យទេ។"
           }
         ],
-        "footer": "We start slow. No pressure."
+        "description": [
+          "In Khmer, there are no spaces between words.",
+          "At all."
+        ],
+        "footer": "Tiny irony: Yes. This is normal. Get used to it."
+      }
+    },
+    {
+      "type": "theory",
+      "data": {
+        "title": "So… how do people read this?",
+        "description": [
+          "They don’t read words.",
+          "They read structure.",
+          "",
+          "Khmer is LEGO.",
+          "Every block has a Hero.",
+          "Everything else is accessories."
+        ],
+        "footer": "Find the Hero. Ignore the Accessories.",
+        "cta": "Show me the Hero"
+      }
+    },
+    {
+      "type": "visual_decoder",
+      "data": {
+        "word": "កម្ពុជា",
+        "word_pronunciation": "kam-pu-chia",
+        "target_char": "ក",
+        "char_split": [
+          "កំ",
+          "ពុ",
+          "ជា"
+        ],
+        "char_position": "start",
+        "english_translation": "Cambodia",
+        "hint": "Find the Hero."
       }
     },
     {
