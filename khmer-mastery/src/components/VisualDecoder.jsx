@@ -212,7 +212,7 @@ export default function VisualDecoder(props) {
     return () => {
       active = false;
     };
-  }, [text, onGlyphsRendered]);
+  }, [text]);
 
   const resolvedGlyphMeta = useMemo(() => {
     const resolved = resolveGlyphMeta(glyphs, text);
@@ -513,15 +513,13 @@ export default function VisualDecoder(props) {
                 d={glyph.d}
                 fill={fillColor}
                 pointerEvents="none"
-                className="transition-all duration-200"
+                className="transition-[fill,stroke,stroke-width] duration-200"
                 style={{
                   stroke: outlineColor,
                   strokeWidth: outlineWidth,
                   vectorEffect: "non-scaling-stroke",
                   paintOrder: "stroke fill",
-                  filter: isSelected
-                    ? `drop-shadow(0 0 10px ${outlineColor})`
-                    : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
+                  filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
                   cursor: "pointer",
                 }}
               />
