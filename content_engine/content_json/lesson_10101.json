@@ -33,18 +33,16 @@
         "description": [
           "They don’t read words.",
           "They read structure.",
-          "",
           "Khmer is LEGO.",
           "Every block has a Hero.",
           "Everything else is accessories."
         ],
         "footer": "Find the Hero. Ignore the Accessories.",
-        "word": "កម្ពុជា",
-        "target": "ក",
+        "word": "ខ្ញុំ",
+        "target": "ខ",
         "char_split": [
-          "កំ",
-          "ពុ",
-          "ជា"
+          "ខ",
+          "្ញុំ"
         ]
       }
     },
