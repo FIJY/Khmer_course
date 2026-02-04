@@ -1,0 +1,58 @@
+import React from 'react';
+import VisualDecoder from '../VisualDecoder';
+import LessonFrame from '../UI/LessonFrame';
+import LessonHeader from '../UI/LessonHeader';
+
+export default function VisualDecoderSlide({
+  variant = 'full',
+  current,
+  highlightMode,
+  onSelectionChange,
+  onGlyphsRendered,
+  onLetterClick,
+  selectionCount = 0,
+  glyphCount = 0,
+  onComplete,
+  hideDefaultButton = true,
+  interactionMode = 'decoder_select'
+}) {
+  if (variant === 'preview') {
+    return (
+      <VisualDecoder
+        data={current}
+        onComplete={onComplete}
+        hideDefaultButton={hideDefaultButton}
+      />
+    );
+  }
+
+  return (
+    <LessonFrame className="p-6">
+      <LessonHeader
+        title="Visual Decoder"
+        hint={current?.instruction || current?.hint || 'Task: tap the glyphs to reveal and identify them.'}
+      />
+
+      <div className="flex items-center justify-between text-xs text-slate-400 uppercase tracking-[0.3em] mt-4">
+        <span>Selected</span>
+        <span className="text-cyan-300 font-black">{selectionCount}</span>
+        <span>Total</span>
+        <span className="text-cyan-300 font-black">{glyphCount}</span>
+      </div>
+
+      <div className="mt-4">
+        <VisualDecoder
+          data={current}
+          highlightMode={highlightMode}
+          interactionMode={interactionMode}
+          selectionMode="multi"
+          revealOnSelect={true}
+          onSelectionChange={onSelectionChange}
+          onGlyphsRendered={onGlyphsRendered}
+          onLetterClick={onLetterClick}
+          hideDefaultButton={hideDefaultButton}
+        />
+      </div>
+    </LessonFrame>
+  );
+}

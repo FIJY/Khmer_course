@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, ArrowRight, X, CheckCircle2, ChevronLeft } from 'lucide-react';
-import VisualDecoder, { HIGHLIGHT_MODES } from '../components/VisualDecoder';
-import MobileLayout from '../components/Layout/MobileLayout';
+import { ArrowRight, ChevronLeft } from 'lucide-react';
+import { HIGHLIGHT_MODES } from '../components/VisualDecoder';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
@@ -12,8 +11,9 @@ import SessionFrame from '../components/Session/SessionFrame';
 import DrillChoiceSlide from "../components/LessonSlides/DrillChoiceSlide";
 import AnalysisSlide from '../components/LessonSlides/AnalysisSlide';
 import ComparisonAudio from '../components/LessonSlides/ComparisonAudio';
-import LessonFrame from '../components/UI/LessonFrame';
-import LessonHeader from '../components/UI/LessonHeader';
+import QuizSlide from '../components/LessonSlides/QuizSlide';
+import VisualDecoderSlide from '../components/LessonSlides/VisualDecoderSlide';
+import VocabCardSlide from '../components/LessonSlides/VocabCardSlide';
 
 
 
@@ -240,112 +240,49 @@ export default function LessonPlayer() {
 
       {/* --- ВИЗУАЛЬНЫЙ ДЕКОДЕР --- */}
       {type === 'visual_decoder' && (
-        <LessonFrame className="p-6">
-          <LessonHeader
-            title="Visual Decoder"
-            hint={current?.instruction || current?.hint || 'Task: tap the glyphs to reveal and identify them.'}
-          />
-
-          <div className="flex items-center justify-between text-xs text-slate-400 uppercase tracking-[0.3em] mt-4">
-            <span>Selected</span>
-            <span className="text-cyan-300 font-black">{visualSelectedIds.length}</span>
-            <span>Total</span>
-            <span className="text-cyan-300 font-black">{visualGlyphCount}</span>
-          </div>
-
-          <div className="mt-4">
-            <VisualDecoder
-              key={step}
-              data={current}
-              highlightMode={highlightMode}
-              interactionMode="decoder_select"
-              selectionMode="multi"
-              revealOnSelect={true}
-              onSelectionChange={setVisualSelectedIds}
-              onGlyphsRendered={(glyphs) => setVisualGlyphCount(glyphs?.length || 0)}
-              onLetterClick={(fileName) => {
-                if (fileName) {
-                  console.log("Playing audio file:", fileName);
-                  playLocalAudio(fileName);
-                } else {
-                  console.log("Silent character selected (no audio)");
-                }
-                setCanAdvance(true);
-              }}
-              hideDefaultButton={true}
-            />
-          </div>
-        </LessonFrame>
+        <VisualDecoderSlide
+          key={step}
+          current={current}
+          highlightMode={highlightMode}
+          selectionCount={visualSelectedIds.length}
+          glyphCount={visualGlyphCount}
+          onSelectionChange={setVisualSelectedIds}
+          onGlyphsRendered={(glyphs) => setVisualGlyphCount(glyphs?.length || 0)}
+          onLetterClick={(fileName) => {
+            if (fileName) {
+              console.log("Playing audio file:", fileName);
+              playLocalAudio(fileName);
+            } else {
+              console.log("Silent character selected (no audio)");
+            }
+            setCanAdvance(true);
+          }}
+          hideDefaultButton={true}
+        />
       )}
 
       {type === 'vocab_card' && (
-        <LessonFrame className="relative p-0" variant="full">
-          <div className="w-full h-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
-            <div className={`relative h-full min-h-[60vh] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
-              <div className="absolute inset-0 backface-hidden bg-gray-900 border border-white/5 flex flex-col items-center justify-center p-8 text-center">
-                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardEnglish')}</p>
-                <h2 className="text-3xl font-black italic text-white">{englishText}</h2>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); playEnglishAudio(); }}
-                  className="mt-6 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-100 hover:bg-cyan-500/30 transition-colors"
-                >
-                  <Volume2 size={18} />
-                  <span className="text-xs font-semibold uppercase tracking-widest">English audio</span>
-                </button>
-              </div>
-              <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
-                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
-                <div className="flex flex-col items-center gap-3 w-full">
-                  <div className="min-h-[4.5rem] flex items-center justify-center">
-                    <span className="font-khmer text-5xl leading-[1.2] text-white">{khmerText}</span>
-                  </div>
-                  <p className="text-base text-cyan-100 font-semibold tracking-wide">
-                    <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
-                    {current.pronunciation || '—'}
-                  </p>
-                </div>
-                {current.audio ? (
-                  <div onClick={(e) => { e.stopPropagation(); playLocalAudio(current.audio); }} className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg">
-                    <Volume2 size={28} />
-                  </div>
-                ) : <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{t('lesson.audioUnavailable')}</p>}
-              </div>
-            </div>
-          </div>
-        </LessonFrame>
+        <VocabCardSlide
+          isFlipped={isFlipped}
+          englishText={englishText}
+          khmerText={khmerText}
+          pronunciation={current.pronunciation}
+          audio={current.audio}
+          onFlip={() => handleVocabCardFlip(current.audio)}
+          onPlayEnglishAudio={playEnglishAudio}
+          onPlayAudio={() => playLocalAudio(current.audio)}
+          t={t}
+        />
       )}
 
       {type === 'quiz' && (
-        <div className="w-full space-y-3">
-          <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
-          {quizOptions.map((opt, i) => {
-            const { value, text, pronunciation, audio: optionAudio } = getQuizOption(opt);
-            const rawValue = value;
-
-            let buttonClass = 'bg-gray-900 border-white/5 text-white';
-            if (selectedOption === rawValue) {
-              const isCorrect = String(rawValue).trim() === String(current.correct_answer).trim();
-              buttonClass = isCorrect
-                ? 'bg-emerald-600 border-emerald-400 text-white'
-                : 'bg-red-600 border-red-400 text-white';
-            }
-
-            return (
-              <button
-                key={i}
-                disabled={!!selectedOption}
-                onClick={() => handleQuizAnswer(rawValue, current.correct_answer, optionAudio || current.audio)}
-                className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${buttonClass}`}
-              >
-                <div className="flex flex-col gap-1">
-                  <span className="text-2xl font-black">{text}</span>
-                  {pronunciation && <span className="text-xl font-semibold text-cyan-100 tracking-wide">{pronunciation}</span>}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <QuizSlide
+          current={current}
+          quizOptions={quizOptions}
+          selectedOption={selectedOption}
+          getQuizOption={getQuizOption}
+          onAnswer={handleQuizAnswer}
+        />
       )}
 
       {/* УНИВЕРСАЛЬНАЯ ТЕОРИЯ */}

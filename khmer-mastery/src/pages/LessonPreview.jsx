@@ -1,22 +1,20 @@
 import React from 'react';
-import { Volume2, ArrowRight, X, CheckCircle2, Trophy, BookOpen, ChevronLeft, Frown } from 'lucide-react';
-import VisualDecoder from '../components/VisualDecoder';
-import KhmerColoredText from '../components/KhmerColoredText';
+import { ArrowRight, X, CheckCircle2, BookOpen, ChevronLeft } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
+import QuizSlide from '../components/LessonSlides/QuizSlide';
+import VisualDecoderSlide from '../components/LessonSlides/VisualDecoderSlide';
+import VocabCardSlide from '../components/LessonSlides/VocabCardSlide';
 
 // --- ИМПОРТИРУЕМ НОВЫЕ СЛАЙДЫ ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
 import InventorySlide from '../components/LessonSlides/InventorySlide';
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
-const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
-  ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
-
 export default function LessonPlayer() {
   const {
     id,
@@ -140,53 +138,38 @@ export default function LessonPlayer() {
         )}
 
         {/* --- СТАРЫЕ СЛАЙДЫ --- */}
-        {type === 'visual_decoder' && <VisualDecoder data={current} onComplete={() => setCanAdvance(true)} hideDefaultButton={true} />}
+        {type === 'visual_decoder' && (
+          <VisualDecoderSlide
+            variant="preview"
+            current={current}
+            onComplete={() => setCanAdvance(true)}
+            hideDefaultButton={true}
+          />
+        )}
 
         {type === 'vocab_card' && (
-          <div className="w-full cursor-pointer" onClick={() => handleVocabCardFlip(current.audio)}>
-            <div className={`relative h-[22rem] transition-all duration-500 preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
-              <div className="absolute inset-0 backface-hidden bg-gray-900 rounded-[3rem] border border-white/5 flex flex-col items-center justify-center p-8 text-center">
-                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardEnglish')}</p>
-                <h2 className="text-3xl font-black italic text-white">{englishText}</h2>
-              </div>
-              <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-900 rounded-[3rem] border-2 border-cyan-500/20 flex flex-col items-center justify-center p-8 text-center text-white">
-                <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-3">{t('lesson.cardKhmer')}</p>
-                <KhmerColoredText text={khmerText} fontUrl={DEFAULT_KHMER_FONT_URL} fontSize={72} className="text-4xl font-black mb-2" />
-                <p className="text-base text-cyan-100 font-semibold tracking-wide mb-4">
-                  <span className="text-[11px] text-cyan-400 font-black uppercase tracking-widest mr-2">{t('lesson.pronunciationLabel')}:</span>
-                  {current.pronunciation || '—'}
-                </p>
-                {current.audio ? (
-                  <div onClick={(e) => { e.stopPropagation(); playLocalAudio(current.audio); }} className="p-5 bg-cyan-500 rounded-full text-black hover:bg-cyan-400 active:scale-90 transition-all shadow-lg">
-                    <Volume2 size={28} />
-                  </div>
-                ) : <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{t('lesson.audioUnavailable')}</p>}
-              </div>
-            </div>
-          </div>
+          <VocabCardSlide
+            variant="preview"
+            isFlipped={isFlipped}
+            englishText={englishText}
+            khmerText={khmerText}
+            pronunciation={current.pronunciation}
+            audio={current.audio}
+            onFlip={() => handleVocabCardFlip(current.audio)}
+            onPlayAudio={() => playLocalAudio(current.audio)}
+            t={t}
+          />
         )}
 
         {type === 'quiz' && (
-          <div className="w-full space-y-3">
-             <h2 className="text-xl font-black mb-8 italic uppercase text-center text-white">{current?.question ?? ''}</h2>
-             {quizOptions.map((opt, i) => {
-               const { value, text, pronunciation, audio: optionAudio } = getQuizOption(opt);
-               const rawValue = value;
-               return (
-               <button
-                 key={i}
-                 disabled={!!selectedOption}
-                 onClick={() => handleQuizAnswer(rawValue, current.correct_answer, optionAudio || current.audio)}
-                 className={`w-full p-5 border rounded-2xl text-left font-bold transition-all ${selectedOption === rawValue ? (rawValue === current.correct_answer ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-red-600 border-red-400 text-white') : 'bg-gray-900 border-white/5 text-white'}`}
-               >
-                 <div className="flex flex-col gap-1">
-                   <span className="text-2xl font-black">{text}</span>
-                   <span className="text-xl font-semibold text-cyan-100 tracking-wide">{pronunciation || '—'}</span>
-                 </div>
-               </button>
-               );
-             })}
-          </div>
+          <QuizSlide
+            current={current}
+            quizOptions={quizOptions}
+            selectedOption={selectedOption}
+            getQuizOption={getQuizOption}
+            onAnswer={handleQuizAnswer}
+            showPronunciationPlaceholder={true}
+          />
         )}
 
         {type === 'theory' && (
