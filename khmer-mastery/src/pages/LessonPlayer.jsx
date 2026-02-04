@@ -213,8 +213,8 @@ export default function LessonPlayer() {
             <button onClick={goBack} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`} type="button">
               <ChevronLeft size={24} />
             </button>
-            <Button onClick={handleNext} disabled={!canAdvance} className="flex-1">
-              {current?.type === 'ready' ? 'FINISH' : t('actions.continue')} <ArrowRight size={20} />
+            <Button onClick={handleNext} disabled={!canAdvance} className="flex-1 text-base md:text-lg">
+              {current?.type === 'ready' ? 'FINISH' : t('actions.continue')} <ArrowRight size={24} />
             </Button>
           </div>
           {!canAdvance && <p className="mt-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center">{t('lesson.hintContinue')}</p>}

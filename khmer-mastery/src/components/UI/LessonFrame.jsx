@@ -1,8 +1,8 @@
 import React from 'react';
 
 const VARIANT_STYLES = {
-  card: 'bg-gray-900/90 border border-white/10 rounded-[2.5rem] shadow-[0_25px_60px_-40px_rgba(0,0,0,0.8)]',
-  full: 'bg-gray-900/90 border border-white/10 rounded-[3rem] shadow-[0_25px_60px_-40px_rgba(0,0,0,0.8)]',
+  card: 'bg-gray-900/95 border border-white/15 rounded-[2.5rem] shadow-[0_25px_60px_-40px_rgba(0,0,0,0.8)] ring-1 ring-cyan-500/10',
+  full: 'bg-gray-900/95 border border-white/15 rounded-[3rem] shadow-[0_25px_60px_-40px_rgba(0,0,0,0.8)] ring-1 ring-cyan-500/10',
 };
 
 export default function LessonFrame({
