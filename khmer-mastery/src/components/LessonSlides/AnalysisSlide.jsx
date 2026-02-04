@@ -2,6 +2,8 @@
 import React, { useMemo, useState } from "react";
 import { RotateCcw, ScanSearch, Volume2 } from "lucide-react";
 import VisualDecoder from "../VisualDecoder";
+import LessonFrame from "../UI/LessonFrame";
+import LessonHeader from "../UI/LessonHeader";
 import { getKhmerGlyphCategory } from "../../lib/khmerGlyphRenderer";
 
 const DEFAULT_KHMER_FONT_URL =
@@ -207,7 +209,7 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
   }
 
   return (
-    <div style={styles.wrap}>
+    <LessonFrame className="p-6">
       <style>{`
         @font-face {
           font-family: "KhmerFont";
@@ -215,26 +217,21 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
           font-display: swap;
         }
       `}</style>
-
-      <div style={styles.card}>
-        <div style={styles.headerRow}>
-          <div>
-            <div style={styles.title}>{title}</div>
-            {subtitle && <div style={styles.subtitle}>{subtitle}</div>}
+      <div style={styles.headerRow}>
+        <LessonHeader title={title} subtitle={subtitle} align="left" />
+        <div style={styles.iconRow}>
+          <div style={styles.badge}>
+            <ScanSearch size={16} />
+            <span>analysis</span>
           </div>
-          <div style={styles.iconRow}>
-            <div style={styles.badge}>
-              <ScanSearch size={16} />
-              <span>analysis</span>
-            </div>
-            {audio && !isDecoderSelect && (
-              <button style={styles.audioBtn} onClick={playAudio}>
-                <Volume2 size={16} />
-                <span>Play</span>
-              </button>
-            )}
-          </div>
+          {audio && !isDecoderSelect && (
+            <button style={styles.audioBtn} onClick={playAudio}>
+              <Volume2 size={16} />
+              <span>Play</span>
+            </button>
+          )}
         </div>
+      </div>
 
         {textLines.length > 0 && (
           <div style={styles.textBlock}>
@@ -317,29 +314,11 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
         </div>
 
         {note && !activeCharData && <div style={styles.note}>{note}</div>}
-      </div>
-    </div>
+    </LessonFrame>
   );
 }
 
 const styles = {
-  wrap: {
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-    padding: "16px",
-    boxSizing: "border-box"
-  },
-  card: {
-    width: "100%",
-    maxWidth: "760px",
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: "28px",
-    padding: "20px",
-    background: "rgba(15, 23, 42, 0.92)",
-    color: "#e2e8f0",
-    boxShadow: "0 12px 40px rgba(0,0,0,0.35)"
-  },
   headerRow: {
     display: "flex",
     justifyContent: "space-between",
@@ -371,15 +350,6 @@ const styles = {
     color: "white",
     cursor: "pointer",
     fontSize: "13px"
-  },
-  title: {
-    fontSize: "22px",
-    fontWeight: 800
-  },
-  subtitle: {
-    fontSize: "14px",
-    opacity: 0.7,
-    marginTop: "4px"
   },
   textBlock: {
     marginBottom: "12px"
