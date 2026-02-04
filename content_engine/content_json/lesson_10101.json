@@ -26,37 +26,26 @@
       }
     },
     {
-      "type": "theory",
+      "type": "learn_char",
       "data": {
-        "title": "So… how do people read this?",
+        "mode": "unlock",
+        "name": "So… how do people read this?",
         "description": [
-          {
-            "kind": "lead",
-            "text": "They don’t read words."
-          },
-          {
-            "kind": "body",
-            "text": "They read structure."
-          },
-          {
-            "kind": "note",
-            "text": ""
-          },
-          {
-            "kind": "lead",
-            "text": "Khmer is LEGO."
-          },
-          {
-            "kind": "body",
-            "text": "Every block has a Hero."
-          },
-          {
-            "kind": "punch",
-            "text": "Everything else is accessories."
-          }
+          "They don’t read words.",
+          "They read structure.",
+          "",
+          "Khmer is LEGO.",
+          "Every block has a Hero.",
+          "Everything else is accessories."
         ],
         "footer": "Find the Hero. Ignore the Accessories.",
-        "cta": "Show me the Hero"
+        "word": "កម្ពុជា",
+        "target": "ក",
+        "char_split": [
+          "កំ",
+          "ពុ",
+          "ជា"
+        ]
       }
     },
     {

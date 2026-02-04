@@ -124,7 +124,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
     case 'rule':
       return (
         <div className="w-full flex-1 flex">
-          <LessonFrame className="w-full flex-1 pt-5 md:pt-6 px-6 md:px-8 pb-14 md:pb-16 text-center animate-in fade-in slide-in-from-bottom-8 duration-700" variant="full">
+          <LessonFrame className="w-full flex-1 p-6 md:p-8 pb-14 md:pb-16 text-center animate-in fade-in slide-in-from-bottom-8 duration-700" variant="full">
             <div className="hidden sm:flex justify-center mb-4">
                 <div className="p-1.5 bg-cyan-500/10 rounded-full">
                     {mode === 'rule' ? <Lightbulb className="text-amber-400" size={12} /> : <BookOpen className="text-cyan-400" size={12} />}
@@ -144,7 +144,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
                     </p>
                   ))}
                   {data.description.length > 0 && (
-                    <p className="text-[clamp(1.25rem,4vw,1.7rem)] text-white font-black tracking-tight text-center">
+                    <p className="text-[clamp(1.25rem,4vw,1.7rem)] font-black text-white tracking-tight">
                       {data.description[data.description.length - 1]}
                     </p>
                   )}
@@ -166,7 +166,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
 
                     const labelCls =
                       "bg-transparent border-0 px-0 py-0 text-sm text-gray-400 tracking-wide";
-                    const latinCls = "bg-black/35 font-mono text-cyan-300/70 text-[clamp(0.95rem,3.2vw,1.15rem)] tracking-tight uppercase leading-tight break-all whitespace-normal";
+                    const latinCls = "bg-black/35 font-mono text-cyan-200 text-[clamp(0.95rem,3.2vw,1.15rem)] tracking-tight uppercase leading-tight break-all whitespace-normal";
                     const khmerCls =
                       "bg-black/45 font-khmer text-cyan-50 text-2xl md:text-3xl leading-snug py-5 px-5";
 
@@ -202,7 +202,7 @@ export default function UniversalTheorySlide({ type, data, onPlayAudio }) {
               )}
 
               {data.footer && (
-                <div className="mt-6 pt-6 border-t border-white/10 text-slate-300 italic opacity-80 tracking-wide text-sm md:text-base text-center whitespace-pre-line">
+                <div className="mt-6 pt-6 border-t border-white/10 text-slate-300 italic opacity-80 text-sm md:text-base text-center whitespace-pre-line">
                   {data.footer}
                 </div>
               )}
