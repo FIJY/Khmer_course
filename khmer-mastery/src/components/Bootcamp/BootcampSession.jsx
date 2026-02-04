@@ -50,20 +50,27 @@ const getConsonantIndices = (text) => {
 // You can wire these to your real audio assets.
 // The tool will gracefully no-op if a file doesn't exist.
 const CONSONANT_AUDIO = {
-  'ក': 'khmer/consonants/ka.mp3',
-  'ខ': 'khmer/consonants/kha.mp3',
-  'គ': 'khmer/consonants/ko.mp3',
-  'ឃ': 'khmer/consonants/kho.mp3',
-  'ង': 'khmer/consonants/ngo.mp3',
-  'ច': 'khmer/consonants/cha.mp3',
-  'ជ': 'khmer/consonants/cho.mp3'
+  'ក': 'letter_ka.mp3',
+  'ខ': 'letter_kha.mp3',
+  'គ': 'letter_ko.mp3',
+  'ឃ': 'letter_kho.mp3',
+  'ង': 'letter_ngo.mp3',
+  'ច': 'letter_cha.mp3',
+  'ជ': 'letter_cho.mp3'
+};
+
+const resolveAudioUrl = (audioFile) => {
+  if (!audioFile) return null;
+  if (audioFile.startsWith('http')) return audioFile;
+  if (audioFile.startsWith('/')) return audioFile;
+  if (audioFile.includes('/')) return `/${audioFile}`;
+  return `/sounds/${audioFile}`;
 };
 
 const playAudio = (audioFile) => {
-  if (!audioFile) return;
+  const url = resolveAudioUrl(audioFile);
+  if (!url) return;
   try {
-    // audioFile should be relative to /public (e.g. "khmer/consonants/ka.mp3")
-    const url = audioFile.startsWith('/') ? audioFile : `/${audioFile}`;
     const a = new Audio(url);
     a.play().catch(() => {});
   } catch {
@@ -722,6 +729,7 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
           key={drillIndex}
           data={(activeDrills[drillIndex]?.data) ?? activeDrills[drillIndex]}
           onComplete={handleDrillComplete}
+          onLetterClick={playAudio}
           hideDefaultButton={true}
         />
       ) : (
