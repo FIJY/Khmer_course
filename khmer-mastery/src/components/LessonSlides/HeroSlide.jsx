@@ -3,41 +3,27 @@ import LessonFrame from "../UI/LessonFrame";
 import VisualDecoder from "../VisualDecoder";
 
 export default function HeroSlide({ data, onPlayAudio }) {
-  const mode = (data?.mode || "unlock").toLowerCase(); // unlock | hunt
+  const mode = data?.mode || "unlock"; // unlock | hunt
 
+  // Общие поля (поддержим разные названия)
   const title = data?.title || data?.name || "Find the Hero";
-
-  // description: string | string[]
-  const descriptionRaw = Array.isArray(data?.description)
+  const description = Array.isArray(data?.description)
     ? data.description
     : typeof data?.description === "string"
       ? [data.description]
       : [];
 
-  // убираем пустые строки — spacing делаем через gap
-  const description = descriptionRaw
-    .map((x) => String(x ?? "").trim())
-    .filter(Boolean);
-
-  const footer = String(data?.footer || "").trim();
-
-  const word = String(data?.word || "").trim();
-  const targetChar = String(
-    data?.target || data?.target_char || data?.targetChar || ""
-  ).trim();
-
+  const footer = data?.footer || "";
+  const word = data?.word || "";
+  const targetChar = data?.target || data?.target_char || data?.targetChar || "";
   const charSplit = data?.char_split || data?.charSplit || null;
 
-  // считаем “видимые” согласные (без subscript после coeng)
   const consonantCount = React.useMemo(() => {
-    if (!word) return 0;
     const chars = Array.from(word);
     let count = 0;
     for (let i = 0; i < chars.length; i += 1) {
       const ch = chars[i];
       const cp = ch.codePointAt(0);
-
-      // Khmer consonants range: U+1780..U+17A2
       const isConsonant = cp >= 0x1780 && cp <= 0x17A2;
       const isSubscript = chars[i - 1] === "្";
       if (isConsonant && !isSubscript) count += 1;
@@ -45,115 +31,121 @@ export default function HeroSlide({ data, onPlayAudio }) {
     return count;
   }, [word]);
 
-  // Последняя строка — акцентная
-  const lastIndex = description.length - 1;
+  // UNLOCK: индекс последней непустой строки (чтобы сделать её жирнее)
+  const lastNonEmptyIndex = (() => {
+    for (let i = description.length - 1; i >= 0; i--) {
+      if (String(description[i] ?? "").trim() !== "") return i;
+    }
+    return -1;
+  })();
 
-  // Никаких max-h/overflow-hidden на рамке:
-  // ограничиваем только внутренний контент и даём нормальный flex.
-  const frameClass = "p-5 sm:p-8";
+  // Общая “безопасная” высота карточки относительно экрана.
+  // 190px — запас под верхнюю панель + нижние кнопки/CTA (можно подкрутить)
+  const frameClass =
+    "p-4 sm:p-8 max-h-[calc(100dvh-190px)] overflow-hidden";
 
-  // Общий layout: header + body (flex-1) + footer pinned
+  if (mode === "hunt") {
+    return (
+      <div className="w-full flex flex-col items-center text-center animate-in fade-in duration-500">
+        <LessonFrame className={frameClass} variant="full">
+          <div className="h-full overflow-y-auto pr-2 flex flex-col">
+            <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-4">
+              Find the Hero
+            </h2>
+
+            <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-3">
+              Consonants:{" "}
+              <span className="text-emerald-300 font-bold">
+                {consonantCount}
+              </span>
+            </div>
+
+            <p className="text-gray-300 mb-4">Tap the main consonant.</p>
+
+            {/* VisualDecoder занимает остаток высоты и центрируется */}
+            <div className="flex-1 flex items-center justify-center">
+              <div className="max-w-[360px] w-full">
+                <div className="scale-[0.95] sm:scale-[1.05] origin-top">
+                  <VisualDecoder
+                    text={word}
+                    targetChar={targetChar}
+                    charSplit={charSplit}
+                    onLetterClick={onPlayAudio}
+                    compact={true}
+                    viewBoxPad={55}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </LessonFrame>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full flex flex-col items-center text-center animate-in fade-in duration-500">
       <LessonFrame className={frameClass} variant="full">
-        <div className="min-h-[52vh] flex flex-col">
-          {/* TOP */}
-          <div className="flex-shrink-0">
-            <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-3">
-              {title}
-            </h2>
+        <div className="h-full overflow-y-auto pr-2 flex flex-col">
+          {/* Маленький заголовок как в твоём дизайне */}
+          <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-6">
+            {title}
+          </h2>
 
-            {/* (опционально) счётчик согласных */}
-            {word ? (
-              <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-4">
-                Consonants:{" "}
-                <span className="text-emerald-300 font-bold">{consonantCount}</span>
-              </div>
-            ) : null}
+          <div className="text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-4">
+            Consonants:{" "}
+            <span className="text-emerald-300 font-bold">{consonantCount}</span>
           </div>
 
-          {/* BODY */}
-          <div className="flex-1 flex flex-col">
-            {/* Текст */}
-            {description.length > 0 ? (
-              <div className="w-full text-left space-y-3">
-                {description.map((line, idx) => {
-                  const isLastStrong = idx === lastIndex;
-                  return (
-                    <p
-                      key={`line-${idx}`}
-                      className={
-                        isLastStrong
-                          ? "text-[clamp(1.25rem,4vw,1.85rem)] font-black text-white mt-1"
-                          : "text-[clamp(1.05rem,3.2vw,1.55rem)] font-bold text-white/95"
-                      }
-                    >
-                      {line}
-                    </p>
-                  );
-                })}
-              </div>
-            ) : null}
+          {/* Текст слева, как в макете */}
+          <div className="w-full text-left flex-shrink-0">
+            {description.map((line, idx) => {
+              const t = String(line ?? "");
+              if (!t.trim()) return <div key={idx} className="h-4" />;
 
-            {/* ВИЗУАЛЬНЫЙ БЛОК */}
-            {mode === "hunt" ? (
-              <>
-                <p className="text-gray-300 mt-5 mb-3 text-left">
-                  Tap the main consonant.
+              const isLastStrong = idx === lastNonEmptyIndex;
+              return (
+                <p
+                  key={idx}
+                  className={
+                    isLastStrong
+                      ? "text-lg sm:text-2xl font-black text-white mt-2"
+                      : "text-lg sm:text-2xl font-bold text-white/95"
+                  }
+                >
+                  {t}
                 </p>
-
-                <div className="flex-1 flex items-center justify-center mt-2">
-                  <div className="max-w-[360px] w-full">
-                    <div className="scale-[0.98] sm:scale-[1.06] origin-top">
-                      <VisualDecoder
-                        text={word}
-                        targetChar={targetChar}
-                        charSplit={charSplit}
-                        onLetterClick={onPlayAudio}
-                        compact={true}
-                        viewBoxPad={55}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              // unlock: показываем “слово-глиф” крупно и красиво
-              word ? (
-                <div className="flex-1 flex items-center justify-center mt-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // если твой onPlayAudio умеет играть по букве/файлу — ок.
-                      // иначе просто оставь без клика.
-                      if (onPlayAudio && targetChar) onPlayAudio(targetChar);
-                    }}
-                    className="w-full"
-                  >
-                    <div className="mx-auto max-w-[520px] rounded-3xl bg-black/35 border border-white/5 px-6 py-10">
-                      <div className="font-khmer text-white text-[clamp(3.2rem,9vw,5.5rem)] leading-none">
-                        {word}
-                      </div>
-                      <div className="mt-3 text-xs text-cyan-300/70 uppercase tracking-[0.25em]">
-                        tap to hear (optional)
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex-1" />
-              )
-            )}
+              );
+            })}
           </div>
 
-          {/* FOOTER pinned */}
+          {/* VisualDecoder занимает остаток высоты, чтобы не давить футер вниз */}
+          {word ? (
+            <div className="flex-1 flex items-center justify-center mt-4">
+              <div className="max-w-[320px] w-full">
+                <div className="scale-[0.95] sm:scale-[1.05] origin-top">
+                  <VisualDecoder
+                    text={word}
+                    targetChar={targetChar}
+                    charSplit={charSplit}
+                    onLetterClick={onPlayAudio}
+                    compact={true}
+                    viewBoxPad={55}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1" />
+          )}
+
           {footer ? (
-            <div className="flex-shrink-0 mt-6">
-              <div className="h-px w-full bg-white/10" />
-              <p className="mt-3 text-xs sm:text-sm italic text-white/60">
+            <>
+              <div className="mt-6 h-px w-full bg-white/10" />
+              <p className="mt-3 text-xs sm:text-sm italic text-white/60 pb-4">
                 {footer}
               </p>
-            </div>
+            </>
           ) : null}
         </div>
       </LessonFrame>
