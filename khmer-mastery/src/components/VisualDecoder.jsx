@@ -148,6 +148,7 @@ export default function VisualDecoder(props) {
     onGlyphClick,
     onGlyphsRendered,
     alphabetDb,
+    showTapHint = true,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
@@ -156,6 +157,7 @@ export default function VisualDecoder(props) {
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [lastTap, setLastTap] = useState(null);
 
   const [glyphSoundMap, setGlyphSoundMap] = useState({});
 
@@ -171,6 +173,10 @@ export default function VisualDecoder(props) {
     setSelectedIds([]);
     setSelectedId(null);
   }, [interactionMode, resetSelectionKey, text]);
+
+  useEffect(() => {
+    setLastTap(null);
+  }, [text]);
 
   useEffect(() => {
     let active = true;
@@ -304,6 +310,25 @@ export default function VisualDecoder(props) {
     [resolvedGlyphMeta]
   );
 
+  const normalizeLookupChar = (glyphChar) => {
+    if (!glyphChar) return "";
+    return String(glyphChar).replace(/\u25CC/g, "").trim().normalize("NFC");
+  };
+
+  const lookupAlphabetEntry = (glyphChar) => {
+    if (!alphabetDb || !glyphChar) return null;
+    const normalized = normalizeLookupChar(glyphChar);
+
+    if (alphabetDb instanceof Map) {
+      return alphabetDb.get(normalized) || alphabetDb.get(glyphChar) || null;
+    }
+    if (typeof alphabetDb === "object") {
+      return alphabetDb[normalized] || alphabetDb[glyphChar] || null;
+    }
+
+    return null;
+  };
+
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
     if (!svg) return null;
@@ -360,6 +385,20 @@ export default function VisualDecoder(props) {
         ...glyphMeta,
         resolvedChar,
         isSubscript: glyphMeta?.isSubscript ?? false,
+      });
+    }
+
+    if (showTapHint) {
+      const glyphMeta = resolvedGlyphMeta?.[hit.idx] || {};
+      const charData = lookupAlphabetEntry(resolvedChar);
+      const normalized = normalizeLookupChar(resolvedChar);
+      const isSubscript = glyphMeta?.isSubscript ?? false;
+
+      setLastTap({
+        char: resolvedChar,
+        displayChar: isSubscript ? `${COENG_CHAR}${normalized}` : resolvedChar,
+        label: charData?.hint || charData?.name_en || charData?.name || charData?.description || "",
+        isSubscript,
       });
     }
 
@@ -457,6 +496,7 @@ export default function VisualDecoder(props) {
           const fillColor = colorForGlyph(glyph, i);
           const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
           const isSubscript = subscriptConsonantIndices.has(i);
+          const hitStrokeWidth = isSubscript ? 110 : 50;
 
           let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
           let outlineWidth = isSelected ? 5 : 0;
@@ -506,7 +546,7 @@ export default function VisualDecoder(props) {
                 d={glyph.d}
                 fill="transparent"
                 stroke="transparent"
-                strokeWidth="50"
+                strokeWidth={hitStrokeWidth}
                 pointerEvents="none"
               />
               <path
@@ -527,6 +567,26 @@ export default function VisualDecoder(props) {
           );
         })}
       </svg>
+      {showTapHint && lastTap ? (
+        <div className="mt-3 w-full max-w-xl rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white">
+          <div className="flex items-center gap-3">
+            <div className="text-3xl font-khmer">{lastTap.displayChar}</div>
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.3em] text-slate-300">
+                Tapped glyph
+              </div>
+              {lastTap.label ? (
+                <div className="text-sm font-semibold text-white">{lastTap.label}</div>
+              ) : (
+                <div className="text-sm text-slate-300">No hint available.</div>
+              )}
+              {lastTap.isSubscript ? (
+                <div className="text-xs text-amber-300">Subscript consonant</div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
       {!hideDefaultButton && onComplete ? (
         <button
           type="button"
