@@ -22,19 +22,19 @@ export default function HeroSlide({ data, onPlayAudio }) {
   if (mode === "hunt") {
     return (
       <div className="w-full flex flex-col items-center text-center animate-in fade-in duration-500">
-        <LessonFrame className="p-10" variant="full">
+        <LessonFrame className="p-6 sm:p-10" variant="full">
           <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-4">
             Find the Hero
           </h2>
 
           <p className="text-gray-300 mb-6">Tap the main consonant.</p>
 
-          <div className="scale-125">
+          <div className="scale-[1.05] sm:scale-125">
             <VisualDecoder
               text={word}
               targetChar={targetChar}
               charSplit={charSplit}
-              onGlyphClick={onPlayAudio}
+              onLetterClick={onPlayAudio}
             />
           </div>
         </LessonFrame>
@@ -52,7 +52,7 @@ export default function HeroSlide({ data, onPlayAudio }) {
 
   return (
     <div className="w-full flex flex-col items-center text-center animate-in fade-in duration-500">
-      <LessonFrame className="p-10" variant="full">
+      <LessonFrame className="p-6 sm:p-10" variant="full">
         {/* Маленький заголовок как в твоём дизайне */}
         <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-6">
           {title}
@@ -70,8 +70,8 @@ export default function HeroSlide({ data, onPlayAudio }) {
                 key={idx}
                 className={
                   isLastStrong
-                    ? "text-2xl font-black text-white mt-2"
-                    : "text-2xl font-bold text-white/95"
+                    ? "text-xl sm:text-2xl font-black text-white mt-2"
+                    : "text-xl sm:text-2xl font-bold text-white/95"
                 }
               >
                 {t}
@@ -85,12 +85,12 @@ export default function HeroSlide({ data, onPlayAudio }) {
           <div className="mt-8 flex justify-center">
             <div className="w-full flex justify-center">
               <div className="max-w-[320px] w-full">
-                <div className="scale-[1.25] origin-top">
+                <div className="scale-[1.05] sm:scale-[1.2] origin-top">
                   <VisualDecoder
                     text={word}
                     targetChar={targetChar}
                     charSplit={charSplit}
-                    onGlyphClick={onPlayAudio}
+                    onLetterClick={onPlayAudio}
                   />
                 </div>
               </div>
