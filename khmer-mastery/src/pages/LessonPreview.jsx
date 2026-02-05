@@ -9,7 +9,7 @@ import { t } from '../i18n';
 import QuizSlide from '../components/LessonSlides/QuizSlide';
 import VisualDecoderSlide from '../components/LessonSlides/VisualDecoderSlide';
 import VocabCardSlide from '../components/LessonSlides/VocabCardSlide';
-
+import SameDifferentSlide from '../components/LessonSlides/SameDifferentSlide';
 // --- ИМПОРТИРУЕМ НОВЫЕ СЛАЙДЫ ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
 import InventorySlide from '../components/LessonSlides/InventorySlide';
@@ -137,6 +137,14 @@ export default function LessonPlayer() {
           <InventorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
+        {type === 'same_different' && (
+                <SameDifferentSlide
+                  data={current}
+                  onPlayAudio={playLocalAudio}
+                  onComplete={() => setCanAdvance(true)}
+                />
+              )}
+          
         {/* --- СТАРЫЕ СЛАЙДЫ --- */}
         {type === 'visual_decoder' && (
           <VisualDecoderSlide

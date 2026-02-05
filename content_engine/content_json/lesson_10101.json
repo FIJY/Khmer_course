@@ -66,15 +66,13 @@
       }
     },
     {
-      "type": "quiz",
+      "type": "same_different",
       "data": {
-        "question": "Same or different?\n\nប  vs  ព",
-        "options": [
-          "Same",
-          "Different"
-        ],
+        "title": "R1.1.6 — Same or Different?",
+        "left_char": "ប",
+        "right_char": "ព",
         "correct_answer": "Different",
-        "explanation": "Different.\n\nThese two letters look similar.\nBut they belong to different groups.\nMixing them changes how a word sounds."
+        "explanation": "These look like twins, but they are not.\nOne belongs to the Solar Team, the other to the Lunar Team.\nMixing them changes the meaning."
       }
     }
   ],
