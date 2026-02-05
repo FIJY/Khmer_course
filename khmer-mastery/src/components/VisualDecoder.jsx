@@ -3,6 +3,7 @@ import React, { useMemo, useRef, useState, useEffect } from "react";
 import { getSoundFileForChar } from "../data/audioMap";
 import {
   getKhmerGlyphColor,
+  getKhmerGlyphCategory,
   GLYPH_COLORS,
   isKhmerConsonantChar,
 } from "../lib/khmerGlyphRenderer";
@@ -354,6 +355,21 @@ export default function VisualDecoder(props) {
     return null;
   };
 
+  const fallbackTypeLabel = (glyphChar) => {
+    const category = getKhmerGlyphCategory(glyphChar);
+    const map = {
+      consonant: "consonant",
+      vowel_dep: "vowel_dependent",
+      vowel_ind: "vowel_independent",
+      diacritic: "diacritic",
+      numeral: "numeral",
+      coeng: "coeng",
+      space: "space",
+      other: "other",
+    };
+    return map[category] || "";
+  };
+
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
     if (!svg) return null;
@@ -382,6 +398,14 @@ export default function VisualDecoder(props) {
     }
 
     if (hits.length === 0) return null;
+
+    const closestOverall = pickClosestHit(hits, p);
+    if (closestOverall) {
+      const resolved = resolvedGlyphChars[closestOverall.idx] || closestOverall.g.char;
+      if (!isKhmerConsonant(resolved)) {
+        return closestOverall;
+      }
+    }
 
     const consonantHits = hits.filter((item) => {
       const resolved = resolvedGlyphChars[item.idx] || item.g.char;
@@ -419,16 +443,21 @@ export default function VisualDecoder(props) {
       const normalized = normalizeLookupChar(resolvedChar);
       const isSubscript = glyphMeta?.isSubscript ?? false;
 
+      const isSubscriptConsonant = isSubscript && isKhmerConsonant(resolvedChar);
       setLastTap({
         char: resolvedChar,
-        displayChar: isSubscript ? `${COENG_CHAR}${normalized}` : resolvedChar,
+        displayChar: isSubscriptConsonant
+          ? `${normalized} / ${COENG_CHAR}${normalized}`
+          : isSubscript
+            ? `${COENG_CHAR}${normalized}`
+            : resolvedChar,
         label:
           charData?.type ||
           charData?.hint ||
           charData?.name_en ||
           charData?.name ||
           charData?.description ||
-          "",
+          fallbackTypeLabel(resolvedChar),
         isSubscript,
       });
     }
@@ -527,7 +556,7 @@ export default function VisualDecoder(props) {
           const fillColor = colorForGlyph(glyph, i);
           const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
           const isSubscript = subscriptConsonantIndices.has(i);
-          const hitStrokeWidth = isSubscript ? 80 : 50;
+          const hitStrokeWidth = isSubscript ? 120 : 60;
 
           let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
           let outlineWidth = isSelected ? 5 : 0;
@@ -604,11 +633,13 @@ export default function VisualDecoder(props) {
             <div className="text-3xl font-khmer">{lastTap.displayChar}</div>
             <div>
               <div className="text-[10px] uppercase tracking-[0.3em] text-slate-300">
-                Tapped glyph
+                Type
               </div>
               {lastTap.label ? (
                 <div className="text-sm font-semibold text-white">{lastTap.label}</div>
-              ) : null}
+              ) : (
+                <div className="text-sm text-slate-300">Unknown type</div>
+              )}
               {lastTap.isSubscript ? (
                 <div className="text-xs text-amber-300">Subscript consonant</div>
               ) : null}
