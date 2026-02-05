@@ -246,8 +246,25 @@ export default function LessonPlayer() {
           highlightMode={highlightMode}
           selectionCount={visualSelectedIds.length}
           glyphCount={visualGlyphCount}
-          onSelectionChange={setVisualSelectedIds}
-          onGlyphsRendered={(glyphs) => setVisualGlyphCount(glyphs?.length || 0)}
+          onSelectionChange={(ids) => {
+            setVisualSelectedIds(ids);
+            if (visualGlyphCount > 0 && ids.length >= visualGlyphCount) {
+              setCanAdvance(true);
+            } else {
+              setCanAdvance(false);
+            }
+          }}
+          onGlyphsRendered={(glyphs) => {
+            const count = glyphs?.length || 0;
+            setVisualGlyphCount(count);
+            if (count === 0) return;
+            if (visualSelectedIds.length >= count) {
+              setCanAdvance(true);
+            } else {
+              setCanAdvance(false);
+            }
+          }}
+          alphabetDb={alphabetDb}
           onLetterClick={(fileName) => {
             if (fileName) {
               console.log("Playing audio file:", fileName);
@@ -255,7 +272,6 @@ export default function LessonPlayer() {
             } else {
               console.log("Silent character selected (no audio)");
             }
-            setCanAdvance(true);
           }}
           hideDefaultButton={true}
         />
