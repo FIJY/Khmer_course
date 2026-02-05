@@ -10,6 +10,7 @@ export default function VisualDecoderSlide({
   onSelectionChange,
   onGlyphsRendered,
   onLetterClick,
+  alphabetDb,
   selectionCount = 0,
   glyphCount = 0,
   onComplete,
@@ -50,6 +51,7 @@ export default function VisualDecoderSlide({
           onSelectionChange={onSelectionChange}
           onGlyphsRendered={onGlyphsRendered}
           onLetterClick={onLetterClick}
+          alphabetDb={alphabetDb}
           hideDefaultButton={hideDefaultButton}
         />
       </div>
