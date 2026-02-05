@@ -3,6 +3,7 @@ import React, { useMemo, useRef, useState, useEffect } from "react";
 import { getSoundFileForChar } from "../data/audioMap";
 import {
   getKhmerGlyphColor,
+  getKhmerGlyphCategory,
   GLYPH_COLORS,
   isKhmerConsonantChar,
 } from "../lib/khmerGlyphRenderer";
@@ -148,6 +149,7 @@ export default function VisualDecoder(props) {
     onGlyphClick,
     onGlyphsRendered,
     alphabetDb,
+    showTapHint = true,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
@@ -156,11 +158,13 @@ export default function VisualDecoder(props) {
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [lastTap, setLastTap] = useState(null);
 
   const [glyphSoundMap, setGlyphSoundMap] = useState({});
 
   const svgRef = useRef(null);
   const hitRefs = useRef([]);
+  const hintRef = useRef(null);
 
   useEffect(() => {
     hitRefs.current = [];
@@ -171,6 +175,20 @@ export default function VisualDecoder(props) {
     setSelectedIds([]);
     setSelectedId(null);
   }, [interactionMode, resetSelectionKey, text]);
+
+  useEffect(() => {
+    setLastTap(null);
+  }, [text]);
+
+  useEffect(() => {
+    if (!lastTap || !hintRef.current) return;
+    hintRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    const scrollTarget = Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight
+    );
+    window.scrollTo({ top: scrollTarget, behavior: "smooth" });
+  }, [lastTap]);
 
   useEffect(() => {
     let active = true;
@@ -304,6 +322,65 @@ export default function VisualDecoder(props) {
     [resolvedGlyphMeta]
   );
 
+  const distanceToGlyphCenter = (item, p) => {
+    const bb = item?.g?.bb;
+    if (!bb) return Number.POSITIVE_INFINITY;
+    const cx = ((bb.x1 ?? 0) + (bb.x2 ?? 0)) / 2;
+    const cy = ((bb.y1 ?? 0) + (bb.y2 ?? 0)) / 2;
+    const dx = p.x - cx;
+    const dy = p.y - cy;
+    return dx * dx + dy * dy;
+  };
+
+  const pickClosestHit = (items, p) => {
+    if (!items.length) return null;
+    return items.reduce((best, item) => {
+      if (!best) return item;
+      const bestDist = distanceToGlyphCenter(best, p);
+      const itemDist = distanceToGlyphCenter(item, p);
+      if (itemDist !== bestDist) {
+        return itemDist < bestDist ? item : best;
+      }
+      const bestArea = bboxArea(best.g?.bb);
+      const itemArea = bboxArea(item.g?.bb);
+      return itemArea < bestArea ? item : best;
+    }, null);
+  };
+
+  const normalizeLookupChar = (glyphChar) => {
+    if (!glyphChar) return "";
+    return String(glyphChar).replace(/\u25CC/g, "").trim().normalize("NFC");
+  };
+
+  const lookupAlphabetEntry = (glyphChar) => {
+    if (!alphabetDb || !glyphChar) return null;
+    const normalized = normalizeLookupChar(glyphChar);
+
+    if (alphabetDb instanceof Map) {
+      return alphabetDb.get(normalized) || alphabetDb.get(glyphChar) || null;
+    }
+    if (typeof alphabetDb === "object") {
+      return alphabetDb[normalized] || alphabetDb[glyphChar] || null;
+    }
+
+    return null;
+  };
+
+  const fallbackTypeLabel = (glyphChar) => {
+    const category = getKhmerGlyphCategory(glyphChar);
+    const map = {
+      consonant: "consonant",
+      vowel_dep: "vowel_dependent",
+      vowel_ind: "vowel_independent",
+      diacritic: "diacritic",
+      numeral: "numeral",
+      coeng: "coeng",
+      space: "space",
+      other: "other",
+    };
+    return map[category] || "";
+  };
+
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
     if (!svg) return null;
@@ -333,16 +410,24 @@ export default function VisualDecoder(props) {
 
     if (hits.length === 0) return null;
 
+    const closestOverall = pickClosestHit(hits, p);
+    if (closestOverall) {
+      const resolved = resolvedGlyphChars[closestOverall.idx] || closestOverall.g.char;
+      if (!isKhmerConsonant(resolved)) {
+        return closestOverall;
+      }
+    }
+
     const consonantHits = hits.filter((item) => {
       const resolved = resolvedGlyphChars[item.idx] || item.g.char;
       return isKhmerConsonant(resolved);
     });
-    if (consonantHits.length > 0) return consonantHits[0];
+    if (consonantHits.length > 0) return pickClosestHit(consonantHits, p);
 
     const nonCoengHits = hits.filter((item) => item.g.char !== COENG_CHAR);
-    if (nonCoengHits.length > 0) return nonCoengHits[0];
+    if (nonCoengHits.length > 0) return pickClosestHit(nonCoengHits, p);
 
-    return hits[0];
+    return pickClosestHit(hits, p);
   }
 
   const handlePointerDown = (e) => {
@@ -360,6 +445,31 @@ export default function VisualDecoder(props) {
         ...glyphMeta,
         resolvedChar,
         isSubscript: glyphMeta?.isSubscript ?? false,
+      });
+    }
+
+    if (showTapHint) {
+      const glyphMeta = resolvedGlyphMeta?.[hit.idx] || {};
+      const charData = lookupAlphabetEntry(resolvedChar);
+      const normalized = normalizeLookupChar(resolvedChar);
+      const isSubscript = glyphMeta?.isSubscript ?? false;
+
+      const isSubscriptConsonant = isSubscript && isKhmerConsonant(resolvedChar);
+      setLastTap({
+        char: resolvedChar,
+        displayChar: isSubscriptConsonant
+          ? `${normalized} / ${COENG_CHAR}${normalized}`
+          : isSubscript
+            ? `${COENG_CHAR}${normalized}`
+            : resolvedChar,
+        label:
+          charData?.type ||
+          charData?.hint ||
+          charData?.name_en ||
+          charData?.name ||
+          charData?.description ||
+          fallbackTypeLabel(resolvedChar),
+        isSubscript,
       });
     }
 
@@ -457,6 +567,7 @@ export default function VisualDecoder(props) {
           const fillColor = colorForGlyph(glyph, i);
           const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
           const isSubscript = subscriptConsonantIndices.has(i);
+          const hitStrokeWidth = isSubscript ? 120 : 60;
 
           let outlineColor = isSelected ? FALLBACK.SELECTED : "transparent";
           let outlineWidth = isSelected ? 5 : 0;
@@ -506,7 +617,7 @@ export default function VisualDecoder(props) {
                 d={glyph.d}
                 fill="transparent"
                 stroke="transparent"
-                strokeWidth="50"
+                strokeWidth={hitStrokeWidth}
                 pointerEvents="none"
               />
               <path
@@ -527,6 +638,37 @@ export default function VisualDecoder(props) {
           );
         })}
       </svg>
+      {showTapHint ? (
+        <div
+          ref={hintRef}
+          className="mt-3 w-full max-w-xl rounded-2xl border border-white/10 bg-black/40 px-4 py-2 min-h-[64px] text-white flex items-center"
+        >
+          <div className="flex items-center gap-3">
+            {lastTap ? (
+              <>
+                <div className="text-3xl font-khmer">{lastTap.displayChar}</div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.3em] text-slate-300">
+                    Type
+                  </div>
+                  {lastTap.label ? (
+                    <div className="text-sm font-semibold text-white">{lastTap.label}</div>
+                  ) : (
+                    <div className="text-sm text-slate-300">Unknown type</div>
+                  )}
+                  {lastTap.isSubscript ? (
+                    <div className="text-xs text-amber-300">Subscript consonant</div>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <div className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                Tap a glyph
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
       {!hideDefaultButton && onComplete ? (
         <button
           type="button"
