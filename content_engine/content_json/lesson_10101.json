@@ -64,277 +64,47 @@
         "target": "ច",
         "char_split": null
       }
-    },
+    }
+  ],
+  "_FUTURE_CONTENT_DO_NOT_LOAD": [
     {
       "type": "drill_choice",
       "data": {
         "title": "R1.1.4 — Select only the Heroes",
-        "subtitle": "Tap the main big letters.",
-        "prompt": "Khmer text is full of \"noise\": smooth shapes, complex shapes, decorations.\n\nFind ONLY the Consonants (Heroes).\nEverything else is decoration.",
+        "prompt": "Find ONLY the Consonants (Heroes).",
         "layout": "grid",
         "mode": "multi",
         "options": [
           {
             "id": "ka",
-            "text": "ក",
-            "audio": "letter_ka"
+            "text": "ក"
           },
           {
             "id": "aa",
-            "text": "ា",
-            "audio": null
+            "text": "ា"
           },
           {
             "id": "kha",
-            "text": "ខ",
-            "audio": "letter_kha"
+            "text": "ខ"
           },
           {
             "id": "ah",
-            "text": "ះ",
-            "audio": null
+            "text": "ះ"
           },
           {
             "id": "ngo",
-            "text": "ង",
-            "audio": "letter_ngo"
+            "text": "ង"
           },
           {
             "id": "ei",
-            "text": "ី",
-            "audio": null
+            "text": "ី"
           }
         ],
         "correct_ids": [
           "ka",
           "kha",
           "ngo"
-        ],
-        "success_text": "✅ Correct. Heroes are the big skeletons.",
-        "fail_text": "❌ That is an accessory (vowel or sign)."
-      }
-    }
-  ],
-  "_FUTURE_CONTENT_DO_NOT_LOAD": [
-    {
-      "type": "visual_decoder",
-      "data": {
-        "word": "កម្ពុជា",
-        "word_pronunciation": "kam-pu-chia",
-        "target_char": "ក",
-        "char_split": [
-          "កំ",
-          "ពុ",
-          "ជា"
-        ],
-        "char_position": "start",
-        "english_translation": "Cambodia",
-        "hint": "Find the Hero."
-      }
-    },
-    {
-      "type": "drill_choice",
-      "data": {
-        "title": "R1.1.5 — Select only the Heroes (Harder)",
-        "subtitle": "Add more noise.",
-        "prompt": "Same principle.\nThe main letter is always ONE.\nDo not count decorations.",
-        "layout": "grid",
-        "mode": "multi",
-        "options": [
-          {
-            "id": "ko",
-            "text": "គ",
-            "audio": "letter_ko"
-          },
-          {
-            "id": "am",
-            "text": "ាំ",
-            "audio": null
-          },
-          {
-            "id": "kho",
-            "text": "ឃ",
-            "audio": "letter_kho"
-          },
-          {
-            "id": "ngo",
-            "text": "ង",
-            "audio": "letter_ngo"
-          },
-          {
-            "id": "ei",
-            "text": "ី",
-            "audio": null
-          }
-        ],
-        "correct_ids": [
-          "ko",
-          "kho",
-          "ngo"
-        ],
-        "success_text": "✅ Found them.",
-        "fail_text": "❌ Only the main letters."
-      }
-    },
-    {
-      "type": "meet-teams",
-      "data": {
-        "title": "R1.1.6 — Same or different?",
-        "text": "Same or different?\n\nប vs ព\n\nAnswer: Different.\n\nThey look similar.\nBut mixing them changes the sound.",
-        "caption": "K-Team only. Tap a letter to hear its sound.",
-        "k_team": [
-          {
-            "char": "ក",
-            "audio": "letter_ka"
-          },
-          {
-            "char": "ខ",
-            "audio": "letter_kha"
-          },
-          {
-            "char": "គ",
-            "audio": "letter_ko"
-          },
-          {
-            "char": "ឃ",
-            "audio": "letter_kho"
-          },
-          {
-            "char": "ង",
-            "audio": "letter_ngo"
-          }
         ]
-      }
-    },
-    {
-      "type": "comparison_audio",
-      "data": {
-        "title": "R1.1.7 — Listen",
-        "pairs": [
-          {
-            "instruction": "Tap the first. Tap the second.\nDifferent sounds = different letters.",
-            "left": {
-              "text": "ប",
-              "audio": "letter_ba",
-              "label": "BA"
-            },
-            "right": {
-              "text": "ព",
-              "audio": "letter_po",
-              "label": "PO"
-            }
-          }
-        ],
-        "note": "They look like twins. They are not."
-      }
-    },
-    {
-      "type": "drill_choice",
-      "data": {
-        "title": "R1.1.8 — Find words with ខ",
-        "subtitle": "The letter is hidden inside words.",
-        "prompt": "Tap the letter ខ in each word.\n\nHint: it’s like a snail with a spiral.",
-        "layout": "grid",
-        "mode": "multi",
-        "options": [
-          {
-            "id": "khang",
-            "text": "ខាង",
-            "audio": null
-          },
-          {
-            "id": "kha",
-            "text": "ខា",
-            "audio": null
-          },
-          {
-            "id": "mak",
-            "text": "មាក",
-            "audio": null
-          },
-          {
-            "id": "lak",
-            "text": "លាក",
-            "audio": null
-          }
-        ],
-        "correct_ids": [
-          "khang",
-          "kha"
-        ],
-        "success_text": "✅ Snail spotted.",
-        "fail_text": "❌ Look for the spiral."
-      }
-    },
-    {
-      "type": "drill_choice",
-      "data": {
-        "title": "R1.1.9 — Find words with ខ (Again)",
-        "subtitle": "Different set. Same idea.",
-        "prompt": "Same principle.\nRemember the shape.",
-        "layout": "grid",
-        "mode": "multi",
-        "options": [
-          {
-            "id": "khmer",
-            "text": "ខ្មែរ",
-            "audio": null
-          },
-          {
-            "id": "khaat",
-            "text": "ខាត",
-            "audio": null
-          },
-          {
-            "id": "kam",
-            "text": "កាំ",
-            "audio": null
-          },
-          {
-            "id": "ka",
-            "text": "កា",
-            "audio": null
-          }
-        ],
-        "correct_ids": [
-          "khmer",
-          "khaat"
-        ],
-        "success_text": "✅ Nice.",
-        "fail_text": "❌ Not that one."
-      }
-    },
-    {
-      "type": "quiz",
-      "data": {
-        "question": "Every Khmer block is built around…",
-        "options": [
-          "Decorations",
-          "A main consonant (Hero)",
-          "A vowel"
-        ],
-        "correct_answer": "A main consonant (Hero)",
-        "explanation": "The consonant is the skeleton. Everything else hangs on it."
-      }
-    },
-    {
-      "type": "quiz",
-      "data": {
-        "question": "When you tap a letter, first you hear…",
-        "options": [
-          "A vowel sound",
-          "A consonant sound",
-          "The word name"
-        ],
-        "correct_answer": "A consonant sound",
-        "explanation": "First the sound. Then the name."
-      }
-    },
-    {
-      "type": "ready",
-      "data": {
-        "title": "R1.1.10 — Done",
-        "text": "Letters can look similar, but sound different.\n\nAlways find the Hero.\n\nThis is normal."
       }
     }
   ]
