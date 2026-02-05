@@ -10,6 +10,7 @@ export default function VisualDecoderSlide({
   onSelectionChange,
   onGlyphsRendered,
   onLetterClick,
+  alphabetDb,
   selectionCount = 0,
   glyphCount = 0,
   onComplete,
@@ -33,14 +34,13 @@ export default function VisualDecoderSlide({
         hint={current?.instruction || current?.hint || 'Task: tap the glyphs to reveal and identify them.'}
       />
 
-      <div className="flex items-center justify-between text-xs text-slate-400 uppercase tracking-[0.3em] mt-4">
-        <span>Selected</span>
-        <span className="text-cyan-300 font-black">{selectionCount}</span>
-        <span>Total</span>
-        <span className="text-cyan-300 font-black">{glyphCount}</span>
-      </div>
-
-      <div className="mt-4">
+      <div className="mt-4 relative">
+        <div className="absolute top-3 left-4 flex items-center gap-3 text-[10px] text-slate-400 uppercase tracking-[0.3em]">
+          <span>Selected</span>
+          <span className="text-cyan-300 font-black">{selectionCount}</span>
+          <span>Total</span>
+          <span className="text-cyan-300 font-black">{glyphCount}</span>
+        </div>
         <VisualDecoder
           data={current}
           highlightMode={highlightMode}
@@ -50,6 +50,7 @@ export default function VisualDecoderSlide({
           onSelectionChange={onSelectionChange}
           onGlyphsRendered={onGlyphsRendered}
           onLetterClick={onLetterClick}
+          alphabetDb={alphabetDb}
           hideDefaultButton={hideDefaultButton}
         />
       </div>

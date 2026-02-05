@@ -54,7 +54,7 @@ export default function HeroSlide({ data, onPlayAudio }) {
             </h2>
 
             <div className="text-[10px] uppercase tracking-[0.32em] text-slate-400 mb-4">
-              Consonants:{" "}
+              Hero:{" "}
               <span className="text-emerald-300 font-bold">
                 {consonantCount}
               </span>
@@ -104,7 +104,7 @@ export default function HeroSlide({ data, onPlayAudio }) {
           </h2>
 
           <div className="text-[10px] uppercase tracking-[0.32em] text-slate-400 mb-5">
-            Consonants:{" "}
+            Hero:{" "}
             <span className="text-emerald-300 font-bold">{consonantCount}</span>
           </div>
 
