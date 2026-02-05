@@ -2,7 +2,7 @@ import React from "react";
 import LessonFrame from "../UI/LessonFrame";
 import VisualDecoder from "../VisualDecoder";
 
-export default function HeroSlide({ data, onPlayAudio }) {
+export default function HeroSlide({ data, heroSelected = false, onHeroFound, onPlayAudio }) {
   const mode = data?.mode || "unlock"; // unlock | hunt
 
   // Общие поля (поддержим разные названия)
@@ -17,6 +17,21 @@ export default function HeroSlide({ data, onPlayAudio }) {
   const word = data?.word || "";
   const targetChar = data?.target || data?.target_char || data?.targetChar || "";
   const charSplit = data?.char_split || data?.charSplit || null;
+
+  const normalizeChar = (value) => {
+    if (!value) return "";
+    return String(value).replace(/\u25CC/g, "").trim().normalize("NFC");
+  };
+
+  const handleGlyphClick = (glyphChar, glyphMeta) => {
+    if (!targetChar) return;
+    if (glyphMeta?.isSubscript) return;
+    const normalizedGlyph = normalizeChar(glyphChar);
+    const normalizedTarget = normalizeChar(targetChar);
+    if (normalizedGlyph && normalizedTarget && normalizedGlyph === normalizedTarget) {
+      onHeroFound?.();
+    }
+  };
 
   const consonantCount = React.useMemo(() => {
     const chars = Array.from(word);
@@ -54,7 +69,7 @@ export default function HeroSlide({ data, onPlayAudio }) {
             </h2>
 
             <div className="text-[10px] uppercase tracking-[0.32em] text-slate-400 mb-4">
-              Consonants:{" "}
+              Hero:{" "}
               <span className="text-emerald-300 font-bold">
                 {consonantCount}
               </span>
@@ -65,13 +80,20 @@ export default function HeroSlide({ data, onPlayAudio }) {
             </p>
 
             {/* VisualDecoder занимает остаток высоты и центрируется — НЕ ТРОГАЕМ */}
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center relative">
+              <div className="absolute top-2 left-3 text-[10px] uppercase tracking-[0.32em] text-slate-400">
+                Hero:{" "}
+                <span className="text-emerald-300 font-bold">
+                  {heroSelected ? 1 : 0}/{consonantCount || 1}
+                </span>
+              </div>
               <div className="max-w-[360px] w-full">
                 <div className="scale-[0.95] sm:scale-[1.05] origin-top">
                   <VisualDecoder
                     text={word}
                     targetChar={targetChar}
                     charSplit={charSplit}
+                    onGlyphClick={handleGlyphClick}
                     onLetterClick={onPlayAudio}
                     compact={true}
                     viewBoxPad={55}
@@ -103,11 +125,6 @@ export default function HeroSlide({ data, onPlayAudio }) {
             {title}
           </h2>
 
-          <div className="text-[10px] uppercase tracking-[0.32em] text-slate-400 mb-5">
-            Consonants:{" "}
-            <span className="text-emerald-300 font-bold">{consonantCount}</span>
-          </div>
-
           {/* Текст слева, как в макете */}
           <div className="w-full text-left flex-shrink-0 space-y-3">
             {description.map((line, idx) => {
@@ -132,13 +149,20 @@ export default function HeroSlide({ data, onPlayAudio }) {
 
           {/* VisualDecoder занимает остаток высоты — НЕ ТРОГАЕМ */}
           {word ? (
-            <div className="flex-1 flex items-center justify-center mt-6">
+            <div className="flex-1 flex items-center justify-center mt-6 relative">
+              <div className="absolute top-2 left-3 text-[10px] uppercase tracking-[0.32em] text-slate-400">
+                Hero:{" "}
+                <span className="text-emerald-300 font-bold">
+                  {heroSelected ? 1 : 0}/{consonantCount || 1}
+                </span>
+              </div>
               <div className="max-w-[320px] w-full">
                 <div className="scale-[0.95] sm:scale-[1.05] origin-top">
                   <VisualDecoder
                     text={word}
                     targetChar={targetChar}
                     charSplit={charSplit}
+                    onGlyphClick={handleGlyphClick}
                     onLetterClick={onPlayAudio}
                     compact={true}
                     viewBoxPad={55}

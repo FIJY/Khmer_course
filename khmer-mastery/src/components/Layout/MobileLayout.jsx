@@ -18,7 +18,10 @@ export default function MobileLayout({
       >
 
         {/* Scrollable area occupies remaining space */}
-        <div className={`flex-1 overflow-y-auto overflow-x-visible custom-scrollbar scroll-smooth ${contentClassName}`}>
+        <div
+          data-scroll-container="true"
+          className={`flex-1 overflow-y-auto overflow-x-visible custom-scrollbar scroll-smooth ${contentClassName}`}
+        >
           {children}
         </div>
 

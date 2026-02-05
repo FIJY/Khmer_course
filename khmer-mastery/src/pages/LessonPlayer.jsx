@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { ArrowRight, ChevronLeft } from 'lucide-react';
 import { HIGHLIGHT_MODES } from '../components/VisualDecoder';
 import Button from '../components/UI/Button';
@@ -60,6 +60,9 @@ export default function LessonPlayer() {
   const [highlightMode, setHighlightMode] = useState(HIGHLIGHT_MODES.ALL);
   const [visualSelectedIds, setVisualSelectedIds] = useState([]);
   const [visualGlyphCount, setVisualGlyphCount] = useState(0);
+  const [visualGlyphs, setVisualGlyphs] = useState([]);
+  const [visualResetSeed, setVisualResetSeed] = useState(0);
+  const [heroSelected, setHeroSelected] = useState(false);
 
   // --- УПРАВЛЕНИЕ БЛОКИРОВКОЙ КНОПКИ "ДАЛЕЕ" ---
   useEffect(() => {
@@ -67,6 +70,9 @@ export default function LessonPlayer() {
     setRevealedConsonants(new Set());
     setVisualSelectedIds([]);
     setVisualGlyphCount(0);
+    setVisualGlyphs([]);
+    setVisualResetSeed((prev) => prev + 1);
+    setHeroSelected(false);
 
     const rawType = safeItems[step]?.type;
     const currentType = rawType
@@ -75,7 +81,6 @@ export default function LessonPlayer() {
 
     const autoUnlockTypes = [
       'theory',
-      'learn_char',
       'word_breakdown',
       'title',
       'meet_teams',
@@ -103,6 +108,23 @@ export default function LessonPlayer() {
   const type = rawType
     ? rawType.toLowerCase().trim().replace(/[\s-]+/g, '_')
     : '';
+
+  const baseConsonantGlyphIds = useMemo(() => {
+    const ids = new Set();
+    visualGlyphs.forEach((glyph, idx) => {
+      const char = glyph?.resolvedChar || glyph?.char || "";
+      const isConsonant = /[\u1780-\u17A2]/.test(char);
+      if (isConsonant && !glyph?.isSubscript) {
+        ids.add(glyph?.id ?? idx);
+      }
+    });
+    return ids;
+  }, [visualGlyphs]);
+
+  const selectedBaseConsonantCount = useMemo(() => {
+    if (!visualSelectedIds.length || baseConsonantGlyphIds.size === 0) return 0;
+    return visualSelectedIds.filter((id) => baseConsonantGlyphIds.has(id)).length;
+  }, [visualSelectedIds, baseConsonantGlyphIds]);
 
   const handleConsonantClick = (index, char) => {
     setRevealedConsonants((prev) => {
@@ -222,7 +244,15 @@ export default function LessonPlayer() {
       )}
     >
       {type === 'learn_char' && (
-        <HeroSlide data={current} onPlayAudio={playLocalAudio} />
+        <HeroSlide
+          data={current}
+          heroSelected={heroSelected}
+          onHeroFound={() => {
+            setHeroSelected(true);
+            setCanAdvance(true);
+          }}
+          onPlayAudio={playLocalAudio}
+        />
       )}
       {type === "drill_choice" && (
         <DrillChoiceSlide
@@ -244,10 +274,40 @@ export default function LessonPlayer() {
           key={step}
           current={current}
           highlightMode={highlightMode}
-          selectionCount={visualSelectedIds.length}
+          selectionCount={selectedBaseConsonantCount}
           glyphCount={visualGlyphCount}
-          onSelectionChange={setVisualSelectedIds}
-          onGlyphsRendered={(glyphs) => setVisualGlyphCount(glyphs?.length || 0)}
+          onSelectionChange={(ids) => {
+            setVisualSelectedIds(ids);
+            const nextSelected = ids.filter((id) => baseConsonantGlyphIds.has(id)).length;
+            if (visualGlyphCount > 0 && nextSelected >= visualGlyphCount) {
+              setCanAdvance(true);
+            } else {
+              setCanAdvance(false);
+            }
+          }}
+          onGlyphsRendered={(glyphs) => {
+            const list = Array.isArray(glyphs) ? glyphs : [];
+            setVisualGlyphs(list);
+            const count = list.filter((glyph) => {
+              const char = glyph?.resolvedChar || glyph?.char || "";
+              const isConsonant = /[\u1780-\u17A2]/.test(char);
+              return isConsonant && !glyph?.isSubscript;
+            }).length;
+            setVisualGlyphCount(count);
+            if (count === 0) return;
+            if (selectedBaseConsonantCount >= count) {
+              setCanAdvance(true);
+            } else {
+              setCanAdvance(false);
+            }
+          }}
+          onResetSelection={() => {
+            setVisualSelectedIds([]);
+            setVisualResetSeed((prev) => prev + 1);
+            setCanAdvance(false);
+          }}
+          resetSelectionKey={visualResetSeed}
+          alphabetDb={alphabetDb}
           onLetterClick={(fileName) => {
             if (fileName) {
               console.log("Playing audio file:", fileName);
@@ -255,7 +315,6 @@ export default function LessonPlayer() {
             } else {
               console.log("Silent character selected (no audio)");
             }
-            setCanAdvance(true);
           }}
           hideDefaultButton={true}
         />
