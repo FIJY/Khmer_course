@@ -66,7 +66,12 @@ export default function LessonPlayer() {
 
 
   const current = safeItems[step]?.data;
-  const type = safeItems[step]?.type;
+  const rawType = safeItems[step]?.type;
+  const type = rawType
+    ? String(rawType).toLowerCase().trim().replace(/[\s-]+/g, '_')
+    : '';
+  const isHeroType = type === 'learn_char' || type === 'hero';
+  const isInventoryType = type === 'word_breakdown' || type === 'inventory';
 
   // ... (Логика vocab_card текста) ...
   const frontText = current?.front ?? '';
@@ -129,11 +134,11 @@ export default function LessonPlayer() {
       <main className="flex-1 flex flex-col items-center justify-center p-6 overflow-y-auto">
 
         {/* --- НОВЫЕ СЛАЙДЫ --- */}
-        {type === 'learn_char' && (
+        {isHeroType && (
           <HeroSlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
-        {type === 'word_breakdown' && (
+        {isInventoryType && (
           <InventorySlide data={current} onPlayAudio={playLocalAudio} />
         )}
 
@@ -180,7 +185,7 @@ export default function LessonPlayer() {
           />
         )}
 
-        {type === 'theory' && (
+        {(type === 'theory' || type === 'universal_theory') && (
           <div className="w-full bg-gray-900 border border-white/10 p-8 rounded-[3.5rem] text-center">
             <BookOpen className="text-cyan-500/20 mx-auto mb-4" size={32} />
             <h2 className="text-xl font-black italic uppercase text-cyan-400 mb-4">{current.title}</h2>

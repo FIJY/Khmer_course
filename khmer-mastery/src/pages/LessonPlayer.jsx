@@ -82,6 +82,7 @@ export default function LessonPlayer() {
     const autoUnlockTypes = [
       'theory',
       'word_breakdown',
+      'inventory',
       'title',
       'meet_teams',
       'rule',
@@ -89,7 +90,8 @@ export default function LessonPlayer() {
       'ready',
       'intro',
       'analysis',
-      'comparison_audio'
+      'comparison_audio',
+      'universal_theory'
     ];
 
     if (autoUnlockTypes.includes(currentType)) {
@@ -205,6 +207,19 @@ export default function LessonPlayer() {
   const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
   const quizOptions = Array.isArray(current?.options) ? current.options : [];
 
+  const isHeroType = type === 'learn_char' || type === 'hero';
+  const isInventoryType = type === 'word_breakdown' || type === 'inventory';
+  const isUniversalTheoryType = [
+    'theory',
+    'title',
+    'meet_teams',
+    'rule',
+    'reading_algorithm',
+    'ready',
+    'intro',
+    'universal_theory'
+  ].includes(type);
+
   return (
     <SessionFrame
       title={lessonInfo?.title}
@@ -228,7 +243,7 @@ export default function LessonPlayer() {
         </footer>
       )}
     >
-      {type === 'learn_char' && (
+      {isHeroType && (
               <HeroSlide
                 key={step} // <--- ВОТ ЭТО ДОБАВИТЬ (Сброс состояния при смене шага)
                 data={current}
@@ -253,7 +268,7 @@ export default function LessonPlayer() {
         <DrillChoiceSlide data={current} onPlayAudio={playLocalAudio} onComplete={() => setCanAdvance(true)} />
       )}
 
-      {type === 'word_breakdown' && (
+      {isInventoryType && (
         <InventorySlide data={current} onPlayAudio={playLocalAudio} />
       )}
 
@@ -315,7 +330,7 @@ export default function LessonPlayer() {
         />
       )}
 
-      {(type === 'theory' || type === 'title' || type === 'meet_teams' || type === 'rule' || type === 'reading_algorithm' || type === 'ready' || type === 'intro') && (
+      {isUniversalTheoryType && (
         <UniversalTheorySlide type={type} data={current} onPlayAudio={playLocalAudio} />
       )}
 

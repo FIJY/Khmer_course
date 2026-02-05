@@ -214,8 +214,19 @@ export default function useLessonPlayer() {
         : '';
 
       const autoUnlockTypes = [
-        'theory', 'learn_char', 'word_breakdown', 'title',
-        'meet-teams', 'rule', 'reading-algorithm', 'ready', 'analysis', 'comparison_audio'
+        'theory',
+        'learn_char',
+        'word_breakdown',
+        'inventory',
+        'title',
+        'meet_teams',
+        'rule',
+        'reading_algorithm',
+        'ready',
+        'analysis',
+        'comparison_audio',
+        'intro',
+        'universal_theory'
       ];
 
       if (autoUnlockTypes.includes(currentType)) {
