@@ -54,7 +54,7 @@ export default function HeroSlide({ data, onPlayAudio }) {
             </h2>
 
             <div className="text-[10px] uppercase tracking-[0.32em] text-slate-400 mb-4">
-              Consonants:{" "}
+              Hero:{" "}
               <span className="text-emerald-300 font-bold">
                 {consonantCount}
               </span>
@@ -103,11 +103,6 @@ export default function HeroSlide({ data, onPlayAudio }) {
             {title}
           </h2>
 
-          <div className="text-[10px] uppercase tracking-[0.32em] text-slate-400 mb-5">
-            Consonants:{" "}
-            <span className="text-emerald-300 font-bold">{consonantCount}</span>
-          </div>
-
           {/* Текст слева, как в макете */}
           <div className="w-full text-left flex-shrink-0 space-y-3">
             {description.map((line, idx) => {
@@ -132,7 +127,11 @@ export default function HeroSlide({ data, onPlayAudio }) {
 
           {/* VisualDecoder занимает остаток высоты — НЕ ТРОГАЕМ */}
           {word ? (
-            <div className="flex-1 flex items-center justify-center mt-6">
+            <div className="flex-1 flex items-center justify-center mt-6 relative">
+              <div className="absolute top-2 left-3 text-[10px] uppercase tracking-[0.32em] text-slate-400">
+                Hero:{" "}
+                <span className="text-emerald-300 font-bold">{consonantCount}</span>
+              </div>
               <div className="max-w-[320px] w-full">
                 <div className="scale-[0.95] sm:scale-[1.05] origin-top">
                   <VisualDecoder

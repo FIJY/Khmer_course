@@ -248,6 +248,7 @@ export default function LessonPlayer() {
           glyphCount={visualGlyphCount}
           onSelectionChange={setVisualSelectedIds}
           onGlyphsRendered={(glyphs) => setVisualGlyphCount(glyphs?.length || 0)}
+          alphabetDb={alphabetDb}
           onLetterClick={(fileName) => {
             if (fileName) {
               console.log("Playing audio file:", fileName);
