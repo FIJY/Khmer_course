@@ -47,85 +47,22 @@
       }
     },
     {
-      "type": "visual_decoder",
+      "type": "learn_char",
       "data": {
-        "word": "កម្ពុជា",
-        "word_pronunciation": "kam-pu-chia",
-        "target_char": "ក",
-        "char_split": [
-          "កំ",
-          "ពុ",
-          "ជា"
+        "mode": "unlock",
+        "title": "R1.1.3 — Observation",
+        "name": "You may have noticed something",
+        "description": [
+          "Every block is built around **ONE** main letter.",
+          "It’s like a game of **“find me”**.",
+          "Tap the letters below.",
+          "First you hear the SOUND.",
+          "Then you hear its NAME."
         ],
-        "char_position": "start",
-        "english_translation": "Cambodia",
-        "hint": "Find the Hero."
-      }
-    },
-    {
-      "type": "analysis",
-      "data": {
-        "mode": "decoder_select",
-        "title": "R1.1.2 — Khmer is like Lego",
-        "text": "Good news: Khmer is like Lego.\n\nYou don’t need to know thousands of “heroes”.\nLet’s not study the language yet.\nLet’s just notice how it works.\n\nToday: we learn to spot consonants.\n\nThis unit starts slowly.\nSit on the same line.\n\nReady?",
-        "word": "ខ្ញុំចង់ញ៉ាំបាយ",
-        "translation": "I want to eat rice"
-      }
-    },
-    {
-      "type": "theory",
-      "data": {
-        "title": "R1.1.6 — SAME OR DIFFERENT?",
-        "description": "Tap a letter to hear it. Solar vs Lunar teams.",
-        "layout": "team_compare",
-        "left_team": {
-          "title": "Solar Team (A-Series)",
-          "icon": "sun",
-          "caption": "Open mouth, natural voice. Like “Ahhh”",
-          "letters": [
-            "ក",
-            "ខ",
-            "ច",
-            "ត",
-            "ប",
-            "ស",
-            "ហ"
-          ]
-        },
-        "right_team": {
-          "title": "Lunar Team (O-Series)",
-          "icon": "moon",
-          "caption": "Round mouth, deeper voice. Like “Ohhh”",
-          "letters": [
-            "គ",
-            "ឃ",
-            "ង",
-            "ជ",
-            "ឈ",
-            "ញ",
-            "ន",
-            "ម",
-            "យ",
-            "រ",
-            "ល",
-            "វ"
-          ]
-        },
-        "interaction": {
-          "mode": "tap_letter_play_sound",
-          "highlight_on_tap": true
-        }
-      }
-    },
-    {
-      "type": "analysis",
-      "data": {
-        "mode": "decoder_select",
-        "title": "R1.1.3 — Find the Hero",
-        "subtitle": "One main consonant per block",
-        "text": "You may have noticed something.\n\nEvery Khmer block is built around ONE main letter.\nThat letter is a consonant.\n\nIt’s a “find me” game.\n\nMechanic:\n• Tap a letter\n• The frame lights up\n• First you hear the consonant SOUND\n• Then you hear its NAME\n\nNo strict rules yet.\nOnly observation.",
-        "word": "ខ្ញុំចង់ញ៉ាំបាយ",
-        "translation": "I want to eat rice"
+        "footer": "Tap the first letter to catch the Hero.",
+        "word": "ចាប់ខ្ញុំបើអ្នកអាច",
+        "target": "ច",
+        "char_split": null
       }
     },
     {
@@ -133,7 +70,7 @@
       "data": {
         "title": "R1.1.4 — Select only the Heroes",
         "subtitle": "Tap the main big letters.",
-        "prompt": "Khmer text has noise: smooth shapes, complex shapes, decorations.\n\nFind ONLY the main letters.\nTap a letter to hear the consonant sound.",
+        "prompt": "Khmer text is full of \"noise\": smooth shapes, complex shapes, decorations.\n\nFind ONLY the Consonants (Heroes).\nEverything else is decoration.",
         "layout": "grid",
         "mode": "multi",
         "options": [
@@ -156,14 +93,43 @@
             "id": "ah",
             "text": "ះ",
             "audio": null
+          },
+          {
+            "id": "ngo",
+            "text": "ង",
+            "audio": "letter_ngo"
+          },
+          {
+            "id": "ei",
+            "text": "ី",
+            "audio": null
           }
         ],
         "correct_ids": [
           "ka",
-          "kha"
+          "kha",
+          "ngo"
         ],
-        "success_text": "✅ Yep. Heroes are the big ones.",
-        "fail_text": "❌ Decorations don’t count."
+        "success_text": "✅ Correct. Heroes are the big skeletons.",
+        "fail_text": "❌ That is an accessory (vowel or sign)."
+      }
+    }
+  ],
+  "_FUTURE_CONTENT_DO_NOT_LOAD": [
+    {
+      "type": "visual_decoder",
+      "data": {
+        "word": "កម្ពុជា",
+        "word_pronunciation": "kam-pu-chia",
+        "target_char": "ក",
+        "char_split": [
+          "កំ",
+          "ពុ",
+          "ជា"
+        ],
+        "char_position": "start",
+        "english_translation": "Cambodia",
+        "hint": "Find the Hero."
       }
     },
     {
