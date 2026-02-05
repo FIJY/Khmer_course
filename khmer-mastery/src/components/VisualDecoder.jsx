@@ -149,6 +149,7 @@ export default function VisualDecoder(props) {
     onGlyphClick,
     onGlyphsRendered,
     alphabetDb,
+    scrollTargetRef,
     showTapHint = true,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
@@ -164,6 +165,7 @@ export default function VisualDecoder(props) {
 
   const svgRef = useRef(null);
   const hitRefs = useRef([]);
+  const hintRef = useRef(null);
 
   useEffect(() => {
     hitRefs.current = [];
@@ -178,6 +180,20 @@ export default function VisualDecoder(props) {
   useEffect(() => {
     setLastTap(null);
   }, [text]);
+
+  useEffect(() => {
+    if (!lastTap) return;
+    const target = scrollTargetRef?.current || hintRef.current;
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "end" });
+    const parent = target.closest?.("[data-scroll-container='true']");
+    if (parent) {
+      requestAnimationFrame(() => {
+        parent.scrollTop = parent.scrollHeight;
+        parent.scrollTo({ top: parent.scrollHeight, behavior: "smooth" });
+      });
+    }
+  }, [lastTap, scrollTargetRef]);
 
   useEffect(() => {
     let active = true;
@@ -627,23 +643,34 @@ export default function VisualDecoder(props) {
           );
         })}
       </svg>
-      {showTapHint && lastTap ? (
-        <div className="mt-3 w-full max-w-xl rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white">
+      {showTapHint ? (
+        <div
+          ref={hintRef}
+          className="mt-3 w-full max-w-xl rounded-2xl border border-white/10 bg-black/40 px-4 py-2 min-h-[64px] text-white flex items-center"
+        >
           <div className="flex items-center gap-3">
-            <div className="text-3xl font-khmer">{lastTap.displayChar}</div>
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.3em] text-slate-300">
-                Type
+            {lastTap ? (
+              <>
+                <div className="text-3xl font-khmer">{lastTap.displayChar}</div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.3em] text-slate-300">
+                    Type
+                  </div>
+                  {lastTap.label ? (
+                    <div className="text-sm font-semibold text-white">{lastTap.label}</div>
+                  ) : (
+                    <div className="text-sm text-slate-300">Unknown type</div>
+                  )}
+                  {lastTap.isSubscript ? (
+                    <div className="text-xs text-amber-300">Subscript consonant</div>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <div className="text-xs uppercase tracking-[0.3em] text-slate-500">
+                Tap a glyph
               </div>
-              {lastTap.label ? (
-                <div className="text-sm font-semibold text-white">{lastTap.label}</div>
-              ) : (
-                <div className="text-sm text-slate-300">Unknown type</div>
-              )}
-              {lastTap.isSubscript ? (
-                <div className="text-xs text-amber-300">Subscript consonant</div>
-              ) : null}
-            </div>
+            )}
           </div>
         </div>
       ) : null}
