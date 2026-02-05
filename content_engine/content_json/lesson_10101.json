@@ -64,6 +64,18 @@
         "target": "ច",
         "char_split": null
       }
+    },
+    {
+      "type": "quiz",
+      "data": {
+        "question": "Same or different?\n\nប  vs  ព",
+        "options": [
+          "Same",
+          "Different"
+        ],
+        "correct_answer": "Different",
+        "explanation": "Different.\n\nThese two letters look similar.\nBut they belong to different groups.\nMixing them changes how a word sounds."
+      }
     }
   ],
   "_FUTURE_CONTENT_DO_NOT_LOAD": [
