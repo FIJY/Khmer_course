@@ -79,7 +79,14 @@ async function init() {
 
   // opentype parse — safer to pass Buffer directly (not .buffer)
   const fontBuffer = fs.readFileSync(FONT_PATH);
-  otFont = opentype.parse(fontBuffer);
+
+  // Buffer -> exact ArrayBuffer slice (важно!)
+  const arrayBuffer = fontBuffer.buffer.slice(
+    fontBuffer.byteOffset,
+    fontBuffer.byteOffset + fontBuffer.byteLength
+  );
+
+  otFont = opentype.parse(arrayBuffer);
 
   console.log("✅ Fonts loaded. Shaping engine ready.");
 }
