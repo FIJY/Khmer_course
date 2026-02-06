@@ -76,66 +76,6 @@
       }
     },
     {
-      "type": "drill_choice",
-      "data": {
-        "title": "Select the Heroes (drill_choice)",
-        "subtitle": "Choose only consonants.",
-        "prompt": "Tap only the main consonant letters. Ignore the vowel marks.",
-        "layout": "grid",
-        "mode": "multi",
-        "options": [
-          {
-            "id": "ka",
-            "text": "ក",
-            "audio": "letter_ka"
-          },
-          {
-            "id": "aa",
-            "text": "ា",
-            "audio": null
-          },
-          {
-            "id": "ba",
-            "text": "ប",
-            "audio": "letter_ba"
-          },
-          {
-            "id": "am",
-            "text": "ំ",
-            "audio": null
-          }
-        ],
-        "correct_ids": [
-          "ka",
-          "ba"
-        ],
-        "success_text": "✅ Correct — the consonants are the heroes.",
-        "fail_text": "❌ Try again. Vowel marks are not heroes."
-      }
-    },
-    {
-      "type": "meet-teams",
-      "data": {
-        "title": "Meet the Team (meet-teams)",
-        "text": "These are a few A-series consonants. Tap to hear them.",
-        "caption": "A-series sample.",
-        "k_team": [
-          {
-            "char": "ក",
-            "audio": "letter_ka"
-          },
-          {
-            "char": "ខ",
-            "audio": "letter_kha"
-          },
-          {
-            "char": "ច",
-            "audio": "letter_cha"
-          }
-        ]
-      }
-    },
-    {
       "type": "comparison_audio",
       "data": {
         "title": "Listen and Compare (comparison_audio)",

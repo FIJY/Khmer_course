@@ -9,7 +9,6 @@ import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
 import SessionCompletion from '../components/Session/SessionCompletion';
 import SessionFrame from '../components/Session/SessionFrame';
-import DrillChoiceSlide from "../components/LessonSlides/DrillChoiceSlide";
 import AnalysisSlide from '../components/LessonSlides/AnalysisSlide';
 import ComparisonAudio from '../components/LessonSlides/ComparisonAudio';
 import QuizSlide from '../components/LessonSlides/QuizSlide';
@@ -86,9 +85,6 @@ export default function LessonPlayer() {
       'theory',
       'word_breakdown',
       'title',
-      'meet_teams',
-      'rule',
-      'reading_algorithm',
       'ready',
       'intro',
       'analysis',
@@ -261,10 +257,6 @@ export default function LessonPlayer() {
         />
       )}
 
-      {type === "drill_choice" && (
-        <DrillChoiceSlide data={current} onPlayAudio={playLocalAudio} onComplete={() => setCanAdvance(true)} />
-      )}
-
       {type === "audio_guess" && (
         <AudioGuessSlide data={current} onPlayAudio={playLocalAudio} onComplete={() => setCanAdvance(true)} />
       )}
@@ -331,7 +323,7 @@ export default function LessonPlayer() {
         />
       )}
 
-      {(type === 'theory' || type === 'title' || type === 'meet_teams' || type === 'rule' || type === 'reading_algorithm' || type === 'ready' || type === 'intro') && (
+      {(type === 'theory' || type === 'title' || type === 'ready' || type === 'intro') && (
         <UniversalTheorySlide type={type} data={current} onPlayAudio={playLocalAudio} />
       )}
 

@@ -26,58 +26,6 @@
           }
         },
         {
-          "type": "drill_choice",
-          "data": {
-            "title": "TEST: Choose Sun Team",
-            "subtitle": "drill_choice (strict A)",
-            "prompt": "Tap ONLY Sun Team letters. Exact match required.",
-            "layout": "grid",
-            "mode": "multi",
-            "options": [
-              {
-                "id": "ka",
-                "text": "ក",
-                "audio": "letter_ka"
-              },
-              {
-                "id": "kha",
-                "text": "ខ",
-                "audio": "letter_kha"
-              },
-              {
-                "id": "ko",
-                "text": "គ",
-                "audio": "letter_ko"
-              },
-              {
-                "id": "kho",
-                "text": "ឃ",
-                "audio": "letter_kho"
-              },
-              {
-                "id": "ngo",
-                "text": "ង",
-                "audio": "letter_ngo"
-              },
-              {
-                "id": "cha",
-                "text": "ច",
-                "audio": "letter_cha"
-              }
-            ],
-            "correct_ids": [
-              "ka",
-              "kha",
-              "cha"
-            ],
-            "shuffle": true,
-            "success_text": "✅ Correct. Smooth = Sun.",
-            "fail_text": "❌ Not exact. Try again.",
-            "check_button_text": "Check",
-            "reset_button_text": "Reset"
-          }
-        },
-        {
           "type": "comparison_audio",
           "data": {
             "title": "TEST: Sun vs Moon (same vowel)",
