@@ -10,6 +10,7 @@ import QuizSlide from '../components/LessonSlides/QuizSlide';
 import VisualDecoderSlide from '../components/LessonSlides/VisualDecoderSlide';
 import VocabCardSlide from '../components/LessonSlides/VocabCardSlide';
 import SameDifferentSlide from '../components/LessonSlides/SameDifferentSlide';
+import IntroduceGroupSlide from '../components/LessonSlides/IntroduceGroupSlide';
 // --- ИМПОРТИРУЕМ НОВЫЕ СЛАЙДЫ ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
 import InventorySlide from '../components/LessonSlides/InventorySlide';
@@ -144,6 +145,13 @@ export default function LessonPlayer() {
                   onComplete={() => setCanAdvance(true)}
                 />
               )}
+
+        {type === 'introduce_group' && (
+          <IntroduceGroupSlide
+            data={current}
+            onPlayAudio={playLocalAudio}
+          />
+        )}
           
         {/* --- СТАРЫЕ СЛАЙДЫ --- */}
         {type === 'visual_decoder' && (
