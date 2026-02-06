@@ -85,20 +85,28 @@
             "title": "Solar Team",
             "caption": "Open mouth, bright tone.",
             "letters": [
-              "ក",
-              "ច",
-              "ត",
-              "ប"
+              {
+                "char": "ក",
+                "label": "k"
+              },
+              {
+                "char": "ខ",
+                "label": "kh"
+              }
             ]
           },
           {
             "title": "Lunar Team",
             "caption": "Rounded mouth, deeper tone.",
             "letters": [
-              "គ",
-              "ជ",
-              "ទ",
-              "ព"
+              {
+                "char": "គ",
+                "label": "g"
+              },
+              {
+                "char": "ឃ",
+                "label": "kh"
+              }
             ]
           }
         ]
