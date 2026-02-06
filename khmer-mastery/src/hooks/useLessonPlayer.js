@@ -215,7 +215,7 @@ export default function useLessonPlayer() {
 
       const autoUnlockTypes = [
         'theory', 'learn_char', 'word_breakdown', 'title',
-        'meet-teams', 'rule', 'reading-algorithm', 'ready', 'analysis', 'comparison_audio'
+        'ready', 'analysis', 'comparison_audio'
       ];
 
       if (autoUnlockTypes.includes(currentType)) {
