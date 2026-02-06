@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import LessonFrame from "../UI/LessonFrame";
 import LessonHeader from "../UI/LessonHeader";
+import VisualDecoder from "../VisualDecoder";
 import { getSoundFileForChar } from "../../data/audioMap";
 
 /**
@@ -156,19 +157,19 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
   }
 
   const baseOptionClass =
-    "border border-slate-500/30 rounded-2xl px-3 py-4 min-h-[84px] flex flex-col items-center justify-center bg-slate-900/60 text-white transition-all";
+    "rounded-2xl px-3 py-4 min-h-[84px] flex flex-col items-center justify-center bg-slate-900/60 text-white transition-all";
   const selectedOptionClass =
-    "border-cyan-400 shadow-[0_0_0_2px_rgba(34,211,238,0.2)] bg-cyan-500/15";
+    "shadow-[0_0_18px_rgba(34,211,238,0.35)] bg-cyan-500/15";
   const selectedCorrectClass =
-    "border-emerald-400 shadow-[0_0_0_2px_rgba(52,211,153,0.25)] bg-emerald-500/15";
+    "shadow-[0_0_18px_rgba(52,211,153,0.4)] bg-emerald-500/15";
   const selectedWrongClass =
-    "border-rose-400 shadow-[0_0_0_2px_rgba(248,113,113,0.25)] bg-rose-500/10";
+    "shadow-[0_0_18px_rgba(248,113,113,0.35)] bg-rose-500/10";
   const lockedOptionClass = "opacity-60 cursor-default";
   const showCorrectness = correctSet.size > 0;
 
   return (
     <div className="w-full flex justify-center px-4">
-      <LessonFrame className="max-w-[720px] p-6">
+      <LessonFrame className="max-w-[720px] p-6 border-0 ring-0">
         <LessonHeader title={title} subtitle={subtitle} hint={prompt} align="left" />
 
         <div className="flex items-center justify-between text-xs text-slate-400 uppercase tracking-[0.3em] mt-4">
@@ -184,12 +185,13 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
             const text = opt?.text ?? "";
             const isSelected = id ? selectedSet.has(id) : false;
             const isCorrect = id ? correctSet.has(id) : false;
+            const hasKhmer = /[\u1780-\u17FF]/.test(text);
             const optionClassName = [
               baseOptionClass,
               isSelected && showCorrectness && isCorrect ? selectedCorrectClass : "",
               isSelected && showCorrectness && !isCorrect ? selectedWrongClass : "",
               isSelected && !showCorrectness ? selectedOptionClass : "",
-              completed ? lockedOptionClass : "hover:border-cyan-400/60",
+              completed ? lockedOptionClass : "hover:bg-slate-900/80",
             ]
               .filter(Boolean)
               .join(" ");
@@ -203,7 +205,19 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
                 disabled={!id || completed}
                 title={opt?.hint || ""}
               >
-                <div className="text-2xl leading-none">{text}</div>
+                {hasKhmer ? (
+                  <div className="w-20">
+                    <VisualDecoder
+                      text={text}
+                      compact={true}
+                      hideDefaultButton={true}
+                      showTapHint={false}
+                      viewBoxPad={40}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-2xl leading-none">{text}</div>
+                )}
                 {opt?.label ? (
                   <div className="text-xs text-slate-400 mt-2">{opt.label}</div>
                 ) : null}
@@ -215,7 +229,7 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
         <div className="flex gap-3 justify-end">
           <button
             type="button"
-            className={`px-4 py-2 rounded-full border border-slate-500/40 text-slate-200 text-sm ${completed ? "opacity-60 cursor-default" : "hover:border-slate-300/60"}`}
+            className={`px-4 py-2 rounded-full bg-white/10 text-slate-200 text-sm ${completed ? "opacity-60 cursor-default" : "hover:bg-white/20"}`}
             onClick={handleReset}
             disabled={completed}
           >
@@ -224,7 +238,7 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
 
           <button
             type="button"
-            className={`px-4 py-2 rounded-full border border-cyan-400/60 bg-cyan-500/20 text-cyan-100 text-sm font-semibold ${completed ? "opacity-60 cursor-default" : "hover:bg-cyan-500/30"}`}
+            className={`px-4 py-2 rounded-full bg-cyan-500/20 text-cyan-100 text-sm font-semibold ${completed ? "opacity-60 cursor-default" : "hover:bg-cyan-500/30"}`}
             onClick={handleCheck}
             disabled={completed}
           >
@@ -233,13 +247,13 @@ export default function DrillChoiceSlide({ data, onPlayAudio, onComplete }) {
         </div>
 
         {status === "correct" ? (
-          <div className="mt-4 px-4 py-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/15 text-emerald-100 text-sm">
+          <div className="mt-4 px-4 py-2 rounded-2xl bg-emerald-500/15 text-emerald-100 text-sm">
             {success_text}
           </div>
         ) : null}
 
         {status === "wrong" ? (
-          <div className="mt-4 px-4 py-2 rounded-2xl border border-rose-400/40 bg-rose-500/15 text-rose-100 text-sm">
+          <div className="mt-4 px-4 py-2 rounded-2xl bg-rose-500/15 text-rose-100 text-sm">
             {fail_text}
           </div>
         ) : null}

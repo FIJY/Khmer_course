@@ -43,7 +43,7 @@ export default function IntroduceGroupSlide({ data, onPlayAudio }) {
   };
 
   const renderColumn = (column, entries, accentClass) => (
-    <div className="rounded-3xl border border-white/10 bg-black/20 p-5 flex flex-col gap-4">
+    <div className="rounded-3xl bg-black/20 p-5 flex flex-col gap-4">
       <div className="text-center">
         <h3 className={`text-sm font-black uppercase tracking-[0.25em] ${accentClass}`}>
           {column?.title || column?.name || "Group"}
@@ -58,7 +58,7 @@ export default function IntroduceGroupSlide({ data, onPlayAudio }) {
             key={`${entry.char}-${index}`}
             type="button"
             onClick={() => handlePlay(entry)}
-            className="rounded-2xl border border-white/10 bg-black/30 p-3 flex items-center justify-center transition hover:border-cyan-400/50"
+            className="rounded-2xl bg-black/30 p-3 flex items-center justify-center transition hover:bg-black/40"
           >
             <div className="w-16">
               <VisualDecoder
@@ -77,7 +77,7 @@ export default function IntroduceGroupSlide({ data, onPlayAudio }) {
 
   return (
     <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
-      <LessonFrame className="pt-6 px-6 pb-10" variant="full">
+      <LessonFrame className="pt-6 px-6 pb-10 border-0 ring-0" variant="full">
         <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-4 text-center">
           {title}
         </h2>
