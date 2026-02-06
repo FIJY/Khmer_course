@@ -74,14 +74,13 @@
         "correct_answer": "Different",
         "explanation": "These look like twins, but they are not.\nOne belongs to the Solar Team, the other to the Lunar Team.\nMixing them changes the meaning."
       }
-    }
-  ],
-  "_FUTURE_CONTENT_DO_NOT_LOAD": [
+    },
     {
       "type": "drill_choice",
       "data": {
         "title": "R1.1.4 — Select only the Heroes",
-        "prompt": "Find ONLY the Consonants (Heroes).",
+        "subtitle": "Tap the main big letters.",
+        "prompt": "Khmer text has noise. Find ONLY the Consonants (Heroes).\nEverything else is decoration.",
         "layout": "grid",
         "mode": "multi",
         "options": [
@@ -114,7 +113,9 @@
           "ka",
           "kha",
           "ngo"
-        ]
+        ],
+        "success_text": "✅ Correct. Heroes are the big skeletons.",
+        "fail_text": "❌ That is an accessory (vowel or sign)."
       }
     }
   ]

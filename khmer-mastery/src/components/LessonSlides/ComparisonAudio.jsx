@@ -1,272 +1,171 @@
 // src/components/LessonSlides/ComparisonAudio.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Volume2, Pause } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+import { Volume2, Check, Sparkles, Play } from "lucide-react";
 import { getSoundFileForChar } from "../../data/audioMap";
 import LessonFrame from "../UI/LessonFrame";
-import LessonHeader from "../UI/LessonHeader";
 import VisualDecoder from "../VisualDecoder";
 
-/**
- * ComparisonAudio Component
- *
- * Displays two (or more) columns of Khmer text with audio playback.
- * Perfect for R1 lessons:
- * - ក (Sun) vs គ (Moon) with same vowel
- * - ក + ា vs ក + ះ (different vowels)
- * - etc.
- *
- * Props:
- * - title: string (lesson title)
- * - pairs: array of { left, right, instruction? }
- *   where left/right = { text, label?, audio?, romanization?, team? }
- * - note: string (optional note at bottom)
- * - onComplete: callback when user clicks play
- */
 export default function ComparisonAudio({
   data = {},
   onComplete,
   hideDefaultButton = false,
 }) {
   const { title, pairs = [], note } = data;
+  const currentPair = pairs[0];
 
-  const [playingIndex, setPlayingIndex] = useState(null);
-  const [playingSide, setPlayingSide] = useState(null); // "left" or "right"
-  const [playedSides, setPlayedSides] = useState(() => new Map());
+  const [playingSide, setPlayingSide] = useState(null); // "left" | "right"
+  const [playedState, setPlayedState] = useState({ left: false, right: false });
   const audioRef = useRef(null);
+  const footerRef = useRef(null); // Реф для автоскролла
 
   const SOUNDS_URL = import.meta.env.VITE_SOUNDS_URL || "/sounds";
 
-  // Получить путь звука (с fallback)
-  const getSoundPath = (audioFile) => {
-    if (!audioFile) return null;
-    if (audioFile.startsWith("http")) return audioFile;
-    return `${SOUNDS_URL}/${audioFile}`;
-  };
+  // Автоскролл к низу после завершения
+  useEffect(() => {
+    const bothPlayed = playedState.left && playedState.right;
+    if (bothPlayed && footerRef.current) {
+      setTimeout(() => {
+        footerRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 400);
+    }
+  }, [playedState]);
 
-  // Получить звук для символа или использовать предоставленный
-  const getAudio = (item) => {
+  const getAudioSource = (item) => {
     if (!item) return null;
-    if (item.audio) return item.audio;
-    if (item.text) return getSoundFileForChar(item.text);
+    if (item.audio) return item.audio.startsWith("http") ? item.audio : `${SOUNDS_URL}/${item.audio}`;
+    if (item.text) {
+        const file = getSoundFileForChar(item.text);
+        return file ? `${SOUNDS_URL}/${file}` : null;
+    }
     return null;
   };
 
-  useEffect(() => {
-    setPlayedSides(new Map());
-  }, [pairs]);
+  const playSound = (side) => {
+    const item = side === "left" ? currentPair?.left : currentPair?.right;
+    const src = getAudioSource(item);
 
-  const hasCompletedPair = useMemo(() => {
-    return pairs.some((pair, pairIdx) => {
-      const leftAudio = getAudio(pair.left);
-      const rightAudio = getAudio(pair.right);
-      const progress = playedSides.get(pairIdx);
-      const leftDone = !leftAudio || progress?.left;
-      const rightDone = !rightAudio || progress?.right;
-      return leftDone && rightDone;
-    });
-  }, [pairs, playedSides]);
+    if (!src || !audioRef.current) return;
 
-  useEffect(() => {
-    if (hasCompletedPair && onComplete) {
-      onComplete();
-    }
-  }, [hasCompletedPair, onComplete]);
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0;
+    setPlayingSide(side);
 
-  const markPlayed = (pairIdx, side) => {
-    setPlayedSides((prev) => {
-      const next = new Map(prev);
-      const current = next.get(pairIdx) || { left: false, right: false };
-      next.set(pairIdx, { ...current, [side]: true });
-      return next;
-    });
-  };
-
-  // Воспроизвести звук
-  const playSound = (audioFile, pairIdx, side) => {
-    if (!audioFile) return;
-
-    const path = getSoundPath(audioFile);
-    if (!path) return;
-    markPlayed(pairIdx, side);
-
-    if (audioRef.current) {
-      audioRef.current.src = path;
-      audioRef.current.onended = () => {
-        setPlayingIndex(null);
+    audioRef.current.src = src;
+    audioRef.current.play().catch(err => {
+        console.error("Audio error:", err);
         setPlayingSide(null);
-      };
+    });
 
-      audioRef.current
-        .play()
-        .then(() => {
-          setPlayingIndex(pairIdx);
-          setPlayingSide(side);
-        })
-        .catch((e) => {
-          console.error("Audio playback failed:", e);
-          setPlayingIndex(null);
-          setPlayingSide(null);
-        });
-    }
+    setPlayedState(prev => {
+        const newState = { ...prev, [side]: true };
+        if (newState.left && newState.right && onComplete) {
+            setTimeout(() => onComplete(), 800);
+        }
+        return newState;
+    });
   };
 
-  const isPlaying = (pairIdx, side) => {
-    return playingIndex === pairIdx && playingSide === side;
+  const handleAudioEnded = () => {
+    setPlayingSide(null);
   };
+
+  if (!currentPair) return null;
+
+  const bothDone = playedState.left && playedState.right;
 
   return (
-    <LessonFrame className="space-y-6 p-6">
-      <audio ref={audioRef} crossOrigin="anonymous" />
+    <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
+      <audio ref={audioRef} onEnded={handleAudioEnded} crossOrigin="anonymous" />
 
-      {/* Title */}
-      {title && (
-        <LessonHeader title={title} />
-      )}
+      <LessonFrame className="pt-6 px-6 pb-20 h-full overflow-y-auto" variant="full">
+        <div className="flex flex-col min-h-full">
+            <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-6 text-center shrink-0">
+               {title || "Listen & Compare"}
+            </h2>
 
-      {/* Pairs */}
-      <div className="space-y-8">
-        {pairs.map((pair, pairIdx) => {
-          const leftAudio = getAudio(pair.left);
-          const rightAudio = getAudio(pair.right);
+            {/* --- ОДНО ОКНО (Общий контейнер) --- */}
+            <div className="w-full max-w-sm mx-auto bg-white/5 border border-white/10 rounded-3xl p-2 relative shrink-0 backdrop-blur-sm">
 
-          return (
-            <div key={pairIdx} className="space-y-4">
-              {/* Instruction */}
-              {pair.instruction && (
-                <p className="text-sm text-slate-300 italic text-center">
-                  {pair.instruction}
-                </p>
-              )}
+                {/* Внутренняя сетка */}
+                <div className="flex items-stretch min-h-[180px]">
 
-              {/* Two columns */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* LEFT */}
-                <div className="flex flex-col items-center space-y-3">
-                  {/* Khmer glyph */}
-                  <div
-                    className={`w-full rounded-2xl p-3 ${isPlaying(pairIdx, "left") ? "bg-cyan-500/10 border border-cyan-400/40" : "bg-black/20 border border-white/10"}`}
-                  >
-                    <VisualDecoder
-                      text={pair.left?.text}
-                      compact={true}
-                      hideDefaultButton={true}
-                      viewBoxPad={50}
-                      onGlyphClick={() => playSound(leftAudio, pairIdx, "left")}
-                    />
-                  </div>
-
-                  {/* Label */}
-                  {pair.left?.label && (
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                      {pair.left.label}
-                    </p>
-                  )}
-
-                  {/* Romanization */}
-                  {pair.left?.romanization && (
-                    <p className="text-sm text-cyan-400 font-mono">
-                      {pair.left.romanization}
-                    </p>
-                  )}
-
-                  {/* Play button */}
-                  {leftAudio && (
+                    {/* ЛЕВАЯ ЧАСТЬ */}
                     <button
-                      onClick={() => playSound(leftAudio, pairIdx, "left")}
-                      disabled={isPlaying(pairIdx, "left")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-60 transition-colors"
-                      aria-label="Play left audio"
+                        onClick={() => playSound("left")}
+                        className={`flex-1 relative rounded-2xl flex flex-col items-center justify-center transition-all duration-300 ${playingSide === "left" ? "bg-white/5" : "hover:bg-white/5"}`}
                     >
-                      {isPlaying(pairIdx, "left") ? (
-                        <>
-                          <Pause size={16} />
-                          <span className="text-sm">Playing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Volume2 size={16} />
-                          <span className="text-sm">Play</span>
-                        </>
-                      )}
+                        <div className="w-2/3 max-w-[100px]">
+                            <VisualDecoder
+                                text={currentPair.left.text}
+                                compact={true}
+                                hideDefaultButton={true}
+                                viewBoxPad={40}
+                                interactionMode="view_only"
+                            />
+                        </div>
+                        {/* Статус */}
+                        <div className="mt-2 h-6 flex items-center justify-center">
+                             {playingSide === "left" ? <Volume2 size={16} className="text-cyan-400 animate-pulse"/> :
+                              playedState.left ? <Check size={16} className="text-emerald-400"/> :
+                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Tap</span>}
+                        </div>
                     </button>
-                  )}
-                </div>
 
-                {/* RIGHT */}
-                <div className="flex flex-col items-center space-y-3">
-                  {/* Khmer glyph */}
-                  <div
-                    className={`w-full rounded-2xl p-3 ${isPlaying(pairIdx, "right") ? "bg-cyan-500/10 border border-cyan-400/40" : "bg-black/20 border border-white/10"}`}
-                  >
-                    <VisualDecoder
-                      text={pair.right?.text}
-                      compact={true}
-                      hideDefaultButton={true}
-                      viewBoxPad={50}
-                      onGlyphClick={() => playSound(rightAudio, pairIdx, "right")}
-                    />
-                  </div>
+                    {/* РАЗДЕЛИТЕЛЬ VS */}
+                    <div className="flex flex-col items-center justify-center px-2">
+                        <div className="w-px h-16 bg-white/10"></div>
+                        <div className="py-2 text-[10px] font-black italic text-slate-600">VS</div>
+                        <div className="w-px h-16 bg-white/10"></div>
+                    </div>
 
-                  {/* Label */}
-                  {pair.right?.label && (
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                      {pair.right.label}
-                    </p>
-                  )}
-
-                  {/* Romanization */}
-                  {pair.right?.romanization && (
-                    <p className="text-sm text-cyan-400 font-mono">
-                      {pair.right.romanization}
-                    </p>
-                  )}
-
-                  {/* Play button */}
-                  {rightAudio && (
+                    {/* ПРАВАЯ ЧАСТЬ */}
                     <button
-                      onClick={() => playSound(rightAudio, pairIdx, "right")}
-                      disabled={isPlaying(pairIdx, "right")}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-100 hover:bg-cyan-500/30 disabled:opacity-60 transition-colors"
-                      aria-label="Play right audio"
+                        onClick={() => playSound("right")}
+                        className={`flex-1 relative rounded-2xl flex flex-col items-center justify-center transition-all duration-300 ${playingSide === "right" ? "bg-white/5" : "hover:bg-white/5"}`}
                     >
-                      {isPlaying(pairIdx, "right") ? (
-                        <>
-                          <Pause size={16} />
-                          <span className="text-sm">Playing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Volume2 size={16} />
-                          <span className="text-sm">Play</span>
-                        </>
-                      )}
+                        <div className="w-2/3 max-w-[100px]">
+                            <VisualDecoder
+                                text={currentPair.right.text}
+                                compact={true}
+                                hideDefaultButton={true}
+                                viewBoxPad={40}
+                                interactionMode="view_only"
+                            />
+                        </div>
+                        {/* Статус */}
+                        <div className="mt-2 h-6 flex items-center justify-center">
+                             {playingSide === "right" ? <Volume2 size={16} className="text-cyan-400 animate-pulse"/> :
+                              playedState.right ? <Check size={16} className="text-emerald-400"/> :
+                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Tap</span>}
+                        </div>
                     </button>
-                  )}
+
                 </div>
-              </div>
             </div>
-          );
-        })}
-      </div>
 
-      {/* Note */}
-      {note && (
-        <div className="mt-6 p-4 bg-black/30 rounded-2xl border border-white/10">
-          <p className="text-sm text-slate-200 italic">{note}</p>
-        </div>
-      )}
+            {/* ИНСТРУКЦИЯ (Нижняя строчка) */}
+            <div ref={footerRef} className="text-center space-y-3 mt-8 pb-8 transition-all duration-500">
+                <p className={`text-lg font-bold transition-all duration-500 ${bothDone ? 'text-emerald-300 scale-105' : 'text-white'}`}>
+                    {currentPair.instruction || (bothDone ? "Great!" : "Tap to listen")}
+                </p>
+                {note && (
+                    <div className={`transition-all duration-500 delay-100 ${bothDone ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                        <p className="text-slate-400 text-sm italic max-w-xs mx-auto leading-relaxed px-4 py-3 rounded-xl bg-black/20 border border-white/5">
+                            {note}
+                        </p>
+                    </div>
+                )}
+            </div>
 
-      {/* Auto-unlock button */}
-      {!hideDefaultButton && (
-        <div className="flex justify-center pt-4">
-          <button
-            onClick={onComplete}
-            className="px-6 py-2 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 font-semibold hover:bg-emerald-500/30 transition-colors"
-          >
-            Got it! Continue →
-          </button>
+            {/* ПОДСКАЗКА (исчезает когда все готово) */}
+            <div className={`mt-auto flex justify-center transition-opacity duration-500 ${bothDone ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                <div className="px-4 py-2 bg-black/40 rounded-full border border-white/5 text-[10px] text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <Sparkles size={10} className="text-cyan-500" />
+                    <span>Listen to both</span>
+                </div>
+            </div>
         </div>
-      )}
-    </LessonFrame>
+      </LessonFrame>
+    </div>
   );
 }

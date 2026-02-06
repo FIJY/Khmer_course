@@ -21,6 +21,7 @@ import HeroSlide from '../components/LessonSlides/HeroSlide';
 import InventorySlide from '../components/LessonSlides/InventorySlide';
 import UniversalTheorySlide from '../components/LessonSlides/UniversalTheorySlide';
 import ConsonantStreamDrill from '../components/Drills/ConsonantStreamDrill';
+import SameDifferentSlide from '../components/LessonSlides/SameDifferentSlide'; // <--- ДОБАВЛЕН ИМПОРТ
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
 
@@ -40,7 +41,7 @@ export default function LessonPlayer() {
     selectedOption,
     isFinished,
     lessonPassed,
-    handleNext, // Мы обернем это
+    handleNext,
     playLocalAudio,
     handleVocabCardFlip,
     handleQuizAnswer,
@@ -51,7 +52,7 @@ export default function LessonPlayer() {
   } = useLessonPlayer();
 
   const safeItems = Array.isArray(items) ? items : [];
-  
+
   // --- ЛОГИКА ДЛЯ МАТРИЦЫ (No Spaces) ---
   const [revealedConsonants, setRevealedConsonants] = useState(new Set());
 
@@ -102,9 +103,9 @@ export default function LessonPlayer() {
 
   // --- ОБЕРТКА ДЛЯ ПЕРЕХОДА (FIX STALE STATE) ---
   const handleContinue = () => {
-    // Принудительно блокируем кнопку ПЕРЕД переходом, 
+    // Принудительно блокируем кнопку ПЕРЕД переходом,
     // чтобы она не моргнула активным состоянием на новом слайде
-    setCanAdvance(false); 
+    setCanAdvance(false);
     setHeroSelected(false);
     handleNext();
   };
@@ -132,7 +133,6 @@ export default function LessonPlayer() {
     return visualSelectedIds.filter((id) => baseConsonantGlyphIds.has(id)).length;
   }, [visualSelectedIds, baseConsonantGlyphIds]);
 
-  // ... (Остальные функции handleConsonantClick, lessonPronunciations, getQuizOption без изменений) ...
   const handleConsonantClick = (index, char) => {
     setRevealedConsonants((prev) => {
       const next = new Set(prev);
@@ -151,8 +151,7 @@ export default function LessonPlayer() {
       return next;
     });
   };
-  
-  // (Сократил lessonPronunciations и getQuizOption для краткости, они остаются как были)
+
   const lessonPronunciations = React.useMemo(() => {
     const map = {};
     safeItems.forEach(item => {
@@ -167,7 +166,6 @@ export default function LessonPlayer() {
   }, [safeItems]);
 
   const getQuizOption = (opt) => {
-    // ... (код getQuizOption) ...
     if (opt && typeof opt === 'object') return { value: opt.value ?? opt.text ?? '', text: opt.text ?? opt.value ?? '', pronunciation: opt.pronunciation ?? '', audio: opt.audio ?? null };
     const metadata = current?.options_metadata?.[opt];
     if (metadata) return { value: opt, text: opt, pronunciation: metadata.pronunciation, audio: metadata.audio };
@@ -199,10 +197,8 @@ export default function LessonPlayer() {
 
   const frontText = current?.front ?? '';
   const backText = current?.back ?? '';
-  const frontHasKhmer = KHMER_PATTERN.test(frontText);
-  const backHasKhmer = KHMER_PATTERN.test(backText);
-  const englishText = frontHasKhmer && !backHasKhmer ? backText : frontText;
-  const khmerText = frontHasKhmer && !backHasKhmer ? frontText : backText;
+  const englishText = KHMER_PATTERN.test(frontText) && !KHMER_PATTERN.test(backText) ? backText : frontText;
+  const khmerText = KHMER_PATTERN.test(frontText) && !KHMER_PATTERN.test(backText) ? frontText : backText;
   const quizOptions = Array.isArray(current?.options) ? current.options : [];
 
   return (
@@ -219,7 +215,6 @@ export default function LessonPlayer() {
             <button onClick={goBack} disabled={step === 0} className={`p-5 rounded-2xl border transition-all ${step === 0 ? 'opacity-0' : 'bg-gray-900 border-white/10 text-white'}`} type="button">
               <ChevronLeft size={24} />
             </button>
-            {/* ИСПОЛЬЗУЕМ handleContinue ВМЕСТО handleNext */}
             <Button onClick={handleContinue} disabled={!canAdvance} className="flex-1 text-base md:text-lg">
               {current?.type === 'ready' ? 'FINISH' : t('actions.continue')} <ArrowRight size={24} />
             </Button>
@@ -229,26 +224,33 @@ export default function LessonPlayer() {
       )}
     >
       {type === 'learn_char' && (
-              <HeroSlide
-                key={step} // <--- ВОТ ЭТО ДОБАВИТЬ (Сброс состояния при смене шага)
-                data={current}
-                heroSelected={heroSelected}
-                onHeroFound={() => {
-                  setHeroSelected(true);
-                  setCanAdvance(true);
-                }}
-                onPlayAudio={playLocalAudio}
-                onReset={() => {
-                  setHeroSelected(false);
-                  setCanAdvance(false);
-                  setVisualResetSeed(s => s + 1);
-                }}
-                resetKey={visualResetSeed}
-              />
-            )}
-      
-      {/* ... Остальные слайды без изменений, только проверим VisualDecoder ... */}
-      
+        <HeroSlide
+          key={step} // ВАЖНО: сброс состояния при смене слайда
+          data={current}
+          heroSelected={heroSelected}
+          onHeroFound={() => {
+            setHeroSelected(true);
+            setCanAdvance(true);
+          }}
+          onPlayAudio={playLocalAudio}
+          onReset={() => {
+            setHeroSelected(false);
+            setCanAdvance(false);
+            setVisualResetSeed(s => s + 1);
+          }}
+          resetKey={visualResetSeed}
+        />
+      )}
+
+      {/* --- ДОБАВЛЕН БЛОК ДЛЯ 4-й КАРТОЧКИ --- */}
+      {type === 'same_different' && (
+        <SameDifferentSlide
+          data={current}
+          onPlayAudio={playLocalAudio}
+          onComplete={() => setCanAdvance(true)}
+        />
+      )}
+
       {type === "drill_choice" && (
         <DrillChoiceSlide data={current} onPlayAudio={playLocalAudio} onComplete={() => setCanAdvance(true)} />
       )}
@@ -259,7 +261,7 @@ export default function LessonPlayer() {
 
       {type === 'visual_decoder' && (
         <VisualDecoderSlide
-          key={step} // Force remount on step change
+          key={step}
           current={current}
           highlightMode={highlightMode}
           selectionCount={selectedBaseConsonantCount}
@@ -277,7 +279,7 @@ export default function LessonPlayer() {
               return /[\u1780-\u17A2]/.test(char) && !glyph?.isSubscript;
             }).length;
             setVisualGlyphCount(count);
-            setCanAdvance(count > 0 && selectedBaseConsonantCount >= count);
+            if (count > 0 && selectedBaseConsonantCount >= count) setCanAdvance(true);
           }}
           onResetSelection={() => {
             setVisualSelectedIds([]);
@@ -322,7 +324,7 @@ export default function LessonPlayer() {
       {type === 'analysis' && (
         <AnalysisSlide data={current} onPlayAudio={playLocalAudio} alphabetDb={alphabetDb} />
       )}
-      
+
       {type === 'comparison_audio' && (
         <ComparisonAudio data={current} onComplete={() => setCanAdvance(true)} hideDefaultButton={true} />
       )}
