@@ -151,6 +151,8 @@ export default function VisualDecoder(props) {
     alphabetDb,
     scrollTargetRef,
     showTapHint = true,
+    getGlyphFillColor,
+    showSelectionOutline = true,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
@@ -522,16 +524,27 @@ export default function VisualDecoder(props) {
     return indices;
   }, [resolvedGlyphMeta]);
 
-  function colorForGlyph(glyph, idx) {
+  function colorForGlyph(glyph, idx, isSelected) {
     const resolved = resolvedGlyphChars[idx] || glyph.char || "";
     const base = getKhmerGlyphColor(glyph.char);
     const glyphId = glyph.id ?? idx;
-    const isSelected =
-      selectionMode === "multi"
+    const resolvedIsSelected =
+      isSelected ??
+      (selectionMode === "multi"
         ? selectedIds.includes(glyphId)
-        : selectedId === glyphId;
+        : selectedId === glyphId);
 
-    if (revealOnSelect && !isSelected) {
+    if (typeof getGlyphFillColor === "function") {
+      const override = getGlyphFillColor({
+        glyph,
+        idx,
+        isSelected: resolvedIsSelected,
+        resolvedChar: resolved,
+      });
+      if (override) return override;
+    }
+
+    if (revealOnSelect && !resolvedIsSelected) {
       return FALLBACK.MUTED;
     }
 
@@ -569,7 +582,7 @@ export default function VisualDecoder(props) {
             selectionMode === "multi"
               ? selectedIds.includes(glyphId)
               : selectedId === glyphId;
-          const fillColor = colorForGlyph(glyph, i);
+          const fillColor = colorForGlyph(glyph, i, isSelected);
           const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
           const isSubscript = subscriptConsonantIndices.has(i);
           const hitStrokeWidth = isSubscript ? 120 : 60;
@@ -613,6 +626,11 @@ export default function VisualDecoder(props) {
                 outlineColor = "#94a3b8";
               }
             }
+          }
+
+          if (!showSelectionOutline) {
+            outlineColor = "transparent";
+            outlineWidth = 0;
           }
 
           return (
