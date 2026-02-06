@@ -64,6 +64,7 @@ export default function IntroduceGroupSlide({ data, onPlayAudio }) {
 
   const title = data?.title || "Introduce group";
   const subtitle = data?.subtitle || data?.description || "";
+  const maxEntries = Math.max(leftEntries.length, rightEntries.length);
 
   const handlePlay = (entry) => {
     const audio = entry?.audio || getSoundFileForChar(entry?.char);
@@ -72,6 +73,7 @@ export default function IntroduceGroupSlide({ data, onPlayAudio }) {
 
   const renderColumn = (column, entries, theme) => {
     const Icon = theme.icon;
+    const paddedEntries = Array.from({ length: maxEntries }, (_, index) => entries[index] ?? null);
     return (
       <div className={`rounded-3xl p-5 flex flex-col gap-4 ${theme.panelClass} ${theme.glowClass}`}>
         <div className="text-center">
@@ -85,13 +87,14 @@ export default function IntroduceGroupSlide({ data, onPlayAudio }) {
             <p className="mt-2 text-xs text-slate-300">{column.caption}</p>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {entries.map((entry, index) => (
+        <div className="grid grid-cols-1 gap-3">
+          {paddedEntries.map((entry, index) => (
+            entry ? (
             <button
               key={`${entry.char}-${index}`}
               type="button"
               onClick={() => handlePlay(entry)}
-              className={`rounded-2xl p-3 flex flex-col items-center justify-center gap-2 transition ${theme.tileClass}`}
+              className={`rounded-2xl p-3 min-h-[88px] flex flex-col items-center justify-center gap-2 transition ${theme.tileClass}`}
             >
               <div className="w-16">
                 <VisualDecoder
@@ -115,6 +118,13 @@ export default function IntroduceGroupSlide({ data, onPlayAudio }) {
                 </div>
               ) : null}
             </button>
+            ) : (
+              <div
+                key={`empty-${index}`}
+                className="rounded-2xl p-3 min-h-[88px] opacity-20"
+                aria-hidden="true"
+              />
+            )
           ))}
         </div>
       </div>

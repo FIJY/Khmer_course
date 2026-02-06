@@ -23,6 +23,7 @@ import UniversalTheorySlide from '../components/LessonSlides/UniversalTheorySlid
 import ConsonantStreamDrill from '../components/Drills/ConsonantStreamDrill';
 import SameDifferentSlide from '../components/LessonSlides/SameDifferentSlide'; // <--- ДОБАВЛЕН ИМПОРТ
 import IntroduceGroupSlide from '../components/LessonSlides/IntroduceGroupSlide';
+import AudioGuessSlide from '../components/LessonSlides/AudioGuessSlide';
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
 
@@ -262,6 +263,10 @@ export default function LessonPlayer() {
 
       {type === "drill_choice" && (
         <DrillChoiceSlide data={current} onPlayAudio={playLocalAudio} onComplete={() => setCanAdvance(true)} />
+      )}
+
+      {type === "audio_guess" && (
+        <AudioGuessSlide data={current} onPlayAudio={playLocalAudio} onComplete={() => setCanAdvance(true)} />
       )}
 
       {type === 'word_breakdown' && (
