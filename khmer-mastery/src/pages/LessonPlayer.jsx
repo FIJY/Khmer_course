@@ -22,6 +22,7 @@ import InventorySlide from '../components/LessonSlides/InventorySlide';
 import UniversalTheorySlide from '../components/LessonSlides/UniversalTheorySlide';
 import ConsonantStreamDrill from '../components/Drills/ConsonantStreamDrill';
 import SameDifferentSlide from '../components/LessonSlides/SameDifferentSlide'; // <--- ДОБАВЛЕН ИМПОРТ
+import IntroduceGroupSlide from '../components/LessonSlides/IntroduceGroupSlide';
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
 
@@ -90,7 +91,8 @@ export default function LessonPlayer() {
       'ready',
       'intro',
       'analysis',
-      'comparison_audio'
+      'comparison_audio',
+      'introduce_group'
     ];
 
     if (autoUnlockTypes.includes(currentType)) {
@@ -248,6 +250,13 @@ export default function LessonPlayer() {
           data={current}
           onPlayAudio={playLocalAudio}
           onComplete={() => setCanAdvance(true)}
+        />
+      )}
+
+      {type === 'introduce_group' && (
+        <IntroduceGroupSlide
+          data={current}
+          onPlayAudio={playLocalAudio}
         />
       )}
 

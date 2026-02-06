@@ -48,20 +48,22 @@ export default function SameDifferentSlide({ data, onComplete, onPlayAudio }) {
         </h2>
 
         {/* Блок сравнения */}
-        <div className="flex items-center justify-center gap-4 mb-10 w-full max-w-sm mx-auto relative">
+        <div className={`flex items-center justify-center mb-10 w-full max-w-sm mx-auto relative rounded-3xl border-2 ${getBorderColor()} ${getBgColor()} transition-all duration-500`}>
 
           {/* Левая буква */}
-          <div className={`flex-1 aspect-square rounded-3xl border-2 ${getBorderColor()} ${getBgColor()} flex items-center justify-center relative transition-all duration-500`}>
+          <div className="flex-1 aspect-square flex items-center justify-center relative">
             <div className="w-2/3">
-               <VisualDecoder
-                 text={leftChar}
-                 compact={true}
-                 hideDefaultButton={true}
-                 viewBoxPad={40}
-                 onLetterClick={onPlayAudio} // Можно послушать при клике
-               />
+              <VisualDecoder
+                text={leftChar}
+                compact={true}
+                hideDefaultButton={true}
+                viewBoxPad={40}
+                onLetterClick={onPlayAudio} // Можно послушать при клике
+              />
             </div>
           </div>
+
+          <div className="w-px self-stretch bg-white/10" />
 
           {/* VS Badge */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 border border-white/20 rounded-full w-10 h-10 flex items-center justify-center z-10 shadow-xl">
@@ -69,7 +71,7 @@ export default function SameDifferentSlide({ data, onComplete, onPlayAudio }) {
           </div>
 
           {/* Правая буква */}
-          <div className={`flex-1 aspect-square rounded-3xl border-2 ${getBorderColor()} ${getBgColor()} flex items-center justify-center relative transition-all duration-500`}>
+          <div className="flex-1 aspect-square flex items-center justify-center relative">
             <div className="w-2/3">
                <VisualDecoder
                  text={rightChar}
