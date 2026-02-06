@@ -145,9 +145,8 @@ async def seed_lesson(lesson_id, title, desc, content_list, module_id=None, orde
         # ═══════════════════════════════════════════════════════════════
         # УНИВЕРСАЛЬНЫЙ ОБРАБОТЧИК НОВЫХ ТИПОВ
         # ═══════════════════════════════════════════════════════════════
-        new_types = ['theory', 'rule', 'reading-algorithm', 'intro', 'analysis',
-                     'meet-teams', 'ready', 'title', 'learn_char', 'word_breakdown',
-                     'same_different', 'drill_choice']
+        new_types = ['theory', 'rule', 'reading-algorithm', 'intro', 'analysis', 'meet-teams', 'ready', 'title',
+                     'learn_char', 'word_breakdown', 'introduce_group']
         if item['type'] in new_types:
             data = item.get('data', {}) or {}
             # Ищем кхмерский текст в разных полях

@@ -78,24 +78,34 @@
     {
       "type": "introduce_group",
       "data": {
-        "title": "R1.1.7 — Introduce group",
-        "subtitle": "Two teams, two sounds. Tap to listen.",
-        "columns": [
-          {
-            "title": "Solar Team",
-            "caption": "K (Sun) sample.",
-            "letters": [
-              "ក"
-            ]
-          },
-          {
-            "title": "Lunar Team",
-            "caption": "K (Moon) sample.",
-            "letters": [
-              "គ"
-            ]
-          }
-        ]
+        "title": "R1.1.7 — Groups",
+        "left_group": {
+          "title": "Solar Team",
+          "items": [
+            {
+              "char": "ក",
+              "label": "KA"
+            },
+
+            {
+              "char": "ខ",
+              "label": "KHA"
+            }
+          ]
+        },
+        "right_group": {
+          "title": "Lunar Team",
+          "items": [
+            {
+              "char": "គ",
+              "label": "KO"
+            },
+            {
+              "char": "ឃ",
+              "label": "KHO"
+            }
+          ]
+        }
       }
     },
     {
