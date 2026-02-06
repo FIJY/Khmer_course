@@ -10,6 +10,7 @@ import LessonPlayer from './pages/LessonPlayer';
 import Vocab from './pages/Vocab';
 import Profile from './pages/Profile';
 import KhmerGlyphLab from './pages/KhmerGlyphLab';
+import AudioGuessDebug from './pages/AudioGuessDebug';
 
 // 👇 ВОТ ЭТИ ДВА ФАЙЛА МЫ ДОБАВИЛИ, ПРОВЕРЬ ЧТО ОНИ ТУТ ЕСТЬ
 import ReviewHub from './pages/ReviewHub';
@@ -19,6 +20,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const showGlyphLab = import.meta.env.DEV || import.meta.env.VITE_ENABLE_KHMER_DEBUG === 'true';
+  const showAudioGuessDebug = import.meta.env.DEV;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -56,6 +58,9 @@ export default function App() {
 
         {showGlyphLab && (
           <Route path="/debug/khmer-glyphs" element={<KhmerGlyphLab />} />
+        )}
+        {showAudioGuessDebug && (
+          <Route path="/debug/audio-guess" element={<AudioGuessDebug />} />
         )}
 
         {/* Если адрес не найден — отправляем на карту */}
