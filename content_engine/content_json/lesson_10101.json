@@ -83,22 +83,16 @@
         "columns": [
           {
             "title": "Solar Team",
-            "caption": "Open mouth, bright tone.",
+            "caption": "K (Sun) sample.",
             "letters": [
-              "ក",
-              "ច",
-              "ត",
-              "ប"
+              "ក"
             ]
           },
           {
             "title": "Lunar Team",
-            "caption": "Rounded mouth, deeper tone.",
+            "caption": "K (Moon) sample.",
             "letters": [
-              "គ",
-              "ជ",
-              "ទ",
-              "ព"
+              "គ"
             ]
           }
         ]
@@ -131,7 +125,7 @@
           },
           {
             "id": "ngo",
-            "text": "ង"
+            "text": "ง"
           },
           {
             "id": "ei",
@@ -189,7 +183,7 @@
       "data": {
         "title": "Meet the Teams",
         "text": "Tap each letter to hear its sound.",
-        "caption": "A-series sample.",
+        "caption": "K-team: first pair.",
         "k_team": [
           {
             "char": "ក",
@@ -198,10 +192,6 @@
           {
             "char": "ខ",
             "audio": "letter_kha"
-          },
-          {
-            "char": "ច",
-            "audio": "letter_cha"
           }
         ]
       }
@@ -321,7 +311,7 @@
             "label": "ko"
           },
           {
-            "glyph": "ង",
+            "glyph": "ง",
             "label": "ng"
           }
         ],
