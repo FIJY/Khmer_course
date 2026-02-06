@@ -85,60 +85,23 @@
             "title": "Solar Team",
             "caption": "K (Sun) sample.",
             "letters": [
-              "ក"
+              {
+                "char": "ក",
+                "label": "ka"
+              }
             ]
           },
           {
             "title": "Lunar Team",
             "caption": "K (Moon) sample.",
             "letters": [
-              "គ"
+              {
+                "char": "គ",
+                "label": "ko"
+              }
             ]
           }
         ]
-      }
-    },
-    {
-      "type": "drill_choice",
-      "data": {
-        "title": "R1.1.4 — Select only the Heroes",
-        "subtitle": "Tap the main big letters.",
-        "prompt": "Khmer text has noise. Find ONLY the Consonants (Heroes).\nEverything else is decoration.",
-        "layout": "grid",
-        "mode": "multi",
-        "options": [
-          {
-            "id": "ka",
-            "text": "ក"
-          },
-          {
-            "id": "aa",
-            "text": "ា"
-          },
-          {
-            "id": "kha",
-            "text": "ខ"
-          },
-          {
-            "id": "ah",
-            "text": "ះ"
-          },
-          {
-            "id": "ngo",
-            "text": "ง"
-          },
-          {
-            "id": "ei",
-            "text": "ី"
-          }
-        ],
-        "correct_ids": [
-          "ka",
-          "kha",
-          "ngo"
-        ],
-        "success_text": "✅ Correct. Heroes are the big skeletons.",
-        "fail_text": "❌ That is an accessory (vowel or sign)."
       }
     },
     {
@@ -154,46 +117,6 @@
       "data": {
         "title": "Quick Tour",
         "text": "Tap through each card to preview the full interaction set."
-      }
-    },
-    {
-      "type": "rule",
-      "data": {
-        "title": "Rule — One Hero",
-        "description": [
-          "Every block has one main consonant.",
-          "Find it first."
-        ],
-        "footer": "Everything else is accessory."
-      }
-    },
-    {
-      "type": "reading_algorithm",
-      "data": {
-        "title": "Reading Algorithm",
-        "steps": [
-          "Spot the main consonant (Hero).",
-          "Check for attached vowels.",
-          "Blend into a single sound."
-        ]
-      }
-    },
-    {
-      "type": "meet-teams",
-      "data": {
-        "title": "Meet the Teams",
-        "text": "Tap each letter to hear its sound.",
-        "caption": "K-team: first pair.",
-        "k_team": [
-          {
-            "char": "ក",
-            "audio": "letter_ka"
-          },
-          {
-            "char": "ខ",
-            "audio": "letter_kha"
-          }
-        ]
       }
     },
     {
