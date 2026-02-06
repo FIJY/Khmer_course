@@ -146,6 +146,206 @@
         "success_text": "✅ Correct. Heroes are the big skeletons.",
         "fail_text": "❌ That is an accessory (vowel or sign)."
       }
+    },
+    {
+      "type": "title",
+      "data": {
+        "title": "R1.1 — Screen Types",
+        "subtitle": "Preview",
+        "description": "This lesson now includes every screen type available in the player."
+      }
+    },
+    {
+      "type": "intro",
+      "data": {
+        "title": "Quick Tour",
+        "text": "Tap through each card to preview the full interaction set."
+      }
+    },
+    {
+      "type": "rule",
+      "data": {
+        "title": "Rule — One Hero",
+        "description": [
+          "Every block has one main consonant.",
+          "Find it first."
+        ],
+        "footer": "Everything else is accessory."
+      }
+    },
+    {
+      "type": "reading_algorithm",
+      "data": {
+        "title": "Reading Algorithm",
+        "steps": [
+          "Spot the main consonant (Hero).",
+          "Check for attached vowels.",
+          "Blend into a single sound."
+        ]
+      }
+    },
+    {
+      "type": "meet-teams",
+      "data": {
+        "title": "Meet the Teams",
+        "text": "Tap each letter to hear its sound.",
+        "caption": "A-series sample.",
+        "k_team": [
+          {
+            "char": "ក",
+            "audio": "letter_ka"
+          },
+          {
+            "char": "ខ",
+            "audio": "letter_kha"
+          },
+          {
+            "char": "ច",
+            "audio": "letter_cha"
+          }
+        ]
+      }
+    },
+    {
+      "type": "word_breakdown",
+      "data": {
+        "word": "កា",
+        "pronunciation": "ka",
+        "translation": "Tea",
+        "chars": [
+          "ក",
+          "ា"
+        ]
+      }
+    },
+    {
+      "type": "vocab_card",
+      "data": {
+        "front": "Tea",
+        "back": "កា",
+        "pronunciation": "ka",
+        "item_type": "word",
+        "audio": "",
+        "audio_alt": {}
+      }
+    },
+    {
+      "type": "visual_decoder",
+      "data": {
+        "word": "អរគុណ",
+        "word_pronunciation": "or-kun",
+        "target_char": "ណ",
+        "char_split": [
+          "អ",
+          "រ",
+          "គុ",
+          "ណ"
+        ],
+        "char_position": "end",
+        "english_translation": "Thank you",
+        "letter_series": 1,
+        "word_audio": "",
+        "char_audio_map": {}
+      }
+    },
+    {
+      "type": "analysis",
+      "data": {
+        "mode": "decoder_select",
+        "title": "Find the Main Consonant",
+        "text": "Tap the main consonant in the word.",
+        "word": "ខ្មែរ",
+        "translation": "Khmer"
+      }
+    },
+    {
+      "type": "comparison_audio",
+      "data": {
+        "title": "Listen and Compare",
+        "pairs": [
+          {
+            "instruction": "Tap both letters. Notice the sound difference.",
+            "left": {
+              "text": "ប",
+              "audio": "letter_ba",
+              "label": "BA"
+            },
+            "right": {
+              "text": "ព",
+              "audio": "letter_po",
+              "label": "PO"
+            }
+          }
+        ],
+        "note": "They look similar, but the sounds are different."
+      }
+    },
+    {
+      "type": "quiz",
+      "data": {
+        "question": "Which item is a vowel mark (not a consonant)?",
+        "options": [
+          "ក",
+          "ា",
+          "ប"
+        ],
+        "correct_answer": "ា",
+        "explanation": "The mark \"ា\" is a vowel sign."
+      }
+    },
+    {
+      "type": "audio_guess",
+      "data": {
+        "title": "Who is this?",
+        "subtitle": "Listen and tap the glyph.",
+        "mode": "letter",
+        "audio": "letter_ka",
+        "prompt_repeat": true,
+        "correct": {
+          "glyph": "ក",
+          "label": "ka",
+          "ipa": "kɑː",
+          "roman": "ka"
+        },
+        "choices": [
+          {
+            "glyph": "ក",
+            "label": "ka"
+          },
+          {
+            "glyph": "ខ",
+            "label": "kha"
+          },
+          {
+            "glyph": "គ",
+            "label": "ko"
+          },
+          {
+            "glyph": "ង",
+            "label": "ng"
+          }
+        ],
+        "attempts": 2,
+        "reveal_on_fail": true,
+        "auto_play_on_enter": false,
+        "min_choices": 2,
+        "max_choices": 4
+      }
+    },
+    {
+      "type": "no_spaces",
+      "data": {
+        "title": "No Spaces Drill",
+        "subtitle": "Tap each consonant in the stream.",
+        "khmerText": "ភាសាខ្មែរមិនមានចន្លោះ"
+      }
+    },
+    {
+      "type": "ready",
+      "data": {
+        "title": "Lesson Complete",
+        "description": "You have seen every screen type in the app."
+      }
     }
   ]
 }
