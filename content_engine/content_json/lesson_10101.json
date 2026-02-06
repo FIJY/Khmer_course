@@ -76,6 +76,35 @@
       }
     },
     {
+      "type": "introduce_group",
+      "data": {
+        "title": "R1.1.7 — Introduce group",
+        "subtitle": "Two teams, two sounds. Tap to listen.",
+        "columns": [
+          {
+            "title": "Solar Team",
+            "caption": "Open mouth, bright tone.",
+            "letters": [
+              "ក",
+              "ច",
+              "ត",
+              "ប"
+            ]
+          },
+          {
+            "title": "Lunar Team",
+            "caption": "Rounded mouth, deeper tone.",
+            "letters": [
+              "គ",
+              "ជ",
+              "ទ",
+              "ព"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "type": "drill_choice",
       "data": {
         "title": "R1.1.4 — Select only the Heroes",
