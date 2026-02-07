@@ -120,16 +120,23 @@ const KhmerConsonantStream = ({
 
           if (onNonConsonantClick) {
             return (
-              <button
+              <span
                 key={i}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => onNonConsonantClick(ch)}
-                className="inline-flex p-0 m-0 bg-transparent border-0 cursor-pointer"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onNonConsonantClick(ch);
+                  }
+                }}
+                className="inline-flex p-0 m-0 cursor-pointer focus-visible:outline-none"
                 style={nonConsonantStyle}
-                title="Vowels/marks are not commanders"
+                title="Not a consonant (tap to hear)"
               >
                 {ch}
-              </button>
+              </span>
             );
           }
 
@@ -141,22 +148,29 @@ const KhmerConsonantStream = ({
         }
 
         return (
-          <button
+          <span
             key={i}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => onConsonantClick(i, ch)}
-            className="inline-flex p-0 m-0 bg-transparent border-0 cursor-pointer"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onConsonantClick(i, ch);
+              }
+            }}
+            className="inline-flex p-0 m-0 cursor-pointer focus-visible:outline-none"
             style={{
               ...baseStyle,
               color: revealed ? '#34d399' : '#ffffff',
               transform: revealed ? 'scale(1.05)' : 'scale(1.0)'
             }}
-            title="Click the consonant (commander)"
+            title="Consonant (tap to hear)"
           >
             <span className={!revealed ? 'hover:underline decoration-2 underline-offset-8' : ''}>
               {ch}
             </span>
-          </button>
+          </span>
         );
       })}
     </div>
@@ -271,6 +285,7 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
 
   // NO-SPACES slide: reveal state (by char index in the stream)
   const [revealedConsonants, setRevealedConsonants] = useState(() => new Set());
+  const [noSpacesTapCount, setNoSpacesTapCount] = useState(0);
 
   // Practice (VisualDecoder drills)
   const [drillQuestions, setDrillQuestions] = useState([]);
@@ -357,13 +372,28 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
       return next;
     });
 
+    setNoSpacesTapCount((prev) => prev + 1);
+
     // 1) Try slide-specific audio mapping.
     // 2) Fall back to global consonant audio mapping.
     // 3) Fall back to a generic click sound.
-    playConsonant(consonantChar, audioMap[consonantChar]);
+    const overrideFile = audioMap[consonantChar];
+    if (overrideFile || CONSONANT_AUDIO[consonantChar]) {
+      playConsonant(consonantChar, overrideFile);
+    } else {
+      playAudio('click.mp3');
+    }
   };
 
-  const resetNoSpaces = () => setRevealedConsonants(new Set());
+  const handleNonConsonantClick = () => {
+    setNoSpacesTapCount((prev) => prev + 1);
+    playAudio('click.mp3');
+  };
+
+  const resetNoSpaces = () => {
+    setRevealedConsonants(new Set());
+    setNoSpacesTapCount(0);
+  };
 
   useEffect(() => {
     if (currentSlide?.type !== 'no-spaces') return;
@@ -423,12 +453,15 @@ const BootcampSession = ({ onClose, practiceItems = [], title }) => {
                 text={slide.khmerText}
                 revealedSet={revealedConsonants}
                 onConsonantClick={handleConsonantClick}
-                onNonConsonantClick={() => {}}
+                onNonConsonantClick={handleNonConsonantClick}
               />
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="text-slate-300 text-sm">
                   Found consonants: <span className="font-bold text-white">{found}</span> / {total}
+                </div>
+                <div className="text-xs uppercase tracking-widest text-slate-400">
+                  Taps: <span className="font-bold text-white">{noSpacesTapCount}</span>
                 </div>
                 <div
                   className={`text-xs font-bold px-3 py-2 rounded-full border ${remaining === 0 ? 'text-emerald-200 border-emerald-400/40 bg-emerald-500/10' : 'text-amber-200 border-amber-400/40 bg-amber-500/10'}`}
