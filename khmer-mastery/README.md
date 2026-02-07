@@ -87,6 +87,8 @@ Lesson content items (cards, theory, quizzes, visual decoder).
 - `theory`: `{ title, text }`
 - `visual_decoder`: `{ word, target_char, hint, english_translation, letter_series, word_audio, char_audio_map }`
 
+Bootcamp lessons currently run through the standard lesson player and use the same `lesson_items` schema; the dedicated BootcampSession component was removed as unused.
+
 ### `user_progress`
 Lesson completion tracking.
 
@@ -261,6 +263,8 @@ SUPABASE_KEY=...
 - `quiz`: `{ question, options, correct_answer }`
 - `theory`: `{ title, text }`
 - `visual_decoder`: `{ word, target_char, hint, english_translation, letter_series, word_audio, char_audio_map }`
+
+Bootcamp-уроки сейчас идут через стандартный плеер уроков и используют ту же схему `lesson_items`; отдельный компонент BootcampSession удалён как неиспользуемый.
 
 ### `user_progress`
 Прогресс по урокам.

@@ -26,9 +26,9 @@ export default function HeroSlide({
   const charSplit = data?.char_split || null;
   const title = data?.title || data?.name || "Find the Hero";
   const description = Array.isArray(data?.description) ? data.description : [data?.description || ""];
-  const footer = data?.footer || "";
-
   const normalizeChar = (v) => String(v || "").replace(/\u25CC/g, "").trim().normalize("NFC");
+  const footer = data?.footer || "";
+  const targetNormalized = normalizeChar(targetChar);
 
   useEffect(() => {
     if (activeChar && footerRef.current) {
@@ -195,6 +195,23 @@ export default function HeroSlide({
                 viewBoxPad={55}
                 showTapHint={false}
                 resetSelectionKey={localResetKey || resetKey}
+                getGlyphFillColor={({ resolvedChar, isSubscript }) => {
+                  if (!resolvedChar || isSubscript) return null;
+                  const normalized = normalizeChar(resolvedChar);
+                  return normalized === targetNormalized ? "#38bdf8" : null;
+                }}
+                getGlyphClassName={({ resolvedChar, isSubscript }) => {
+                  if (!resolvedChar || isSubscript) return "";
+                  const normalized = normalizeChar(resolvedChar);
+                  return normalized === targetNormalized ? "animate-pulse" : "";
+                }}
+                getGlyphStyle={({ resolvedChar, isSubscript }) => {
+                  if (!resolvedChar || isSubscript) return null;
+                  const normalized = normalizeChar(resolvedChar);
+                  return normalized === targetNormalized
+                    ? { filter: "drop-shadow(0 0 12px rgba(56,189,248,0.9))" }
+                    : null;
+                }}
               />
             </div>
 
