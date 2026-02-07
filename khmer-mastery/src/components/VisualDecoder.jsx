@@ -153,6 +153,8 @@ export default function VisualDecoder(props) {
     showTapHint = true,
     getGlyphFillColor,
     showSelectionOutline = true,
+    getGlyphClassName,
+    getGlyphStyle,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
@@ -528,6 +530,8 @@ export default function VisualDecoder(props) {
     const resolved = resolvedGlyphChars[idx] || glyph.char || "";
     const base = getKhmerGlyphColor(glyph.char);
     const glyphId = glyph.id ?? idx;
+    const glyphMeta = resolvedGlyphMeta?.[idx];
+    const isSubscript = glyphMeta?.isSubscript ?? false;
     const resolvedIsSelected =
       isSelected ??
       (selectionMode === "multi"
@@ -540,6 +544,7 @@ export default function VisualDecoder(props) {
         idx,
         isSelected: resolvedIsSelected,
         resolvedChar: resolved,
+        isSubscript,
       });
       if (override) return override;
     }
@@ -633,6 +638,29 @@ export default function VisualDecoder(props) {
             outlineWidth = 0;
           }
 
+          const glyphMeta = resolvedGlyphMeta?.[i];
+          const isSubscriptMeta = glyphMeta?.isSubscript ?? false;
+          const extraClassName =
+            typeof getGlyphClassName === "function"
+              ? getGlyphClassName({
+                  glyph,
+                  idx: i,
+                  isSelected,
+                  resolvedChar: resolvedGlyphChars[i] || glyph.char || "",
+                  isSubscript: isSubscriptMeta,
+                })
+              : "";
+          const extraStyle =
+            typeof getGlyphStyle === "function"
+              ? getGlyphStyle({
+                  glyph,
+                  idx: i,
+                  isSelected,
+                  resolvedChar: resolvedGlyphChars[i] || glyph.char || "",
+                  isSubscript: isSubscriptMeta,
+                })
+              : null;
+
           return (
             <g key={glyphId}>
               <path
@@ -647,7 +675,7 @@ export default function VisualDecoder(props) {
                 d={glyph.d}
                 fill={fillColor}
                 pointerEvents="none"
-                className="transition-[fill,stroke,stroke-width] duration-200"
+                className={`transition-[fill,stroke,stroke-width] duration-200 ${extraClassName || ""}`}
                 style={{
                   stroke: outlineColor,
                   strokeWidth: outlineWidth,
@@ -655,6 +683,7 @@ export default function VisualDecoder(props) {
                   paintOrder: "stroke fill",
                   filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
                   cursor: "pointer",
+                  ...(extraStyle || {}),
                 }}
               />
             </g>
