@@ -66,19 +66,9 @@
       }
     },
     {
-      "type": "same_different",
-      "data": {
-        "title": "R1.1.6 — Same or Different?",
-        "left_char": "ប",
-        "right_char": "ព",
-        "correct_answer": "Different",
-        "explanation": "These look like twins, but they are not.\nOne belongs to the Solar Team, the other to the Lunar Team.\nMixing them changes the meaning."
-      }
-    },
-    {
       "type": "introduce_group",
       "data": {
-        "title": "R1.1.7 — Groups",
+        "title": "R1.1.6 — Groups",
         "left_group": {
           "title": "Solar Team",
           "items": [
@@ -113,7 +103,7 @@
       "data": {
         "title": "R1.1 — Screen Types",
         "subtitle": "Preview",
-        "description": "This lesson now includes every screen type available in the player."
+        "description": "This lesson previews the core screen types used in the player."
       }
     },
     {
@@ -173,28 +163,6 @@
         "text": "Tap the main consonant in the word.",
         "word": "ខ្មែរ",
         "translation": "Khmer"
-      }
-    },
-    {
-      "type": "comparison_audio",
-      "data": {
-        "title": "Listen and Compare",
-        "pairs": [
-          {
-            "instruction": "Tap both letters. Notice the sound difference.",
-            "left": {
-              "text": "ប",
-              "audio": "letter_ba",
-              "label": "BA"
-            },
-            "right": {
-              "text": "ព",
-              "audio": "letter_po",
-              "label": "PO"
-            }
-          }
-        ],
-        "note": "They look similar, but the sounds are different."
       }
     },
     {
@@ -261,7 +229,7 @@
       "type": "ready",
       "data": {
         "title": "Lesson Complete",
-        "description": "You have seen every screen type in the app."
+        "description": "You have previewed the core screen types in the app."
       }
     }
   ]
