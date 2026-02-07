@@ -1,0 +1,118 @@
+{
+  "lesson_id": 10101,
+  "title": "UNIT R1.1 — Drills Only",
+  "desc": "Showcasing the versatile Drill Choice Slide.",
+  "module_id": 10000,
+  "order_index": 0,
+  "content": [
+    {
+      "type": "title",
+      "data": {
+        "title": "PART 1: DRILL SHOWCASE",
+        "subtitle": "One component, many forms",
+        "description": "We removed Comparison Audio. Now we use Drill Choice for everything."
+      }
+    },
+    {
+      "type": "theory",
+      "data": {
+        "title": "Structure",
+        "description": "Let's review the letters before testing.",
+        "examples": [
+          {
+            "kind": "khmer",
+            "text": "ក ខ គ ឃ"
+          }
+        ]
+      }
+    },
+    {
+      "type": "drill_choice",
+      "data": {
+        "title": "Mode 1: Audio (4 Grid)",
+        "prompt": "Listen. Which letter is this?",
+        "audio_question": "letter_kha",
+        "correct_id": "kha",
+        "options": [
+          {
+            "id": "ka",
+            "text": "ក"
+          },
+          {
+            "id": "kha",
+            "text": "ខ"
+          },
+          {
+            "id": "ko",
+            "text": "គ"
+          },
+          {
+            "id": "kho",
+            "text": "ឃ"
+          }
+        ]
+      }
+    },
+    {
+      "type": "drill_choice",
+      "data": {
+        "title": "Mode 2: Visual (Big Grid)",
+        "prompt": "Find the letter 'NGO' (ง)",
+        "audio_question": null,
+        "correct_id": "ngo",
+        "options": [
+          {
+            "id": "ka",
+            "text": "ក"
+          },
+          {
+            "id": "kha",
+            "text": "ខ"
+          },
+          {
+            "id": "ko",
+            "text": "គ"
+          },
+          {
+            "id": "kho",
+            "text": "ឃ"
+          },
+          {
+            "id": "ngo",
+            "text": "ង"
+          },
+          {
+            "id": "cha",
+            "text": "ច"
+          }
+        ]
+      }
+    },
+    {
+      "type": "drill_choice",
+      "data": {
+        "title": "Mode 3: Visual (Small Grid)",
+        "prompt": "Which one is 'KO'?",
+        "audio_question": null,
+        "correct_id": "ko",
+        "options": [
+          {
+            "id": "ko",
+            "text": "គ"
+          },
+          {
+            "id": "kho",
+            "text": "ឃ"
+          }
+        ]
+      }
+    },
+    {
+      "type": "ready",
+      "data": {
+        "title": "All Done",
+        "description": "Drill Choice works perfectly in all sizes."
+      }
+    }
+  ]
+}

@@ -14,7 +14,7 @@ import ComparisonAudio from '../components/LessonSlides/ComparisonAudio';
 import QuizSlide from '../components/LessonSlides/QuizSlide';
 import VisualDecoderSlide from '../components/LessonSlides/VisualDecoderSlide';
 import VocabCardSlide from '../components/LessonSlides/VocabCardSlide';
-
+import DrillChoiceSlide from "../components/LessonSlides/DrillChoiceSlide";
 // --- ИМПОРТ КОМПОНЕНТОВ ---
 import HeroSlide from '../components/LessonSlides/HeroSlide';
 import InventorySlide from '../components/LessonSlides/InventorySlide';
@@ -89,7 +89,8 @@ export default function LessonPlayer() {
       'intro',
       'analysis',
       'comparison_audio',
-      'introduce_group'
+      'introduce_group',
+      'drill_choice'
     ];
 
     if (autoUnlockTypes.includes(currentType)) {
@@ -249,6 +250,13 @@ export default function LessonPlayer() {
           onComplete={() => setCanAdvance(true)}
         />
       )}
+      {type === 'drill_choice' && (
+              <DrillChoiceSlide
+                data={current}
+                onPlayAudio={playLocalAudio}
+                onComplete={() => setCanAdvance(true)}
+              />
+            )}
 
       {type === 'introduce_group' && (
         <IntroduceGroupSlide
