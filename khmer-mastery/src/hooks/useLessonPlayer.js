@@ -32,7 +32,7 @@ export default function useLessonPlayer() {
   const fallbackLesson = useRef({
     id: 10000,
     lesson_id: 10000,
-    title: 'Bootcamp: Unit R1'
+    title: 'Unit R1'
   });
 
   const resolveLessonIdentifier = useCallback((rawId) => {

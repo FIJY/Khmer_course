@@ -27,15 +27,17 @@ export default function ConsonantStreamDrill({
           <span>Tap Consonants</span>
         </div>
 
-        {/* Контейнер с буквами */}
-        <div className="flex flex-wrap justify-center gap-3 max-w-2xl">
+        {/* Контейнер с глифами */}
+        <div className="flex flex-wrap justify-center max-w-2xl text-5xl md:text-6xl leading-[1.35] font-semibold tracking-wide">
           {chars.map((char, index) => {
             const isRevealed = revealedSet.has(index);
             const isTarget = isKhmerConsonant(char);
 
             return (
-              <button
+              <span
                 key={index}
+                role="button"
+                tabIndex={0}
                 onClick={() => {
                   if (isTarget) {
                     // Если нажали на согласную - сообщаем наверх
@@ -45,21 +47,30 @@ export default function ConsonantStreamDrill({
                     if (onNonConsonantClick) onNonConsonantClick(char);
                   }
                 }}
-                // СТИЛИ КНОПКИ
-                className={`
-                  relative w-16 h-16 rounded-2xl flex items-center justify-center text-4xl font-bold transition-all duration-300
-                  ${isRevealed
-                    ? "bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.6)] scale-110 z-10"
-                    : "bg-gray-800/50 text-gray-500 hover:bg-gray-700 hover:text-gray-200 border border-white/5"}
-                `}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    if (isTarget) {
+                      if (onConsonantClick) onConsonantClick(index, char);
+                    } else if (onNonConsonantClick) {
+                      onNonConsonantClick(char);
+                    }
+                  }
+                }}
+                className={`inline-flex cursor-pointer focus-visible:outline-none ${isTarget ? 'mx-1' : ''}`}
+                style={{
+                  color: isTarget
+                    ? (isRevealed ? '#34d399' : '#ffffff')
+                    : (revealedSet.size > 0 ? '#64748b' : '#ffffff'),
+                  transform: isRevealed ? 'scale(1.05)' : 'scale(1.0)',
+                  transition: 'color 200ms ease, transform 120ms ease'
+                }}
+                title={isTarget ? 'Consonant' : 'Not a consonant'}
               >
-                <span className={isRevealed ? "drop-shadow-md" : ""}>{char}</span>
-
-                {/* Эффект пульсации при открытии */}
-                {isRevealed && (
-                  <span className="absolute inset-0 rounded-2xl bg-emerald-400 opacity-20 animate-pulse" />
-                )}
-              </button>
+                <span className={!isRevealed && isTarget ? 'hover:underline decoration-2 underline-offset-8' : ''}>
+                  {char}
+                </span>
+              </span>
             );
           })}
         </div>

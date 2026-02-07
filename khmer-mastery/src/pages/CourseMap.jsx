@@ -28,8 +28,7 @@ const COURSE_LEVELS = [
     range: [10000, 10699],
     color: "text-amber-400",
     bg: "from-amber-500/10 to-transparent",
-    border: "border-amber-500/20",
-    isBootcamp: true
+    border: "border-amber-500/20"
   },
 
   {
@@ -102,11 +101,6 @@ export default function CourseMap() {
     navigate,
     refresh
   } = useCourseMap();
-  const bootcampBlockIds = useMemo(
-    () => Array.from({ length: 6 }, (_, idx) => 10100 + (idx * 100)),
-    []
-  );
-  const [openBootcampBlockId, setOpenBootcampBlockId] = useState(bootcampBlockIds[0]);
   const [openChapterId, setOpenChapterId] = useState(null);
   const [openLevels, setOpenLevels] = useState(() => COURSE_LEVELS.map(() => true));
   const [hasScrolledToLast, setHasScrolledToLast] = useState(false);
@@ -116,44 +110,6 @@ export default function CourseMap() {
     () => (userId ? `courseMapState:${userId}` : 'courseMapState'),
     [userId]
   );
-
-  const bootcampBlocks = useMemo(
-    () => bootcampBlockIds.map((blockId) => {
-      const existing = chapters[blockId];
-      if (existing) {
-        return existing;
-      }
-      return {
-        id: blockId,
-        displayId: blockId / 100,
-        title: `Bootcamp ${blockId / 100}`,
-        description: 'Coming soon...',
-        subLessons: []
-      };
-    }),
-    [bootcampBlockIds, chapters]
-  );
-
-  const handleBootcampToggle = async (blockId) => {
-    setOpenBootcampBlockId((prev) => (prev === blockId ? null : blockId));
-    if (!userId) return;
-    try {
-      await updateLastOpenedProgress(userId, blockId, lastOpenedLessonId ?? blockId);
-    } catch (err) {
-      console.error('Failed to update last opened bootcamp block', err);
-    }
-  };
-
-  const handleBootcampNavigate = async (blockId, lessonId, target) => {
-    if (userId) {
-      try {
-        await updateLastOpenedProgress(userId, blockId, lessonId);
-      } catch (err) {
-        console.error('Failed to update last opened bootcamp lesson', err);
-      }
-    }
-    navigate(target);
-  };
 
   const handleChapterToggle = async (blockId) => {
     setOpenChapterId((prev) => (prev === blockId ? null : blockId));
@@ -181,12 +137,6 @@ export default function CourseMap() {
   };
 
   useEffect(() => {
-    if (lastOpenedBlockId && lastOpenedBlockId >= 10000) {
-      setOpenBootcampBlockId(lastOpenedBlockId);
-    }
-  }, [lastOpenedBlockId]);
-
-  useEffect(() => {
     if (!userId || hasRestoredState) return;
     const savedState = localStorage.getItem(mapStorageKey);
     if (savedState) {
@@ -194,9 +144,6 @@ export default function CourseMap() {
         const parsed = JSON.parse(savedState);
         if (Array.isArray(parsed.openLevels) && parsed.openLevels.length === COURSE_LEVELS.length) {
           setOpenLevels(parsed.openLevels);
-        }
-        if (parsed.openBootcampBlockId) {
-          setOpenBootcampBlockId(parsed.openBootcampBlockId);
         }
         if (parsed.openChapterId) {
           setOpenChapterId(parsed.openChapterId);
@@ -212,14 +159,12 @@ export default function CourseMap() {
     if (!userId || !hasRestoredState) return;
     const snapshot = {
       openLevels,
-      openBootcampBlockId,
       openChapterId
     };
     localStorage.setItem(mapStorageKey, JSON.stringify(snapshot));
   }, [
     hasRestoredState,
     mapStorageKey,
-    openBootcampBlockId,
     openChapterId,
     openLevels,
     userId
@@ -228,13 +173,12 @@ export default function CourseMap() {
   const fallbackChapterId = useMemo(() => {
     const chapterIds = Object.values(chapters)
       .map((chapter) => chapter.id)
-      .filter((id) => id < 10000)
       .sort((a, b) => a - b);
     return chapterIds[0] ?? null;
   }, [chapters]);
 
   useEffect(() => {
-    if (lastOpenedBlockId && lastOpenedBlockId < 10000) {
+    if (lastOpenedBlockId) {
       setOpenChapterId(lastOpenedBlockId);
       return;
     }
@@ -269,7 +213,6 @@ export default function CourseMap() {
     lastOpenedBlockId,
     lastOpenedLessonId,
     loading,
-    openBootcampBlockId,
     openChapterId,
     openLevels
   ]);
@@ -341,92 +284,7 @@ export default function CourseMap() {
 
               {isLevelOpen && (
                 <div className="p-6 space-y-8">
-                  {level.isBootcamp ? bootcampBlocks.map((chapter) => {
-                  const isOpen = openBootcampBlockId === chapter.id;
-                  const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
-                  const isChapterFullDone = subLessonIds.length > 0
-                    && subLessonIds.every(id => completedLessons.includes(id));
-                  const lessonCount = chapter.subLessons.length;
-
-                  return (
-                    <div key={chapter.id} id={`lesson-${chapter.id}`} className="relative pl-3 border-l border-white/5">
-                      <div className={`absolute -left-[7px] top-9 w-3.5 h-3.5 rounded-full border-[3px] bg-black transition-colors ${isChapterFullDone ? 'border-emerald-500' : 'border-gray-800'}`} />
-
-                      <div className={`bg-gray-900/40 border rounded-[2rem] p-5 transition-all duration-500
-                        ${isChapterFullDone ? 'border-emerald-500/30' : 'border-white/5'}`}>
-
-                        <div className="flex justify-between items-start mb-5">
-                          <div className="max-w-[70%] text-white">
-                            <h3 className={`text-xl font-black uppercase tracking-tight leading-none mb-2 ${isChapterFullDone ? 'text-emerald-400' : 'text-white'}`}>
-                              {chapter.title}
-                            </h3>
-                            <p className="text-gray-500 text-xs italic leading-tight">{chapter.description}</p>
-                            {lessonCount > 0 && (
-                              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mt-2">
-                                {lessonCount} lessons
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleBootcampNavigate(chapter.id, chapter.id, `/lesson/${chapter.id}/preview`)}
-                              className={`p-3 rounded-2xl border transition-all active:scale-90
-                                ${isChapterFullDone ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-500/30'}`}
-                              type="button"
-                            >
-                              <BookOpen size={20} />
-                            </button>
-
-                            <button
-                              onClick={() => handleBootcampToggle(chapter.id)}
-                              className="px-3 py-2 rounded-full border bg-black border-white/10 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:border-white/30 transition-colors"
-                              type="button"
-                            >
-                              {isOpen ? 'Close' : 'Open'}
-                            </button>
-                          </div>
-                        </div>
-
-                        {isOpen && (
-                          chapter.subLessons.length > 0 ? (
-                            <div className="space-y-2">
-                              {chapter.subLessons.map((sub) => {
-                                const isDone = completedLessons.includes(Number(sub.id));
-                                return (
-                                  <button
-                                    key={sub.id}
-                                    id={`lesson-${sub.id}`}
-                                    onClick={() => handleBootcampNavigate(chapter.id, Number(sub.id), `/lesson/${sub.id}`)}
-                                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border text-left group
-                                      ${isDone
-                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                                        : 'bg-black/20 border-white/5 text-gray-400 hover:bg-white/5'}`}
-                                    type="button"
-                                  >
-                                    <div className="flex items-center gap-3 overflow-hidden">
-                                      <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border
-                                        ${isDone ? 'border-emerald-500 bg-emerald-500 text-black' : 'border-white/10 bg-black text-transparent'}`}>
-                                        <Check size={10} strokeWidth={4} />
-                                      </div>
-                                      <span className="text-xs font-bold uppercase tracking-wider truncate group-hover:text-white transition-colors">
-                                        {sub.title}
-                                      </span>
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="text-xs text-gray-500 uppercase tracking-widest font-semibold">
-                              Lessons coming soon
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  );
-                  }) : (levelChapters.length > 0 ? levelChapters.map((chapter) => {
+                  {levelChapters.length > 0 ? levelChapters.map((chapter) => {
                   const subLessonIds = chapter.subLessons.map(sub => Number(sub.id));
                   const isChapterFullDone = subLessonIds.length > 0
                     && subLessonIds.every(id => completedLessons.includes(id));
@@ -514,7 +372,7 @@ export default function CourseMap() {
                   <div className="rounded-[2.5rem] border border-white/5 bg-gray-900/40 p-6 text-center text-xs uppercase tracking-widest text-gray-500">
                     Lessons coming soon
                   </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
