@@ -127,6 +127,12 @@ export default function LessonPlayer() {
 
   }, [step, safeItems, setCanAdvance]);
 
+  useEffect(() => {
+    if (type === 'no_spaces' && Array.isArray(noSpacesWordList) && noSpacesWordList.length > 0) {
+      setCanAdvance(true);
+    }
+  }, [noSpacesWordList, setCanAdvance, type]);
+
   // --- ОБЕРТКА ДЛЯ ПЕРЕХОДА (FIX STALE STATE) ---
   const handleContinue = () => {
     // Принудительно блокируем кнопку ПЕРЕД переходом,
