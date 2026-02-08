@@ -15,20 +15,39 @@ const getChapterDisplayId = (chapterId) => (chapterId >= 10000 ? Math.floor(chap
 
 const isChapterLesson = (lessonId) => lessonId < 100 || lessonId % 100 === 0;
 
+const CYRILLIC_PATTERN = /[\u0400-\u04FF]/;
+
+const normalizeLessonTitle = (lesson, fallbackTitle) => {
+  const candidates = [
+    lesson?.title_en,
+    lesson?.title,
+    lesson?.name,
+    lesson?.label
+  ];
+  const cleaned = candidates
+    .map((candidate) => (typeof candidate === 'string' ? candidate.trim() : ''))
+    .find((candidate) => candidate.length >= 3 && !CYRILLIC_PATTERN.test(candidate));
+  return cleaned || fallbackTitle;
+};
+
 const buildChaptersMap = (allLessons) => {
   if (!allLessons) return {};
 
   const chaptersMap = {};
 
   allLessons.forEach((lesson) => {
-    const chapterId = getChapterId(lesson.id);
+    const lessonId = Number(lesson.id ?? lesson.lesson_id);
+    if (!Number.isFinite(lessonId)) return;
+
+    const chapterId = getChapterId(lessonId);
     const displayId = getChapterDisplayId(chapterId);
 
-    if (isChapterLesson(lesson.id)) {
+    if (isChapterLesson(lessonId)) {
       chaptersMap[chapterId] = {
         ...lesson,
         id: chapterId,
         displayId,
+        title: normalizeLessonTitle(lesson, `Chapter ${displayId}`),
         subLessons: []
       };
       return;
@@ -45,8 +64,8 @@ const buildChaptersMap = (allLessons) => {
     }
 
     chaptersMap[chapterId].subLessons.push({
-      id: lesson.id,
-      title: lesson.title,
+      id: lessonId,
+      title: normalizeLessonTitle(lesson, `Lesson ${lessonId}`),
       order_index: lesson.order_index ?? 0
     });
   });
