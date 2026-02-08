@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Check, Gem, Layers, BookOpen, RefreshCw
+  Check, Gem, Layers, RefreshCw
 } from 'lucide-react';
 import MobileLayout from '../components/Layout/MobileLayout';
 import ErrorState from '../components/UI/ErrorState';
@@ -125,13 +125,11 @@ export default function CourseMap() {
     setOpenLevels((prev) => prev.map((isOpen, idx) => (idx === levelIndex ? !isOpen : isOpen)));
   };
 
-  const handleChapterNavigate = async (blockId, lessonId, target) => {
+  const handleChapterNavigate = (blockId, lessonId, target) => {
     if (userId) {
-      try {
-        await updateLastOpenedProgress(userId, blockId, lessonId);
-      } catch (err) {
+      updateLastOpenedProgress(userId, blockId, lessonId).catch((err) => {
         console.error('Failed to update last opened chapter lesson', err);
-      }
+      });
     }
     navigate(target);
   };
@@ -252,7 +250,9 @@ export default function CourseMap() {
           />
         ) : COURSE_LEVELS.map((level, levelIndex) => {
           const levelChapters = Object.values(chapters).filter(ch =>
-            ch.id >= level.range[0] && ch.id <= level.range[1]
+            ch.id >= level.range[0]
+            && ch.id <= level.range[1]
+            && ch.subLessons.length > 0
           );
           const isLevelOpen = openLevels[levelIndex];
 
@@ -312,14 +312,6 @@ export default function CourseMap() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleChapterNavigate(chapter.id, chapter.id, `/lesson/${chapter.id}/preview`)}
-                              className={`p-3 rounded-2xl border transition-all active:scale-90
-                                ${isChapterFullDone ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-black border-white/10 text-gray-600 hover:text-cyan-400 hover:border-cyan-500/30'}`}
-                              type="button"
-                            >
-                              <BookOpen size={20} />
-                            </button>
                             <button
                               onClick={() => handleChapterToggle(chapter.id)}
                               className="px-3 py-2 rounded-full border bg-black border-white/10 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:border-white/30 transition-colors"
