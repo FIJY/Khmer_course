@@ -4,6 +4,8 @@ import { RotateCcw } from "lucide-react";
 import LessonFrame from "../UI/LessonFrame";
 import VisualDecoder from "../VisualDecoder";
 import { getKhmerGlyphCategory } from "../../lib/khmerGlyphRenderer";
+import { getSoundFileForChar } from "../../data/audioMap";
+import useAudioPlayer from "../../hooks/useAudioPlayer";
 
 export default function HeroSlide({
   data,
@@ -20,6 +22,7 @@ export default function HeroSlide({
   const [foundConsonants, setFoundConsonants] = useState(new Set());
 
   const footerRef = useRef(null);
+  const { playSequence } = useAudioPlayer();
 
   const word = data?.word || "";
   const targetChar = data?.target || data?.target_char || "";
@@ -57,6 +60,9 @@ export default function HeroSlide({
     // Получаем категорию символа для точной проверки
     const normChar = normalizeChar(glyphChar);
     const category = getKhmerGlyphCategory(normChar);
+    const isTarget = normalizeChar(glyphChar) === normalizeChar(targetChar);
+    const isConsonant = category === 'consonant' && !glyphMeta?.isSubscript;
+    const soundFile = getSoundFileForChar(glyphChar);
 
     // Логика счетчика: Если это БАЗОВАЯ согласная (не ножка и не знак)
     if (category === 'consonant' && !glyphMeta?.isSubscript) {
@@ -70,11 +76,18 @@ export default function HeroSlide({
     }
 
     // Логика победы (только если нашли Цель)
-    if (!targetChar) return;
-    if (glyphMeta?.isSubscript) return;
-
-    if (normalizeChar(glyphChar) === normalizeChar(targetChar)) {
+    if (targetChar && !glyphMeta?.isSubscript && isTarget) {
       onHeroFound?.();
+    }
+
+    if (soundFile && isConsonant && targetChar) {
+      const feedbackSound = isTarget ? 'success.mp3' : 'error.mp3';
+      playSequence([feedbackSound, soundFile], { gapMs: 200 });
+      return;
+    }
+
+    if (soundFile && onPlayAudio) {
+      onPlayAudio(soundFile);
     }
   };
 
@@ -190,7 +203,6 @@ export default function HeroSlide({
                 targetChar={targetChar}
                 charSplit={charSplit}
                 onGlyphClick={handleGlyphClick}
-                onLetterClick={onPlayAudio}
                 compact={true}
                 viewBoxPad={55}
                 showTapHint={false}
