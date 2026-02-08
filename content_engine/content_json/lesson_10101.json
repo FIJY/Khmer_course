@@ -227,7 +227,62 @@
         "title": "No Spaces Drill",
         "subtitle": "Tap each consonant in the stream.",
         "success_rule": "consonant",
-        "khmerText": "ភាសាខ្មែរមិនមានចន្លោះ"
+        "khmerText": "ភាសាខ្មែរមិនមានចន្លោះ",
+        "word_list": [
+          {
+            "khmer": "ខ្ញុំ",
+            "pronunciation": "kɲom",
+            "translation": "я"
+          },
+          {
+            "khmer": "ខ្លាំង",
+            "pronunciation": "khlaŋ"
+          },
+          {
+            "khmer": "ខ្មែរ",
+            "pronunciation": "khmae"
+          },
+          {
+            "khmer": "ខែ",
+            "pronunciation": "khae"
+          },
+          {
+            "khmer": "ខោ",
+            "pronunciation": "khao",
+            "translation": "штаны",
+            "starred": true
+          },
+          {
+            "khmer": "គោ",
+            "pronunciation": "koo",
+            "translation": "корова",
+            "starred": true
+          },
+          {
+            "khmer": "ខ្យល់",
+            "pronunciation": "khyɑl",
+            "translation": "ветер",
+            "starred": true
+          },
+          {
+            "khmer": "ខ្នង",
+            "pronunciation": "khnɑɑŋ",
+            "translation": "спина",
+            "starred": true
+          },
+          {
+            "khmer": "ខ្ញុំគិត",
+            "translation": "Я думаю"
+          },
+          {
+            "khmer": "គេខ្លាំង",
+            "translation": "Они сильные"
+          },
+          {
+            "khmer": "ខ្មែរគ្នា",
+            "translation": "Кхмеры вместе"
+          }
+        ]
       }
     },
     {

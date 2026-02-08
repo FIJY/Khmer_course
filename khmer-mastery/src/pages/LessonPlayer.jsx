@@ -25,6 +25,17 @@ import ConsonantStreamDrill from '../components/Drills/ConsonantStreamDrill';
 import SameDifferentSlide from '../components/LessonSlides/SameDifferentSlide'; // <--- ДОБАВЛЕН ИМПОРТ
 import IntroduceGroupSlide from '../components/LessonSlides/IntroduceGroupSlide';
 import AudioGuessSlide from '../components/LessonSlides/AudioGuessSlide';
+import GlyphHintCard from '../components/UI/GlyphHintCard';
+import {
+  buildGlyphDisplayChar,
+  getGlyphHintContent,
+  normalizeGlyphChar,
+  resolveGlyphMeta,
+  truncateHint,
+  COENG_CHAR,
+} from '../lib/glyphHintUtils';
+import { getKhmerGlyphCategory } from '../lib/khmerGlyphRenderer';
+import { buildShapeApiUrl } from '../lib/apiConfig';
 
 const KHMER_PATTERN = /[\u1780-\u17FF]/;
 
@@ -67,6 +78,8 @@ export default function LessonPlayer() {
   const [visualGlyphs, setVisualGlyphs] = useState([]);
   const [visualResetSeed, setVisualResetSeed] = useState(0);
   const [heroSelected, setHeroSelected] = useState(false);
+  const [noSpacesHint, setNoSpacesHint] = useState(null);
+  const [noSpacesSubscriptIndices, setNoSpacesSubscriptIndices] = useState(new Set());
 
   // --- СБРОС СОСТОЯНИЯ ПРИ СМЕНЕ ШАГА ---
   useEffect(() => {
@@ -78,6 +91,8 @@ export default function LessonPlayer() {
     setVisualGlyphs([]);
     setVisualResetSeed((prev) => prev + 1);
     setHeroSelected(false);
+    setNoSpacesHint(null);
+    setNoSpacesSubscriptIndices(new Set());
 
     const rawType = safeItems[step]?.type;
     const currentType = rawType
@@ -118,6 +133,13 @@ export default function LessonPlayer() {
   const type = rawType
     ? rawType.toLowerCase().trim().replace(/[\s-]+/g, '_')
     : '';
+  const noSpacesWordList = current?.word_list || current?.wordList || [];
+
+  useEffect(() => {
+    if (type === 'no_spaces' && Array.isArray(noSpacesWordList) && noSpacesWordList.length > 0) {
+      setCanAdvance(true);
+    }
+  }, [noSpacesWordList, setCanAdvance, type]);
 
   const baseConsonantGlyphIds = useMemo(() => {
     const ids = new Set();
@@ -147,7 +169,82 @@ export default function LessonPlayer() {
     }
   });
 
+  const fallbackTypeFromChar = (glyphChar) => {
+    const normalized = normalizeGlyphChar(glyphChar);
+    const khmerMatch = normalized.match(/[\u1780-\u17FF]/);
+    const targetChar = khmerMatch ? khmerMatch[0] : normalized;
+    const category = getKhmerGlyphCategory(targetChar);
+    const map = {
+      consonant: 'consonant',
+      vowel_dep: 'vowel_dependent',
+      vowel_ind: 'vowel_independent',
+      diacritic: 'diacritic',
+      numeral: 'numeral',
+      space: 'space',
+      coeng: 'consonant'
+    };
+    return map[category] || 'symbol';
+  };
+
+  useEffect(() => {
+    if (type !== 'no_spaces' || !current?.khmerText || noSpacesWordList.length > 0) return;
+    let active = true;
+
+    fetch(`${buildShapeApiUrl("/api/shape")}?text=${encodeURIComponent(current.khmerText)}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        return res.json();
+      })
+      .then((json) => {
+        if (!active) return;
+        const glyphs = Array.isArray(json) ? json : [];
+        const resolved = resolveGlyphMeta(glyphs, current.khmerText);
+        const indices = new Set();
+        resolved.forEach((glyph) => {
+          if (glyph.isSubscript && glyph.resolvedIndex >= 0) {
+            indices.add(glyph.resolvedIndex);
+          }
+        });
+        setNoSpacesSubscriptIndices(indices);
+      })
+      .catch(() => {
+        if (!active) return;
+        setNoSpacesSubscriptIndices(new Set());
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [current?.khmerText, noSpacesWordList.length, type]);
+
+  const updateNoSpacesHint = (index, char) => {
+    const chars = Array.from(current?.khmerText || '');
+    const isSubscript = noSpacesSubscriptIndices.size > 0
+      ? noSpacesSubscriptIndices.has(index)
+      : chars[index - 1] === COENG_CHAR;
+    const normalized = normalizeGlyphChar(char);
+    const isSubscriptConsonant = isSubscript && /[\u1780-\u17A2]/.test(normalized);
+    const { typeLabel, hint } = getGlyphHintContent({
+      glyphChar: normalized,
+      alphabetDb,
+      fallbackTypeLabel: fallbackTypeFromChar
+    });
+    const hintMaxChars = current?.hint_max_chars ?? current?.hintMaxChars;
+    const truncatedHint = truncateHint(hint, hintMaxChars);
+    setNoSpacesHint({
+      displayChar: buildGlyphDisplayChar({
+        glyphChar: normalized,
+        isSubscript,
+        isSubscriptConsonant,
+      }),
+      typeLabel,
+      hint: truncatedHint,
+      isSubscript,
+    });
+  };
+
   const handleConsonantClick = (index, char) => {
+    updateNoSpacesHint(index, char);
     setRevealedConsonants((prev) => {
       const next = new Set(prev);
       next.add(index);
@@ -183,6 +280,7 @@ export default function LessonPlayer() {
   };
 
   const handleNonConsonantClick = (index, char) => {
+    updateNoSpacesHint(index, char);
     const { rule, sounds } = getFeedbackConfig();
     const chars = Array.from(current?.khmerText || '');
     const isSubscript = chars[index - 1] === '្';
@@ -321,7 +419,7 @@ export default function LessonPlayer() {
       )}
 
       {type === 'word_breakdown' && (
-        <InventorySlide data={current} onPlayAudio={playLocalAudio} />
+        <InventorySlide data={current} onPlayAudio={playLocalAudio} alphabetDb={alphabetDb} />
       )}
 
       {type === 'visual_decoder' && (
@@ -403,11 +501,25 @@ export default function LessonPlayer() {
             revealedSet={revealedConsonants}
             onConsonantClick={handleConsonantClick}
             onNonConsonantClick={handleNonConsonantClick}
+            wordList={noSpacesWordList}
           />
-          <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-white/10 text-xs text-gray-400 w-full text-center">
-            <span className="text-emerald-400 font-bold uppercase tracking-widest mr-2">Goal:</span>
-            Find all {Array.from(current.khmerText || '').filter(c => c.match(/[\u1780-\u17A2]/)).length} commanders
-          </div>
+          {noSpacesWordList.length === 0 ? (
+            <div className="mt-4 flex justify-center w-full">
+              <GlyphHintCard
+                displayChar={noSpacesHint?.displayChar}
+                typeLabel={noSpacesHint?.typeLabel}
+                hint={noSpacesHint?.hint}
+                isSubscript={noSpacesHint?.isSubscript}
+                placeholder="Tap a glyph"
+              />
+            </div>
+          ) : null}
+          {noSpacesWordList.length === 0 ? (
+            <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-white/10 text-xs text-gray-400 w-full text-center">
+              <span className="text-emerald-400 font-bold uppercase tracking-widest mr-2">Goal:</span>
+              Find all {Array.from(current.khmerText || '').filter(c => c.match(/[\u1780-\u17A2]/)).length} commanders
+            </div>
+          ) : null}
         </div>
       )}
     </SessionFrame>

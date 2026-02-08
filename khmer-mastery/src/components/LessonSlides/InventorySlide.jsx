@@ -1,15 +1,61 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Puzzle, Volume2 } from 'lucide-react';
 import KhmerColoredText from '../KhmerColoredText';
 import { getSoundFileForChar } from '../../data/audioMap';
 import LessonFrame from '../UI/LessonFrame';
 import LessonHeader from '../UI/LessonHeader';
+import GlyphHintCard from '../UI/GlyphHintCard';
+import {
+  buildGlyphDisplayChar,
+  getGlyphHintContent,
+  normalizeGlyphChar,
+  truncateHint,
+  COENG_CHAR,
+} from '../../lib/glyphHintUtils';
 
 const DEFAULT_KHMER_FONT_URL = import.meta.env.VITE_KHMER_FONT_URL
   ?? '/fonts/NotoSansKhmer-VariableFont_wdth,wght.ttf';
 
-export default function InventorySlide({ data, onPlayAudio }) {
+const isKhmerConsonant = (char) => /[\u1780-\u17A2]/.test(char || '');
+
+export default function InventorySlide({ data, onPlayAudio, alphabetDb }) {
   const wordAudio = data.audio || data.word_audio || data.phrase_audio || '';
+  const [activeHint, setActiveHint] = useState(null);
+  const hintMaxChars = data?.hint_max_chars ?? data?.hintMaxChars;
+
+  const fallbackTypeLabel = (glyphChar) => {
+    const normalized = normalizeGlyphChar(glyphChar);
+    if (!normalized) return '';
+    if (normalized === COENG_CHAR) return 'coeng';
+    if (isKhmerConsonant(normalized)) return 'consonant';
+    return 'symbol';
+  };
+
+  const handleLetterTap = (char) => {
+    const rawChar = String(char || '');
+    const isSubscript = rawChar.startsWith(COENG_CHAR);
+    const lookupChar = isSubscript ? rawChar.replace(COENG_CHAR, '') : rawChar;
+    const normalized = normalizeGlyphChar(lookupChar);
+    const isSubscriptConsonant = isSubscript && isKhmerConsonant(normalized);
+    const { typeLabel, hint } = getGlyphHintContent({
+      glyphChar: normalized,
+      alphabetDb,
+      fallbackTypeLabel,
+    });
+    const truncatedHint = truncateHint(hint, hintMaxChars);
+
+    setActiveHint({
+      displayChar: buildGlyphDisplayChar({
+        glyphChar: normalized,
+        isSubscript,
+        isSubscriptConsonant,
+      }),
+      typeLabel,
+      hint: truncatedHint,
+      isSubscript,
+    });
+  };
+
   const playWordAudio = () => {
     if (!onPlayAudio) return;
     if (wordAudio) {
@@ -78,7 +124,10 @@ export default function InventorySlide({ data, onPlayAudio }) {
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => audioFile && onPlayAudio(audioFile)}
+                  onClick={() => {
+                    handleLetterTap(char);
+                    if (audioFile && onPlayAudio) onPlayAudio(audioFile);
+                  }}
                   className="bg-gray-800 border border-white/10 rounded-2xl w-16 h-20 flex items-center justify-center shadow-lg relative overflow-visible group hover:border-cyan-500/50 transition-colors"
                   title="Tap to hear this letter"
                 >
@@ -92,6 +141,16 @@ export default function InventorySlide({ data, onPlayAudio }) {
               );
             })}
           </div>
+        </div>
+
+        <div className="flex justify-center">
+          <GlyphHintCard
+            displayChar={activeHint?.displayChar}
+            typeLabel={activeHint?.typeLabel}
+            hint={activeHint?.hint}
+            isSubscript={activeHint?.isSubscript}
+            placeholder="Tap a letter"
+          />
         </div>
       </LessonFrame>
     </div>
