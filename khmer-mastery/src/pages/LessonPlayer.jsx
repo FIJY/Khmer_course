@@ -193,7 +193,7 @@ export default function LessonPlayer() {
   };
 
   useEffect(() => {
-    if (type !== 'no_spaces' || !current?.khmerText || noSpacesWordList.length > 0) return;
+    if (type !== 'no_spaces' || !current?.khmerText) return;
     let active = true;
 
     fetch(`${buildShapeApiUrl("/api/shape")}?text=${encodeURIComponent(current.khmerText)}`)
@@ -221,7 +221,7 @@ export default function LessonPlayer() {
     return () => {
       active = false;
     };
-  }, [current?.khmerText, noSpacesWordList.length, type]);
+  }, [current?.khmerText, type]);
 
   const updateNoSpacesHint = (index, char) => {
     const chars = Array.from(current?.khmerText || '');
@@ -509,23 +509,19 @@ export default function LessonPlayer() {
             onNonConsonantClick={handleNonConsonantClick}
             wordList={noSpacesWordList}
           />
-          {noSpacesWordList.length === 0 ? (
-            <div className="mt-4 flex justify-center w-full">
-              <GlyphHintCard
-                displayChar={noSpacesHint?.displayChar}
-                typeLabel={noSpacesHint?.typeLabel}
-                hint={noSpacesHint?.hint}
-                isSubscript={noSpacesHint?.isSubscript}
-                placeholder="Tap a glyph"
-              />
-            </div>
-          ) : null}
-          {noSpacesWordList.length === 0 ? (
-            <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-white/10 text-xs text-gray-400 w-full text-center">
-              <span className="text-emerald-400 font-bold uppercase tracking-widest mr-2">Goal:</span>
-              Find all {Array.from(current.khmerText || '').filter(c => c.match(/[\u1780-\u17A2]/)).length} commanders
-            </div>
-          ) : null}
+          <div className="mt-4 flex justify-center w-full">
+            <GlyphHintCard
+              displayChar={noSpacesHint?.displayChar}
+              typeLabel={noSpacesHint?.typeLabel}
+              hint={noSpacesHint?.hint}
+              isSubscript={noSpacesHint?.isSubscript}
+              placeholder="Tap a glyph"
+            />
+          </div>
+          <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-white/10 text-xs text-gray-400 w-full text-center">
+            <span className="text-emerald-400 font-bold uppercase tracking-widest mr-2">Goal:</span>
+            Find all {Array.from(current.khmerText || '').filter(c => c.match(/[\u1780-\u17A2]/)).length} commanders
+          </div>
         </div>
       )}
     </SessionFrame>
