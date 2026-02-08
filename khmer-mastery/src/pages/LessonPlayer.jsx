@@ -141,6 +141,12 @@ export default function LessonPlayer() {
     : '';
   const noSpacesWordList = current?.word_list || current?.wordList || [];
 
+  useEffect(() => {
+    if (type === 'no_spaces' && Array.isArray(noSpacesWordList) && noSpacesWordList.length > 0) {
+      setCanAdvance(true);
+    }
+  }, [noSpacesWordList, setCanAdvance, type]);
+
   const baseConsonantGlyphIds = useMemo(() => {
     const ids = new Set();
     visualGlyphs.forEach((glyph, idx) => {
