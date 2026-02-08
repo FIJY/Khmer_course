@@ -44,7 +44,7 @@ export default function ConsonantStreamDrill({
                     if (onConsonantClick) onConsonantClick(index, char);
                   } else {
                     // Если промахнулись
-                    if (onNonConsonantClick) onNonConsonantClick(char);
+                  if (onNonConsonantClick) onNonConsonantClick(index, char);
                   }
                 }}
                 onKeyDown={(event) => {
@@ -53,7 +53,7 @@ export default function ConsonantStreamDrill({
                     if (isTarget) {
                       if (onConsonantClick) onConsonantClick(index, char);
                     } else if (onNonConsonantClick) {
-                      onNonConsonantClick(char);
+                      onNonConsonantClick(index, char);
                     }
                   }
                 }}

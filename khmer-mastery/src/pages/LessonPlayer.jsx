@@ -2,11 +2,13 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { ArrowRight, ChevronLeft } from 'lucide-react';
 import { HIGHLIGHT_MODES } from '../components/VisualDecoder';
+import { getSoundFileForChar } from '../data/audioMap';
 import Button from '../components/UI/Button';
 import ErrorState from '../components/UI/ErrorState';
 import LoadingState from '../components/UI/LoadingState';
 import useLessonPlayer from '../hooks/useLessonPlayer';
 import { t } from '../i18n';
+import { DEFAULT_FEEDBACK_SOUNDS, evaluateGlyphSuccess } from '../lib/glyphFeedback';
 import SessionCompletion from '../components/Session/SessionCompletion';
 import SessionFrame from '../components/Session/SessionFrame';
 import AnalysisSlide from '../components/LessonSlides/AnalysisSlide';
@@ -49,6 +51,7 @@ export default function LessonPlayer() {
     goBack,
     setCanAdvance,
     refresh,
+    playSequence,
     alphabetDb
   } = useLessonPlayer();
 
@@ -133,23 +136,71 @@ export default function LessonPlayer() {
     return visualSelectedIds.filter((id) => baseConsonantGlyphIds.has(id)).length;
   }, [visualSelectedIds, baseConsonantGlyphIds]);
 
+  const getFeedbackConfig = () => ({
+    rule: current?.success_rule ?? current?.successRule,
+    sounds: {
+      ...DEFAULT_FEEDBACK_SOUNDS,
+      ...(current?.feedback_sounds || {}),
+      ...(current?.feedbackSounds || {}),
+      ...(current?.success_sound ? { success: current.success_sound } : {}),
+      ...(current?.error_sound ? { error: current.error_sound } : {})
+    }
+  });
+
   const handleConsonantClick = (index, char) => {
     setRevealedConsonants((prev) => {
       const next = new Set(prev);
       next.add(index);
       if (current?.khmerText) {
         const totalConsonants = Array.from(current.khmerText).filter(c => c.match(/[\u1780-\u17A2]/)).length;
+        const { rule, sounds } = getFeedbackConfig();
+        const chars = Array.from(current.khmerText || '');
+        const isSubscript = chars[index - 1] === '្';
+        const isSuccess = rule
+          ? evaluateGlyphSuccess({
+              rule,
+              glyphChar: char,
+              glyphMeta: { isSubscript },
+              targetChar: current?.target ?? current?.target_char
+            })
+          : null;
+        const soundFile = current.consonantAudioMap?.[char]
+          || getSoundFileForChar(char)
+          || 'click.mp3';
         if (next.size >= totalConsonants) {
           playLocalAudio('success.mp3');
           setCanAdvance(true);
         } else {
-          const soundFile = current.consonantAudioMap?.[char];
-          if (soundFile) playLocalAudio(soundFile);
-          else playLocalAudio('click.mp3');
+          if (isSuccess === null) {
+            playLocalAudio(soundFile);
+          } else {
+            playSequence([isSuccess ? sounds.success : sounds.error, soundFile], { gapMs: 200 });
+          }
         }
       }
       return next;
     });
+  };
+
+  const handleNonConsonantClick = (index, char) => {
+    const { rule, sounds } = getFeedbackConfig();
+    const chars = Array.from(current?.khmerText || '');
+    const isSubscript = chars[index - 1] === '្';
+    const isSuccess = rule
+      ? evaluateGlyphSuccess({
+          rule,
+          glyphChar: char,
+          glyphMeta: { isSubscript },
+          targetChar: current?.target ?? current?.target_char
+        })
+      : false;
+    const soundFile = getSoundFileForChar(char);
+    if (rule) {
+      const sequence = soundFile ? [isSuccess ? sounds.success : sounds.error, soundFile] : [sounds.error];
+      playSequence(sequence, { gapMs: 200 });
+    } else {
+      playLocalAudio('error.mp3');
+    }
   };
 
   const lessonPronunciations = React.useMemo(() => {
@@ -347,7 +398,12 @@ export default function LessonPlayer() {
         <div className="w-full flex flex-col items-center">
           <h2 className="text-3xl font-black text-white mb-2 text-center uppercase italic">{current.title}</h2>
           <p className="text-gray-400 mb-6 text-center text-sm font-medium">{current.subtitle}</p>
-          <ConsonantStreamDrill text={current.khmerText} revealedSet={revealedConsonants} onConsonantClick={handleConsonantClick} onNonConsonantClick={() => playLocalAudio('error.mp3')} />
+          <ConsonantStreamDrill
+            text={current.khmerText}
+            revealedSet={revealedConsonants}
+            onConsonantClick={handleConsonantClick}
+            onNonConsonantClick={handleNonConsonantClick}
+          />
           <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-white/10 text-xs text-gray-400 w-full text-center">
             <span className="text-emerald-400 font-bold uppercase tracking-widest mr-2">Goal:</span>
             Find all {Array.from(current.khmerText || '').filter(c => c.match(/[\u1780-\u17A2]/)).length} commanders

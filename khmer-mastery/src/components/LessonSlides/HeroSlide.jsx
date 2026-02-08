@@ -4,6 +4,12 @@ import { RotateCcw } from "lucide-react";
 import LessonFrame from "../UI/LessonFrame";
 import VisualDecoder from "../VisualDecoder";
 import { getKhmerGlyphCategory } from "../../lib/khmerGlyphRenderer";
+import { getSoundFileForChar } from "../../data/audioMap";
+import useAudioPlayer from "../../hooks/useAudioPlayer";
+import {
+  DEFAULT_FEEDBACK_SOUNDS,
+  evaluateGlyphSuccess
+} from "../../lib/glyphFeedback";
 
 export default function HeroSlide({
   data,
@@ -20,6 +26,7 @@ export default function HeroSlide({
   const [foundConsonants, setFoundConsonants] = useState(new Set());
 
   const footerRef = useRef(null);
+  const { playSequence } = useAudioPlayer();
 
   const word = data?.word || "";
   const targetChar = data?.target || data?.target_char || "";
@@ -27,6 +34,14 @@ export default function HeroSlide({
   const title = data?.title || data?.name || "Find the Hero";
   const description = Array.isArray(data?.description) ? data.description : [data?.description || ""];
   const footer = data?.footer || "";
+  const successRule = data?.success_rule ?? data?.successRule ?? (targetChar ? "target" : null);
+  const feedbackSounds = {
+    ...DEFAULT_FEEDBACK_SOUNDS,
+    ...(data?.feedback_sounds || {}),
+    ...(data?.feedbackSounds || {}),
+    ...(data?.success_sound ? { success: data.success_sound } : {}),
+    ...(data?.error_sound ? { error: data.error_sound } : {}),
+  };
 
   const normalizeChar = (v) => String(v || "").replace(/\u25CC/g, "").trim().normalize("NFC");
 
@@ -57,6 +72,8 @@ export default function HeroSlide({
     // Получаем категорию символа для точной проверки
     const normChar = normalizeChar(glyphChar);
     const category = getKhmerGlyphCategory(normChar);
+    const isTarget = normalizeChar(glyphChar) === normalizeChar(targetChar);
+    const soundFile = getSoundFileForChar(glyphChar);
 
     // Логика счетчика: Если это БАЗОВАЯ согласная (не ножка и не знак)
     if (category === 'consonant' && !glyphMeta?.isSubscript) {
@@ -70,11 +87,25 @@ export default function HeroSlide({
     }
 
     // Логика победы (только если нашли Цель)
-    if (!targetChar) return;
-    if (glyphMeta?.isSubscript) return;
-
-    if (normalizeChar(glyphChar) === normalizeChar(targetChar)) {
+    if (targetChar && !glyphMeta?.isSubscript && isTarget) {
       onHeroFound?.();
+    }
+
+    if (soundFile && successRule) {
+      const isSuccess = evaluateGlyphSuccess({
+        rule: successRule,
+        glyphChar,
+        glyphMeta,
+        targetChar
+      });
+      const feedbackSound = isSuccess ? feedbackSounds.success : feedbackSounds.error;
+      const sequence = soundFile ? [feedbackSound, soundFile] : [feedbackSound];
+      playSequence(sequence, { gapMs: 200 });
+      return;
+    }
+
+    if (soundFile && onPlayAudio) {
+      onPlayAudio(soundFile);
     }
   };
 
@@ -190,7 +221,6 @@ export default function HeroSlide({
                 targetChar={targetChar}
                 charSplit={charSplit}
                 onGlyphClick={handleGlyphClick}
-                onLetterClick={onPlayAudio}
                 compact={true}
                 viewBoxPad={55}
                 showTapHint={false}
