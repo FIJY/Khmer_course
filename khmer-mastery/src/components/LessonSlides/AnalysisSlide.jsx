@@ -5,6 +5,13 @@ import VisualDecoder from "../VisualDecoder";
 import LessonFrame from "../UI/LessonFrame";
 import LessonHeader from "../UI/LessonHeader";
 import { getKhmerGlyphCategory } from "../../lib/khmerGlyphRenderer";
+import GlyphHintCard from "../UI/GlyphHintCard";
+import {
+  buildGlyphDisplayChar,
+  getGlyphHintContent,
+  normalizeGlyphChar,
+  truncateHint,
+} from "../../lib/glyphHintUtils";
 
 const DEFAULT_KHMER_FONT_URL =
   import.meta.env.VITE_KHMER_FONT_URL ??
@@ -114,26 +121,10 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
     if (onPlayAudio && audio) onPlayAudio(audio);
   }
 
-  const normalizeLookupChar = (glyphChar) => {
-    if (!glyphChar) return "";
-    return String(glyphChar).replace(/\u25CC/g, "").trim().normalize("NFC");
-  };
-
-  const lookupAlphabetEntry = (glyphChar) => {
-    if (!alphabetDb || !glyphChar) return null;
-    const normalized = normalizeLookupChar(glyphChar);
-
-    if (alphabetDb instanceof Map) {
-      return alphabetDb.get(normalized) || alphabetDb.get(glyphChar) || null;
-    } else if (typeof alphabetDb === "object") {
-      return alphabetDb[normalized] || alphabetDb[glyphChar] || null;
-    }
-
-    return null;
-  };
+  const hintMaxChars = d.hint_max_chars ?? d.hintMaxChars;
 
   const fallbackTypeFromChar = (glyphChar) => {
-    const normalized = normalizeLookupChar(glyphChar);
+    const normalized = normalizeGlyphChar(glyphChar);
     const khmerMatch = normalized.match(/[\u1780-\u17FF]/);
     const targetChar = khmerMatch ? khmerMatch[0] : normalized;
     const category = getKhmerGlyphCategory(targetChar);
@@ -152,19 +143,28 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
   };
 
   function handleGlyphClick(glyphChar, glyphMeta) {
-    const charData = lookupAlphabetEntry(glyphChar);
     const isSub = glyphMeta?.isSubscript;
-    const norm = normalizeLookupChar(glyphChar);
-    const display = isSub ? `${norm} / ${COENG_CHAR}${norm}` : glyphChar;
+    const display = buildGlyphDisplayChar({
+      glyphChar,
+      isSubscript: isSub,
+      isSubscriptConsonant: isSub && isKhmerConsonant(glyphChar),
+    });
+    const { typeLabel, hint, entry } = getGlyphHintContent({
+      glyphChar,
+      alphabetDb,
+      fallbackTypeLabel: fallbackTypeFromChar,
+    });
+    const truncatedHint = truncateHint(hint, hintMaxChars);
 
     setActiveCharData({
       char: display,
-      type: charData?.type || fallbackTypeFromChar(glyphChar),
-      hint: charData?.hint || charData?.name_en || charData?.name || charData?.description || ""
+      type: typeLabel,
+      hint: truncatedHint,
+      isSubscript: isSub,
     });
 
-    if (onPlayAudio && charData?.audio) {
-      onPlayAudio(charData.audio);
+    if (onPlayAudio && entry?.audio) {
+      onPlayAudio(entry.audio);
     }
   }
 
@@ -298,13 +298,13 @@ export default function AnalysisSlide({ data, onPlayAudio, alphabetDb }) {
 
         <div style={styles.infoPanel}>
           {activeCharData ? (
-            <div style={styles.charDetailBox}>
-              <div style={styles.charLarge}>{activeCharData.char}</div>
-              <div style={styles.charInfoText}>
-                <div style={styles.charType}>{activeCharData.type}</div>
-                <div style={styles.charHint}>{activeCharData.hint}</div>
-              </div>
-            </div>
+            <GlyphHintCard
+              displayChar={activeCharData.char}
+              typeLabel={activeCharData.type}
+              hint={activeCharData.hint}
+              isSubscript={activeCharData.isSubscript}
+              variant="detail"
+            />
           ) : translation ? (
             <div style={styles.translationContainer}>
               <div style={styles.khmerLabel}>Meaning</div>
@@ -435,39 +435,6 @@ const styles = {
   infoPanel: {
     marginTop: "16px",
     minHeight: "90px"
-  },
-  charDetailBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: "24px",
-    padding: "16px 20px",
-    borderRadius: "20px",
-    background: "rgba(34, 211, 238, 0.12)",
-    border: "1px solid rgba(34, 211, 238, 0.25)"
-  },
-  charLarge: {
-    fontFamily: "KhmerFont, sans-serif",
-    fontSize: "52px",
-    color: "#22d3ee",
-    lineHeight: 1
-  },
-  charInfoText: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    flex: 1
-  },
-  charType: {
-    fontSize: "16px",
-    fontWeight: 700,
-    color: "white",
-    textTransform: "uppercase",
-    letterSpacing: "0.03em"
-  },
-  charHint: {
-    fontSize: "14px",
-    opacity: 0.8,
-    lineHeight: 1.4
   },
   translationContainer: {
     padding: "16px",

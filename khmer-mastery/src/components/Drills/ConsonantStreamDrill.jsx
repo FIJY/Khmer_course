@@ -6,7 +6,9 @@ export default function ConsonantStreamDrill({
   text = "",
   revealedSet = new Set(), // Набор индексов уже найденных букв
   onConsonantClick,
-  onNonConsonantClick
+  onNonConsonantClick,
+  wordList = [],
+  onWordClick
 }) {
   // Разбиваем текст на массив символов (правильно работая с Unicode)
   const chars = Array.from(text);
@@ -18,6 +20,8 @@ export default function ConsonantStreamDrill({
     return cp >= 0x1780 && cp <= 0x17A2;
   };
 
+  const hasWordList = Array.isArray(wordList) && wordList.length > 0;
+
   return (
     <div className="w-full flex justify-center px-4 animate-in fade-in zoom-in duration-300">
       <LessonCard className="max-w-2xl flex flex-col items-center">
@@ -27,53 +31,80 @@ export default function ConsonantStreamDrill({
           <span>Tap Consonants</span>
         </div>
 
-        {/* Контейнер с глифами */}
-        <div className="flex flex-wrap justify-center max-w-2xl text-5xl md:text-6xl leading-[1.35] font-semibold tracking-wide">
-          {chars.map((char, index) => {
-            const isRevealed = revealedSet.has(index);
-            const isTarget = isKhmerConsonant(char);
-
-            return (
-              <span
-                key={index}
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  if (isTarget) {
-                    // Если нажали на согласную - сообщаем наверх
-                    if (onConsonantClick) onConsonantClick(index, char);
-                  } else {
-                    // Если промахнулись
-                  if (onNonConsonantClick) onNonConsonantClick(index, char);
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    if (isTarget) {
-                      if (onConsonantClick) onConsonantClick(index, char);
-                    } else if (onNonConsonantClick) {
-                      onNonConsonantClick(index, char);
-                    }
-                  }
-                }}
-                className={`inline-flex cursor-pointer focus-visible:outline-none ${isTarget ? 'mx-1' : ''}`}
-                style={{
-                  color: isTarget
-                    ? (isRevealed ? '#34d399' : '#ffffff')
-                    : (revealedSet.size > 0 ? '#64748b' : '#ffffff'),
-                  transform: isRevealed ? 'scale(1.05)' : 'scale(1.0)',
-                  transition: 'color 200ms ease, transform 120ms ease'
-                }}
-                title={isTarget ? 'Consonant' : 'Not a consonant'}
+        {hasWordList ? (
+          <div className="w-full flex flex-col gap-4 text-left">
+            {wordList.map((entry, idx) => (
+              <button
+                key={`${entry.khmer || entry.word || idx}`}
+                type="button"
+                onClick={() => onWordClick?.(entry, idx)}
+                className="flex w-full items-start justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left transition-colors hover:border-cyan-500/40 hover:bg-white/10"
               >
-                <span className={!isRevealed && isTarget ? 'hover:underline decoration-2 underline-offset-8' : ''}>
-                  {char}
+                <div className="flex flex-col gap-1">
+                  <div className="text-2xl md:text-3xl font-khmer text-white">
+                    {entry.khmer || entry.word}
+                  </div>
+                  {entry.pronunciation ? (
+                    <div className="text-sm text-cyan-300">{entry.pronunciation}</div>
+                  ) : null}
+                  {entry.translation ? (
+                    <div className="text-sm text-slate-300">{entry.translation}</div>
+                  ) : null}
+                </div>
+                {entry.starred ? (
+                  <div className="text-2xl">⭐</div>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-wrap justify-center max-w-2xl text-5xl md:text-6xl leading-[1.35] font-semibold tracking-wide">
+            {chars.map((char, index) => {
+              const isRevealed = revealedSet.has(index);
+              const isTarget = isKhmerConsonant(char);
+
+              return (
+                <span
+                  key={index}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    if (isTarget) {
+                      // Если нажали на согласную - сообщаем наверх
+                      if (onConsonantClick) onConsonantClick(index, char);
+                    } else {
+                      // Если промахнулись
+                      if (onNonConsonantClick) onNonConsonantClick(index, char);
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      if (isTarget) {
+                        if (onConsonantClick) onConsonantClick(index, char);
+                      } else if (onNonConsonantClick) {
+                        onNonConsonantClick(index, char);
+                      }
+                    }
+                  }}
+                  className={`inline-flex cursor-pointer focus-visible:outline-none ${isTarget ? 'mx-1' : ''}`}
+                  style={{
+                    color: isTarget
+                      ? (isRevealed ? '#34d399' : '#ffffff')
+                      : (revealedSet.size > 0 ? '#64748b' : '#ffffff'),
+                    transform: isRevealed ? 'scale(1.05)' : 'scale(1.0)',
+                    transition: 'color 200ms ease, transform 120ms ease'
+                  }}
+                  title={isTarget ? 'Consonant' : 'Not a consonant'}
+                >
+                  <span className={!isRevealed && isTarget ? 'hover:underline decoration-2 underline-offset-8' : ''}>
+                    {char}
+                  </span>
                 </span>
-              </span>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </LessonCard>
     </div>
   );
