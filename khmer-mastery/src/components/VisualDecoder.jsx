@@ -13,6 +13,12 @@ import {
   DEFAULT_FEEDBACK_SOUNDS,
   evaluateGlyphSuccess
 } from "../lib/glyphFeedback";
+import GlyphHintCard from "./UI/GlyphHintCard";
+import {
+  buildGlyphDisplayChar,
+  getGlyphHintContent,
+  truncateHint,
+} from "../lib/glyphHintUtils";
 
 const COENG_CHAR = "្";
 
@@ -364,25 +370,6 @@ export default function VisualDecoder(props) {
     }, null);
   };
 
-  const normalizeLookupChar = (glyphChar) => {
-    if (!glyphChar) return "";
-    return String(glyphChar).replace(/\u25CC/g, "").trim().normalize("NFC");
-  };
-
-  const lookupAlphabetEntry = (glyphChar) => {
-    if (!alphabetDb || !glyphChar) return null;
-    const normalized = normalizeLookupChar(glyphChar);
-
-    if (alphabetDb instanceof Map) {
-      return alphabetDb.get(normalized) || alphabetDb.get(glyphChar) || null;
-    }
-    if (typeof alphabetDb === "object") {
-      return alphabetDb[normalized] || alphabetDb[glyphChar] || null;
-    }
-
-    return null;
-  };
-
   const fallbackTypeLabel = (glyphChar) => {
     const category = getKhmerGlyphCategory(glyphChar);
     const map = {
@@ -467,25 +454,25 @@ export default function VisualDecoder(props) {
 
     if (showTapHint) {
       const glyphMeta = resolvedGlyphMeta?.[hit.idx] || {};
-      const charData = lookupAlphabetEntry(resolvedChar);
-      const normalized = normalizeLookupChar(resolvedChar);
       const isSubscript = glyphMeta?.isSubscript ?? false;
-
       const isSubscriptConsonant = isSubscript && isKhmerConsonant(resolvedChar);
+      const { typeLabel, hint } = getGlyphHintContent({
+        glyphChar: resolvedChar,
+        alphabetDb,
+        fallbackTypeLabel,
+      });
+      const hintMaxChars = data?.hint_max_chars ?? data?.hintMaxChars;
+      const truncatedHint = truncateHint(hint, hintMaxChars);
+
       setLastTap({
         char: resolvedChar,
-        displayChar: isSubscriptConsonant
-          ? `${normalized} / ${COENG_CHAR}${normalized}`
-          : isSubscript
-            ? `${COENG_CHAR}${normalized}`
-            : resolvedChar,
-        label:
-          charData?.type ||
-          charData?.hint ||
-          charData?.name_en ||
-          charData?.name ||
-          charData?.description ||
-          fallbackTypeLabel(resolvedChar),
+        displayChar: buildGlyphDisplayChar({
+          glyphChar: resolvedChar,
+          isSubscript,
+          isSubscriptConsonant,
+        }),
+        typeLabel,
+        hint: truncatedHint,
         isSubscript,
       });
     }
@@ -689,34 +676,14 @@ export default function VisualDecoder(props) {
         })}
       </svg>
       {showTapHint ? (
-        <div
-          ref={hintRef}
-          className="mt-3 w-full max-w-xl rounded-2xl border border-white/10 bg-black/40 px-4 py-2 min-h-[64px] text-white flex items-center"
-        >
-          <div className="flex items-center gap-3">
-            {lastTap ? (
-              <>
-                <div className="text-3xl font-khmer">{lastTap.displayChar}</div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.3em] text-slate-300">
-                    Type
-                  </div>
-                  {lastTap.label ? (
-                    <div className="text-sm font-semibold text-white">{lastTap.label}</div>
-                  ) : (
-                    <div className="text-sm text-slate-300">Unknown type</div>
-                  )}
-                  {lastTap.isSubscript ? (
-                    <div className="text-xs text-amber-300">Subscript consonant</div>
-                  ) : null}
-                </div>
-              </>
-            ) : (
-              <div className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                Tap a glyph
-              </div>
-            )}
-          </div>
+        <div ref={hintRef} className="mt-3 w-full flex justify-center">
+          <GlyphHintCard
+            displayChar={lastTap?.displayChar}
+            typeLabel={lastTap?.typeLabel}
+            hint={lastTap?.hint}
+            isSubscript={lastTap?.isSubscript}
+            placeholder="Tap a glyph"
+          />
         </div>
       ) : null}
       {!hideDefaultButton && onComplete ? (
