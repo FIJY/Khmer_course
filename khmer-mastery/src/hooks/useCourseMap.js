@@ -15,6 +15,20 @@ const getChapterDisplayId = (chapterId) => (chapterId >= 10000 ? Math.floor(chap
 
 const isChapterLesson = (lessonId) => lessonId < 100 || lessonId % 100 === 0;
 
+const normalizeLessonTitle = (lesson, fallbackTitle) => {
+  const candidates = [
+    lesson?.title,
+    lesson?.title_ru,
+    lesson?.title_en,
+    lesson?.name,
+    lesson?.label
+  ];
+  const cleaned = candidates
+    .map((candidate) => (typeof candidate === 'string' ? candidate.trim() : ''))
+    .find((candidate) => candidate.length >= 3);
+  return cleaned || fallbackTitle;
+};
+
 const buildChaptersMap = (allLessons) => {
   if (!allLessons) return {};
 
@@ -29,6 +43,7 @@ const buildChaptersMap = (allLessons) => {
         ...lesson,
         id: chapterId,
         displayId,
+        title: normalizeLessonTitle(lesson, `Chapter ${displayId}`),
         subLessons: []
       };
       return;
@@ -46,7 +61,7 @@ const buildChaptersMap = (allLessons) => {
 
     chaptersMap[chapterId].subLessons.push({
       id: lesson.id,
-      title: lesson.title,
+      title: normalizeLessonTitle(lesson, `Lesson ${lesson.id}`),
       order_index: lesson.order_index ?? 0
     });
   });
