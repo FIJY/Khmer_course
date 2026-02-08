@@ -10,6 +10,11 @@ import {
   DEFAULT_FEEDBACK_SOUNDS,
   evaluateGlyphSuccess
 } from "../../lib/glyphFeedback";
+import GlyphHintCard from "../UI/GlyphHintCard";
+import {
+  buildGlyphDisplayChar,
+  normalizeGlyphChar,
+} from "../../lib/glyphHintUtils";
 
 export default function HeroSlide({
   data,
@@ -43,7 +48,7 @@ export default function HeroSlide({
     ...(data?.error_sound ? { error: data.error_sound } : {}),
   };
 
-  const normalizeChar = (v) => String(v || "").replace(/\u25CC/g, "").trim().normalize("NFC");
+  const normalizeChar = (v) => normalizeGlyphChar(v);
 
   useEffect(() => {
     if (activeChar && footerRef.current) {
@@ -183,6 +188,14 @@ export default function HeroSlide({
   };
 
   const roleInfo = activeChar ? getRoleInfo(activeChar) : null;
+  const hintDisplayChar = activeChar
+    ? buildGlyphDisplayChar({
+        glyphChar: activeChar.resolvedChar,
+        isSubscript: activeChar.isSubscript,
+        isSubscriptConsonant:
+          activeChar.isSubscript && /[\u1780-\u17A2]/.test(normalizeChar(activeChar.resolvedChar)),
+      })
+    : null;
 
   return (
     <div className="w-full flex flex-col items-center text-center animate-in fade-in duration-500">
@@ -228,22 +241,16 @@ export default function HeroSlide({
               />
             </div>
 
-            <div className="mt-6 w-full max-w-[280px] mx-auto min-h-[140px]">
+            <div className="mt-6 w-full max-w-[320px] mx-auto min-h-[140px]">
               {activeChar && roleInfo ? (
-                <div className="p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/5 backdrop-blur-sm text-center animate-in slide-in-from-bottom-2">
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/60 mb-1">Role</div>
-                  <div className="text-2xl font-khmer text-white mb-2 leading-relaxed">
-                    {activeChar.isSubscript
-                      ? `${normalizeChar(activeChar.resolvedChar)} / ្${normalizeChar(activeChar.resolvedChar)}`
-                      : activeChar.resolvedChar}
-                  </div>
-                  <div className={`text-sm font-bold uppercase tracking-tight ${roleInfo.color}`}>
-                    {roleInfo.title}
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                    {roleInfo.desc}
-                  </p>
-                </div>
+                <GlyphHintCard
+                  displayChar={hintDisplayChar}
+                  typeLabel={roleInfo.title}
+                  hint={roleInfo.desc}
+                  isSubscript={activeChar.isSubscript}
+                  placeholder="Tap to analyze structure"
+                  variant="detail"
+                />
               ) : (
                 <div className="py-8 text-[10px] uppercase tracking-[0.3em] text-slate-600 italic text-center w-full">
                   Tap to analyze structure
