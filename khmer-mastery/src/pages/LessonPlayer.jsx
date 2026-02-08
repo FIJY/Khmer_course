@@ -174,7 +174,7 @@ export default function LessonPlayer() {
           if (isSuccess === null) {
             playLocalAudio(soundFile);
           } else {
-            playSequence([isSuccess ? sounds.success : sounds.error, soundFile], { gapMs: 200 });
+            playSequence([isSuccess ? sounds.success : sounds.error, soundFile]);
           }
         }
       }
@@ -197,7 +197,7 @@ export default function LessonPlayer() {
     const soundFile = getSoundFileForChar(char);
     if (rule) {
       const sequence = soundFile ? [isSuccess ? sounds.success : sounds.error, soundFile] : [sounds.error];
-      playSequence(sequence, { gapMs: 200 });
+      playSequence(sequence);
     } else {
       playLocalAudio('error.mp3');
     }

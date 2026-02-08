@@ -269,7 +269,7 @@ export default function useLessonPlayer() {
     if (correct) setScore(s => s + 1);
     const feedbackSound = correct ? 'success.mp3' : 'error.mp3';
     if (selectedAudio) {
-      playSequence([feedbackSound, selectedAudio], { gapMs: 300 });
+      playSequence([feedbackSound, selectedAudio]);
     } else {
       playLocalAudio(feedbackSound);
     }

@@ -1,6 +1,8 @@
 import { useCallback, useRef } from 'react';
 
 const DEFAULT_SOUNDS_BASE = '/sounds';
+const DEFAULT_SEQUENCE_GAP_MS = 150;
+const FEEDBACK_VOLUME = 0.75;
 
 const resolveAudioSource = (audioFile, baseUrl = DEFAULT_SOUNDS_BASE) => {
   if (!audioFile) return null;
@@ -38,6 +40,9 @@ export default function useAudioPlayer(baseUrl = DEFAULT_SOUNDS_BASE) {
       if (!src) return null;
       stop();
       const audio = new Audio(src);
+      if (/\/(success|error)\.mp3$/i.test(src)) {
+        audio.volume = FEEDBACK_VOLUME;
+      }
       audioRef.current = audio;
       audio.play().catch((error) => {
         console.error(`Audio failed: ${src}`, error);
@@ -48,7 +53,7 @@ export default function useAudioPlayer(baseUrl = DEFAULT_SOUNDS_BASE) {
   );
 
   const playSequence = useCallback(
-    (audioFiles, { gapMs = 200, onComplete } = {}) => {
+    (audioFiles, { gapMs = DEFAULT_SEQUENCE_GAP_MS, onComplete } = {}) => {
       const files = Array.isArray(audioFiles) ? audioFiles.filter(Boolean) : [];
       if (files.length === 0) return;
       stop();
@@ -63,6 +68,9 @@ export default function useAudioPlayer(baseUrl = DEFAULT_SOUNDS_BASE) {
           return;
         }
         const audio = new Audio(src);
+        if (/\/(success|error)\.mp3$/i.test(src)) {
+          audio.volume = FEEDBACK_VOLUME;
+        }
         audioRef.current = audio;
         audio.onended = () => {
           index += 1;
