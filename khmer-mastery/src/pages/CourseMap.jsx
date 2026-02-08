@@ -125,13 +125,11 @@ export default function CourseMap() {
     setOpenLevels((prev) => prev.map((isOpen, idx) => (idx === levelIndex ? !isOpen : isOpen)));
   };
 
-  const handleChapterNavigate = async (blockId, lessonId, target) => {
+  const handleChapterNavigate = (blockId, lessonId, target) => {
     if (userId) {
-      try {
-        await updateLastOpenedProgress(userId, blockId, lessonId);
-      } catch (err) {
+      updateLastOpenedProgress(userId, blockId, lessonId).catch((err) => {
         console.error('Failed to update last opened chapter lesson', err);
-      }
+      });
     }
     navigate(target);
   };
