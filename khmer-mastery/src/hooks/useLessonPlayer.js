@@ -5,6 +5,7 @@ import { fetchCurrentUser } from '../data/auth';
 import { markLessonCompleted } from '../data/progress';
 // ПРАВИЛЬНЫЙ ИМПОРТ: используем тот же путь, что в твоих файлах lessons.js и auth.js
 import { supabase } from '../supabaseClient';
+import useAudioPlayer from './useAudioPlayer';
 
 export default function useLessonPlayer() {
   const { id } = useParams();
@@ -26,8 +27,7 @@ export default function useLessonPlayer() {
   // Добавляем состояние для словаря алфавита
   const [alphabetDb, setAlphabetDb] = useState(new Map());
 
-  const audioRef = useRef(null);
-  const audioTimeoutRef = useRef(null);
+  const { play, playSequence, stop } = useAudioPlayer();
 
   const fallbackLesson = useRef({
     id: 10000,
@@ -206,8 +206,6 @@ export default function useLessonPlayer() {
       setCanAdvance(false);
       setSelectedOption(null);
       setIsFlipped(false);
-      if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
-
       const currentItem = items[step];
       const currentType = currentItem?.type
         ? String(currentItem?.type).toLowerCase().trim().replace(/[\s-]+/g, '_')
@@ -222,11 +220,8 @@ export default function useLessonPlayer() {
           setCanAdvance(true);
       }
 
-      if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-      }
-  }, [step, items]);
+      stop();
+  }, [step, items, stop]);
 
   useEffect(() => {
     const persistCompletion = async () => {
@@ -253,15 +248,7 @@ export default function useLessonPlayer() {
 
   const playLocalAudio = (audioFile) => {
     if (!audioFile) return;
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    let fileName = String(audioFile).trim().replace(/(\.mp3)+$/i, '');
-    const audioPath = `/sounds/${fileName}.mp3`;
-    const audio = new Audio(audioPath);
-    audioRef.current = audio;
-    audio.play().catch((e) => console.error(`Audio failed: ${audioPath}`, e));
+    play(audioFile);
   };
 
   const handleVocabCardFlip = (audioFile) => {
@@ -280,12 +267,11 @@ export default function useLessonPlayer() {
     setCanAdvance(true);
     const correct = String(optionValue).trim() === String(correctValue).trim();
     if (correct) setScore(s => s + 1);
-    playLocalAudio(correct ? 'success.mp3' : 'error.mp3');
+    const feedbackSound = correct ? 'success.mp3' : 'error.mp3';
     if (selectedAudio) {
-        if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
-        audioTimeoutRef.current = setTimeout(() => {
-            playLocalAudio(selectedAudio);
-        }, 800);
+      playSequence([feedbackSound, selectedAudio], { gapMs: 300 });
+    } else {
+      playLocalAudio(feedbackSound);
     }
   };
 
@@ -295,6 +281,7 @@ export default function useLessonPlayer() {
     id, navigate, lessonInfo, items, step, score, quizCount, canAdvance, isFlipped,
     loading, error, selectedOption, isFinished, lessonPassed, handleNext,
     playLocalAudio, handleVocabCardFlip, handleQuizAnswer, goBack, setCanAdvance,
+    playSequence,
     alphabetDb,
     current: items[step],
     currentIndex: step,

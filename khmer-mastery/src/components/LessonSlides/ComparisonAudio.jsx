@@ -1,9 +1,10 @@
 // src/components/LessonSlides/ComparisonAudio.jsx
 import React, { useEffect, useState, useRef } from "react";
-import { Volume2, Check, Sparkles, Play } from "lucide-react";
+import { Volume2, Check, Sparkles } from "lucide-react";
 import { getSoundFileForChar } from "../../data/audioMap";
 import LessonFrame from "../UI/LessonFrame";
 import VisualDecoder from "../VisualDecoder";
+import useAudioPlayer from "../../hooks/useAudioPlayer";
 
 export default function ComparisonAudio({
   data = {},
@@ -15,10 +16,10 @@ export default function ComparisonAudio({
 
   const [playingSide, setPlayingSide] = useState(null); // "left" | "right"
   const [playedState, setPlayedState] = useState({ left: false, right: false });
-  const audioRef = useRef(null);
   const footerRef = useRef(null); // Реф для автоскролла
 
   const SOUNDS_URL = import.meta.env.VITE_SOUNDS_URL || "/sounds";
+  const { play, playSequence, resolveAudioSource, stop } = useAudioPlayer(SOUNDS_URL);
 
   // Автоскролл к низу после завершения
   useEffect(() => {
@@ -32,29 +33,39 @@ export default function ComparisonAudio({
 
   const getAudioSource = (item) => {
     if (!item) return null;
-    if (item.audio) return item.audio.startsWith("http") ? item.audio : `${SOUNDS_URL}/${item.audio}`;
+    if (item.audio) return resolveAudioSource(item.audio);
     if (item.text) {
         const file = getSoundFileForChar(item.text);
-        return file ? `${SOUNDS_URL}/${file}` : null;
+        return file ? resolveAudioSource(file) : null;
     }
     return null;
   };
 
+  const getFeedbackSound = (item) =>
+    item?.feedbackSound || item?.feedback_sound || data?.feedbackSound || data?.feedback_sound;
+
   const playSound = (side) => {
     const item = side === "left" ? currentPair?.left : currentPair?.right;
     const src = getAudioSource(item);
+    const feedbackSound = getFeedbackSound(item);
 
-    if (!src || !audioRef.current) return;
-
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0;
+    if (!src) return;
+    stop();
     setPlayingSide(side);
 
-    audioRef.current.src = src;
-    audioRef.current.play().catch(err => {
-        console.error("Audio error:", err);
+    if (feedbackSound) {
+      playSequence([feedbackSound, src], {
+        gapMs: 200,
+        onComplete: () => setPlayingSide(null)
+      });
+    } else {
+      const audio = play(src);
+      if (audio) {
+        audio.onended = () => setPlayingSide(null);
+      } else {
         setPlayingSide(null);
-    });
+      }
+    }
 
     setPlayedState(prev => {
         const newState = { ...prev, [side]: true };
@@ -65,18 +76,12 @@ export default function ComparisonAudio({
     });
   };
 
-  const handleAudioEnded = () => {
-    setPlayingSide(null);
-  };
-
   if (!currentPair) return null;
 
   const bothDone = playedState.left && playedState.right;
 
   return (
     <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
-      <audio ref={audioRef} onEnded={handleAudioEnded} crossOrigin="anonymous" />
-
       <LessonFrame className="pt-6 px-6 pb-20 h-full overflow-y-auto" variant="full">
         <div className="flex flex-col min-h-full">
             <h2 className="text-xs uppercase tracking-[0.25em] text-cyan-300/80 mb-6 text-center shrink-0">

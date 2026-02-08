@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { fetchCurrentUser } from '../data/auth';
 import { fetchDictionaryEntries } from '../data/review';
 import { getDueItems, updateSRSItem } from '../services/srsService';
+import useAudioPlayer from './useAudioPlayer';
 
 const DEFAULT_SETTINGS = {
   mode: 'mix',
@@ -21,7 +22,7 @@ export default function useReviewSession() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [error, setError] = useState(null);
   const [emptyReason, setEmptyReason] = useState(null);
-  const audioRef = useRef(null);
+  const { play: playAudio } = useAudioPlayer();
 
   useEffect(() => {
     if (!loading && !isFinished && sessionData.length > 0 && settings.autoPlay) {
@@ -33,7 +34,7 @@ export default function useReviewSession() {
         return () => clearTimeout(timer);
       }
     }
-  }, [currentIndex, loading, isFinished, sessionData, settings.autoPlay, settings.mode]);
+  }, [currentIndex, loading, isFinished, sessionData, settings.autoPlay, settings.mode, playAudio]);
 
   const initSession = useCallback(async () => {
     try {
@@ -88,14 +89,6 @@ export default function useReviewSession() {
   useEffect(() => { initSession(); }, [initSession]);
 
   const shuffle = (array) => [...array].sort(() => 0.5 - Math.random());
-
-  const playAudio = (file) => {
-    if (!file) return;
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    const audio = new Audio(`/sounds/${file}`);
-    audioRef.current = audio;
-    audio.play().catch(() => {});
-  };
 
   const handleAnswer = async (option) => {
     const current = sessionData[currentIndex];
