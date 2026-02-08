@@ -119,6 +119,12 @@ export default function LessonPlayer() {
 
   }, [step, safeItems, setCanAdvance]);
 
+  useEffect(() => {
+    if (type === 'no_spaces' && Array.isArray(noSpacesWordList) && noSpacesWordList.length > 0) {
+      setCanAdvance(true);
+    }
+  }, [noSpacesWordList, setCanAdvance, type]);
+
   // --- ОБЕРТКА ДЛЯ ПЕРЕХОДА (FIX STALE STATE) ---
   const handleContinue = () => {
     // Принудительно блокируем кнопку ПЕРЕД переходом,
@@ -133,6 +139,13 @@ export default function LessonPlayer() {
   const type = rawType
     ? rawType.toLowerCase().trim().replace(/[\s-]+/g, '_')
     : '';
+  const noSpacesWordList = current?.word_list || current?.wordList || [];
+
+  useEffect(() => {
+    if (type === 'no_spaces' && Array.isArray(noSpacesWordList) && noSpacesWordList.length > 0) {
+      setCanAdvance(true);
+    }
+  }, [noSpacesWordList, setCanAdvance, type]);
 
   const baseConsonantGlyphIds = useMemo(() => {
     const ids = new Set();
@@ -494,6 +507,7 @@ export default function LessonPlayer() {
             revealedSet={revealedConsonants}
             onConsonantClick={handleConsonantClick}
             onNonConsonantClick={handleNonConsonantClick}
+            wordList={noSpacesWordList}
           />
           <div className="mt-4 flex justify-center w-full">
             <GlyphHintCard
