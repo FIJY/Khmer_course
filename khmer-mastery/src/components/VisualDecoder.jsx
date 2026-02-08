@@ -8,6 +8,11 @@ import {
   isKhmerConsonantChar,
 } from "../lib/khmerGlyphRenderer";
 import { buildShapeApiUrl } from "../lib/apiConfig";
+import useAudioPlayer from "../hooks/useAudioPlayer";
+import {
+  DEFAULT_FEEDBACK_SOUNDS,
+  evaluateGlyphSuccess
+} from "../lib/glyphFeedback";
 
 const COENG_CHAR = "្";
 
@@ -153,6 +158,10 @@ export default function VisualDecoder(props) {
     showTapHint = true,
     getGlyphFillColor,
     showSelectionOutline = true,
+    feedbackRule,
+    feedbackTargetChar,
+    feedbackSounds,
+    feedbackGapMs = 200,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
 
@@ -164,6 +173,7 @@ export default function VisualDecoder(props) {
   const [lastTap, setLastTap] = useState(null);
 
   const [glyphSoundMap, setGlyphSoundMap] = useState({});
+  const { playSequence } = useAudioPlayer();
 
   const svgRef = useRef(null);
   const hitRefs = useRef([]);
@@ -492,7 +502,24 @@ export default function VisualDecoder(props) {
       soundFile = getSoundFileForChar(resolvedChar);
     }
 
-    if (onLetterClick) onLetterClick(soundFile);
+    const effectiveRule = feedbackRule ?? data?.success_rule ?? data?.successRule;
+    if (effectiveRule) {
+      const isSuccess = evaluateGlyphSuccess({
+        rule: effectiveRule,
+        glyphChar: resolvedChar,
+        glyphMeta: resolvedGlyphMeta?.[hit.idx],
+        targetChar: feedbackTargetChar ?? data?.target ?? data?.target_char
+      });
+      const sounds = {
+        ...DEFAULT_FEEDBACK_SOUNDS,
+        ...(feedbackSounds || {})
+      };
+      const feedbackSound = isSuccess ? sounds.success : sounds.error;
+      const sequence = soundFile ? [feedbackSound, soundFile] : [feedbackSound];
+      playSequence(sequence, { gapMs: feedbackGapMs });
+    } else if (onLetterClick) {
+      onLetterClick(soundFile);
+    }
     if (onComplete) onComplete();
   };
 

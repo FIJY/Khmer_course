@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchVocabCards } from '../data/vocab';
+import useAudioPlayer from './useAudioPlayer';
 
 export default function useVocab() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
   const [error, setError] = useState(null);
+  const { play: playAudio } = useAudioPlayer();
 
   const fetchVocab = useCallback(async () => {
     try {
@@ -22,10 +24,6 @@ export default function useVocab() {
   }, []);
 
   useEffect(() => { fetchVocab(); }, [fetchVocab]);
-
-  const playAudio = (filename) => {
-    if (filename) new Audio(`/sounds/${filename}`).play().catch(() => {});
-  };
 
   const filteredItems = useMemo(() => items.filter(item => {
     const term = filter.toLowerCase();

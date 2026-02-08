@@ -40,6 +40,7 @@
         "footer": "Find the Hero. Ignore the Accessories.",
         "word": "ខ្ញុំ",
         "target": "ខ",
+        "success_rule": "consonant",
         "char_split": [
           "ខ",
           "្ញុំ"
@@ -62,6 +63,7 @@
         "footer": "Tap the first letter to catch the Hero.",
         "word": "ចាប់ខ្ញុំបើអ្នកអាច",
         "target": "ច",
+        "success_rule": "consonant",
         "char_split": null
       }
     },
@@ -142,6 +144,7 @@
         "word": "អរគុណ",
         "word_pronunciation": "or-kun",
         "target_char": "ណ",
+        "success_rule": "consonant",
         "char_split": [
           "អ",
           "រ",
@@ -162,6 +165,7 @@
         "title": "Find the Main Consonant",
         "text": "Tap the main consonant in the word.",
         "word": "ខ្មែរ",
+        "success_rule": "consonant",
         "translation": "Khmer"
       }
     },
@@ -222,6 +226,7 @@
       "data": {
         "title": "No Spaces Drill",
         "subtitle": "Tap each consonant in the stream.",
+        "success_rule": "consonant",
         "khmerText": "ភាសាខ្មែរមិនមានចន្លោះ"
       }
     },
