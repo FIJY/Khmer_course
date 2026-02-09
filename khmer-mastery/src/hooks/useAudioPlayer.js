@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 
 const DEFAULT_SOUNDS_BASE = '/sounds';
-const DEFAULT_SEQUENCE_GAP_MS = 0;
+const DEFAULT_SEQUENCE_GAP_MS = -200;
 const FEEDBACK_VOLUME = 0.5;
 
 const resolveAudioSource = (audioFile, baseUrl = DEFAULT_SOUNDS_BASE) => {

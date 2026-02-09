@@ -203,7 +203,7 @@ export default function AudioGuessSlide({ data, onPlayAudio, onComplete }) {
         </div>
 
         <div className="mt-8">
-          <div className={`grid ${gridClass} gap-4`}> 
+          <div className={`grid ${gridClass} gap-4`}>
             {normalizedChoices.map((choice, idx) => {
               const glyph = choice?.glyph ?? "";
               const label = choice?.label ?? "";

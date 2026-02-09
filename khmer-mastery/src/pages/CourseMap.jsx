@@ -10,39 +10,38 @@ import useCourseMap from '../hooks/useCourseMap';
 import { t } from '../i18n';
 import { updateLastOpenedProgress } from '../data/progress';
 
-// МЫ ОСТАВИЛИ ТОЛЬКО ОДИН БЛОК, ЧТОБЫ БЫЛО КРАСИВО И НЕ ПУСТО
+// ✅ ИСПРАВЛЕННЫЕ ДИАПАЗОНЫ
+// Логика: Глава 1 имеет подуроки 101-199, глава 2 → 201-299, и т.д.
+// Поэтому диапазоны должны покрывать как саму главу, так и её подуроки
 const COURSE_LEVELS = [
   {
     title: "CONTACT & REACTIONS",
     description: "I don't get lost, I'm polite, and I am understood.",
-    range: [1, 5],
+    range: [1, 599],  // Главы 1-5 + их подуроки (101-599)
     color: "text-cyan-400",
     bg: "from-cyan-500/10 to-transparent",
     border: "border-cyan-500/20"
   },
-
-  // --- 🔥 ТВОЙ ГЛАВНЫЙ БЛОК (R1 и далее) ---
-  {
-    title: "VISUAL DECODER: READING & WRITING",
-    description: "Crack the code. Learn the Khmer script from scratch.",
-    range: [10000, 10699],
-    color: "text-amber-400",
-    bg: "from-amber-500/10 to-transparent",
-    border: "border-amber-500/20"
-  },
-
   {
     title: "DAILY LIFE",
     description: "I live, buy, get medical help, and move around.",
-    range: [6, 10],
+    range: [6, 1099],  // Главы 6-10 + их подуроки (601-1099)
     color: "text-teal-400",
     bg: "from-teal-500/10 to-transparent",
     border: "border-teal-500/20"
   },
   {
+    title: "VISUAL DECODER: READING & WRITING",
+    description: "Crack the code. Learn the Khmer script from scratch.",
+    range: [10000, 10699],  // Главы 10000-10699 (для R1-R6 и их подуроки)
+    color: "text-amber-400",
+    bg: "from-amber-500/10 to-transparent",
+    border: "border-amber-500/20"
+  },
+  {
     title: "THINKING IN KHMER",
     description: "I start understanding the meaning, not just the phrases.",
-    range: [11, 18],
+    range: [11, 1899],  // Главы 11-18 + их подуроки (1101-1899)
     color: "text-sky-400",
     bg: "from-sky-500/10 to-transparent",
     border: "border-sky-500/20"
@@ -50,7 +49,7 @@ const COURSE_LEVELS = [
   {
     title: "GRAMMAR AS A TOOL",
     description: "Understanding structure: Causes, conditions, and frequency.",
-    range: [19, 23],
+    range: [19, 2399],  // Главы 19-23 + их подуроки (1901-2399)
     color: "text-indigo-400",
     bg: "from-indigo-500/10 to-transparent",
     border: "border-indigo-500/20"
@@ -58,7 +57,7 @@ const COURSE_LEVELS = [
   {
     title: "EXPANDING THE WORLD",
     description: "Work, education, technology, and travel.",
-    range: [24, 28],
+    range: [24, 2899],  // Главы 24-28 + их подуроки (2401-2899)
     color: "text-violet-400",
     bg: "from-violet-500/10 to-transparent",
     border: "border-violet-500/20"
@@ -66,7 +65,7 @@ const COURSE_LEVELS = [
   {
     title: "CONNECTED SPEECH",
     description: "Logic, opinions, conflicts, and storytelling.",
-    range: [29, 38],
+    range: [29, 3899],  // Главы 29-38 + их подуроки (2901-3899)
     color: "text-purple-400",
     bg: "from-purple-500/10 to-transparent",
     border: "border-purple-500/20"
@@ -74,7 +73,7 @@ const COURSE_LEVELS = [
   {
     title: "LANGUAGE AS THOUGHT",
     description: "Abstract concepts, idioms, and native speed.",
-    range: [39, 46],
+    range: [39, 4699],  // Главы 39-46 + их подуроки (3901-4699)
     color: "text-fuchsia-400",
     bg: "from-fuchsia-500/10 to-transparent",
     border: "border-fuchsia-500/20"
@@ -82,10 +81,18 @@ const COURSE_LEVELS = [
   {
     title: "NO TRANSLATION NEEDED",
     description: "Cultural subtext, humor, irony, and fluency.",
-    range: [47, 60],
+    range: [47, 6099],  // Главы 47-60 + их подуроки (4701-6099)
     color: "text-rose-400",
     bg: "from-rose-500/10 to-transparent",
     border: "border-rose-500/20"
+  },
+  {
+    title: "SPECIAL & BONUS CONTENT",
+    description: "Additional materials and special lessons.",
+    range: [99900, 99999],  // Специальные уроки (99900+)
+    color: "text-yellow-400",
+    bg: "from-yellow-500/10 to-transparent",
+    border: "border-yellow-500/20"
   }
 ];
 
@@ -243,7 +250,7 @@ export default function CourseMap() {
         </div>
       </div>
 
-      <div className="space-y-12 mt-6 pb-24"> {/* Увеличил паддинг снизу, чтобы кнопка не перекрывала контент */}
+      <div className="space-y-12 mt-6 pb-24">
         {Object.keys(chapters).length === 0 ? (
           <EmptyState
             title={t('empty.lessons')}
