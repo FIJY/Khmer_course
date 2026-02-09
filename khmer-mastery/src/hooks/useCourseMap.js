@@ -11,7 +11,7 @@ const getChapterId = (lessonId) => {
   return Math.floor(lessonId / 100);
 };
 
-const getChapterDisplayId = (chapterId) => (chapterId >= 10000 ? Math.floor(chapterId / 100) : chapterId);
+const getChapterDisplayId = (chapterId) => chapterId;
 
 const isChapterLesson = (lessonId) => lessonId < 100 || lessonId % 100 === 0;
 
@@ -44,12 +44,15 @@ const buildChaptersMap = (allLessons) => {
 
   allLessons.forEach((lesson) => {
     const lessonId = Number(lesson.id ?? lesson.lesson_id);
+    const rawModuleId = lesson.module_id ?? lesson.chapter_id ?? lesson.moduleId ?? lesson.chapterId;
+    const moduleId = Number(rawModuleId);
     if (!Number.isFinite(lessonId)) return;
 
-    const chapterId = getChapterId(lessonId);
+    const chapterId = Number.isFinite(moduleId) ? moduleId : getChapterId(lessonId);
     const displayId = getChapterDisplayId(chapterId);
+    const isPrimaryChapterLesson = lessonId === chapterId;
 
-    if (isChapterLesson(lessonId)) {
+    if (isPrimaryChapterLesson || isChapterLesson(lessonId)) {
       chaptersMap[chapterId] = {
         ...lesson,
         id: chapterId,
