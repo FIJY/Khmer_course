@@ -1,54 +1,43 @@
-// src/hooks/useCourseMap.js
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchCurrentUser } from '../data/auth';
 import { fetchAllLessons } from '../data/lessons';
 import { fetchCompletedLessonIds, fetchLastOpenedProgress } from '../data/progress';
 
-// Helper: Parent ID Logic
+// Хелпер: вычисляем ID родителя
 const calculateParentId = (lessonId) => {
   const id = Number(lessonId);
+
+  // Исключаем системные/тестовые ID
   if (id === 999 || id === 99999) return null;
-  if (id >= 10000) return Math.floor(id / 100) * 100; // 10101 -> 10100
-  if (id >= 100) return Math.floor(id / 100);       // 101 -> 1
+
+  // Логика для Чтения (R1...): 10101 -> 10100
+  if (id >= 10000) {
+    return Math.floor(id / 100) * 100;
+  }
+
+  // Логика для Основного курса: 101 -> 1
+  if (id >= 100) {
+    return Math.floor(id / 100);
+  }
+
   return null;
 };
 
-// Helper: Is Chapter?
+// Хелпер: это глава?
 const isChapterCheck = (id) => {
   const numId = Number(id);
+  // Глава, если ID < 100 или это круглое число >= 10000
   return numId < 100 || (numId >= 10000 && numId % 100 === 0);
-};
-
-const CYRILLIC_PATTERN = /[\u0400-\u04FF]/;
-
-const normalizeLessonTitle = (lesson, fallbackTitle) => {
-  const candidates = [
-    lesson?.title_en,
-    lesson?.title,
-    lesson?.name,
-    lesson?.label
-  ];
-  const cleaned = candidates
-    .map((candidate) => (typeof candidate === 'string' ? candidate.trim() : ''))
-    .find((candidate) => candidate.length >= 3 && !CYRILLIC_PATTERN.test(candidate));
-  return cleaned || fallbackTitle;
-};
-
-const prefixLessonNumber = (lessonId, title) => {
-  if (!Number.isFinite(lessonId) || lessonId >= 10000) return title;
-  if (typeof title !== 'string' || title.length === 0) return title;
-  if (/^\d/.test(title)) return title;
-  return `${lessonId}: ${title}`;
 };
 
 const buildChaptersMap = (allLessons) => {
   if (!allLessons || !Array.isArray(allLessons)) return {};
+
   const chaptersMap = {};
 
-  // Pass 1: Create Chapters
+  // --- ШАГ 1: Создаем каркас существующих ГЛАВ ---
   allLessons.forEach((lesson) => {
-<<<<<<< HEAD
     const id = Number(lesson.id);
     if (id === 999 || id === 99999) return;
 
@@ -60,70 +49,48 @@ const buildChaptersMap = (allLessons) => {
         subLessons: []
       };
     }
-=======
-    const lessonId = Number(lesson.id ?? lesson.lesson_id);
-    if (!Number.isFinite(lessonId)) return;
-
-    const chapterId = getChapterId(lessonId);
-    const displayId = getChapterDisplayId(chapterId);
-
-    if (isChapterLesson(lessonId)) {
-      chaptersMap[chapterId] = {
-        ...lesson,
-        id: chapterId,
-        displayId,
-        title: normalizeLessonTitle(lesson, `Chapter ${displayId}`),
-        subLessons: []
-      };
-      return;
-    }
-
-    if (!chaptersMap[chapterId]) {
-      chaptersMap[chapterId] = {
-        id: chapterId,
-        displayId,
-        title: `Chapter ${displayId}`,
-        description: 'Coming soon...',
-        subLessons: []
-      };
-    }
-
-    chaptersMap[chapterId].subLessons.push({
-      id: lessonId,
-      title: prefixLessonNumber(
-        lessonId,
-        normalizeLessonTitle(lesson, `Lesson ${lessonId}`)
-      ),
-      order_index: lesson.order_index ?? 0
-    });
->>>>>>> 7df6f32610cf04eb02e91d4affda9c01becc4cfb
   });
 
-  // Pass 2: Assign Children
+  // --- ШАГ 2: Раскладываем ДЕТЕЙ по главам ---
   allLessons.forEach((lesson) => {
     const id = Number(lesson.id);
-    if (chaptersMap[id]) return; // Skip chapters
+
+    // Если урок уже обработан как глава - пропускаем
+    if (chaptersMap[id]) return;
     if (id === 999 || id === 99999) return;
 
     const parentId = calculateParentId(id);
 
-    if (parentId && chaptersMap[parentId]) {
+    if (parentId) {
+      // АВТО-СОЗДАНИЕ РОДИТЕЛЯ (если его нет в базе)
+      if (!chaptersMap[parentId]) {
+        console.warn(`Creating virtual parent for lesson ${id} -> ${parentId}`);
+        chaptersMap[parentId] = {
+          id: parentId,
+          title: `Unit ${parentId >= 10000 ? parentId / 100 : parentId}`, // Заглушка названия
+          description: "Auto-generated chapter",
+          order_index: parentId, // Сортировка по ID
+          displayId: parentId >= 10000 ? Math.floor(parentId / 100) : parentId,
+          subLessons: []
+        };
+      }
+
+      // Добавляем урок в (существующую или созданную) главу
       chaptersMap[parentId].subLessons.push({
         ...lesson,
         id: id,
         title: lesson.title,
         order_index: lesson.order_index ?? 0
       });
-    } else if (parentId) {
-       // DEBUG: Log orphans
-       console.warn(`Orphan lesson found: ${id}. Expected parent ${parentId} not found in fetched data.`);
     }
   });
 
-  // Sort
+  // --- ШАГ 3: Сортируем уроки внутри глав ---
   Object.values(chaptersMap).forEach((chapter) => {
     chapter.subLessons.sort((a, b) => {
-      if (a.order_index !== b.order_index) return a.order_index - b.order_index;
+      if (a.order_index !== b.order_index) {
+        return a.order_index - b.order_index;
+      }
       return a.id - b.id;
     });
   });
@@ -146,26 +113,20 @@ export default function useCourseMap() {
       setLoading(true);
       setError(null);
       const user = await fetchCurrentUser();
-      if (!user) { navigate('/login'); return; }
+      if (!user) {
+        navigate('/login');
+        return;
+      }
       setUserId(user.id);
 
       const doneIds = await fetchCompletedLessonIds(user.id);
       setCompletedLessons(Array.isArray(doneIds) ? doneIds : []);
 
-      // FETCH
       const allLessons = await fetchAllLessons();
-
-      // DEBUG LOGS
-      console.log("--- DEBUG COURSE MAP ---");
-      console.log("Total lessons fetched:", allLessons.length);
-      console.log("Sample lesson IDs:", allLessons.slice(0, 5).map(l => l.id));
-      const readingLessons = allLessons.filter(l => l.id >= 10000);
-      console.log("Reading lessons (ID >= 10000) count:", readingLessons.length);
-      if (readingLessons.length === 0) {
-        console.error("CRITICAL: No reading lessons fetched! Check fetchAllLessons query.");
+      if (!allLessons || !allLessons.length) {
+        setChapters({});
+        return;
       }
-
-      if (!allLessons.length) { setChapters({}); return; }
 
       const builtMap = buildChaptersMap(allLessons);
       setChapters(builtMap);
@@ -176,7 +137,7 @@ export default function useCourseMap() {
 
     } catch (e) {
       console.error('CRITICAL MAP ERROR:', e);
-      setError('Unable to load course map.');
+      setError('Unable to load the course map. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -185,6 +146,14 @@ export default function useCourseMap() {
   useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
   return {
-    userId, loading, completedLessons, lastOpenedBlockId, lastOpenedLessonId, chapters, error, navigate, refresh: fetchAllData
+    userId,
+    loading,
+    completedLessons,
+    lastOpenedBlockId,
+    lastOpenedLessonId,
+    chapters,
+    error,
+    navigate,
+    refresh: fetchAllData
   };
 }
