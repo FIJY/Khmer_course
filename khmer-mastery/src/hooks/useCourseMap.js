@@ -48,7 +48,8 @@ const buildChaptersMap = (allLessons) => {
     const moduleId = Number(rawModuleId);
     if (!Number.isFinite(lessonId)) return;
 
-    const chapterId = Number.isFinite(moduleId) ? moduleId : getChapterId(lessonId);
+    const useModuleForChapter = Number.isFinite(moduleId) && lessonId < 10000 && moduleId >= 10000;
+    const chapterId = useModuleForChapter ? moduleId : getChapterId(lessonId);
     const displayId = getChapterDisplayId(chapterId);
     const isPrimaryChapterLesson = lessonId === chapterId;
 
