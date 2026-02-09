@@ -1,6 +1,7 @@
 import React from "react";
 import { MousePointerClick } from 'lucide-react';
 import LessonCard from '../UI/LessonCard';
+import VisualDecoder from '../VisualDecoder';
 
 export default function ConsonantStreamDrill({
   text = "",
@@ -9,9 +10,6 @@ export default function ConsonantStreamDrill({
   onNonConsonantClick,
   wordList = []
 }) {
-  // Разбиваем текст на массив символов (правильно работая с Unicode)
-  const chars = Array.from(text);
-
   // Проверка: это согласная? (диапазон Unicode для кхмерских согласных)
   const isKhmerConsonant = (char) => {
     if (!char) return false;
@@ -20,6 +18,17 @@ export default function ConsonantStreamDrill({
   };
 
   const hasWordList = Array.isArray(wordList) && wordList.length > 0;
+
+  const handleGlyphClick = (char, glyphMeta) => {
+    const resolvedIndex = Number.isInteger(glyphMeta?.resolvedIndex)
+      ? glyphMeta.resolvedIndex
+      : -1;
+    if (isKhmerConsonant(char)) {
+      if (onConsonantClick) onConsonantClick(resolvedIndex, char);
+    } else if (onNonConsonantClick) {
+      onNonConsonantClick(resolvedIndex, char);
+    }
+  };
 
   return (
     <div className="w-full flex justify-center px-4 animate-in fade-in zoom-in duration-300">
@@ -30,8 +39,21 @@ export default function ConsonantStreamDrill({
           <span>Tap Consonants</span>
         </div>
 
+        <div className="w-full">
+          <VisualDecoder
+            text={text}
+            interactionMode="decoder_select"
+            selectionMode="multi"
+            revealOnSelect={false}
+            showTapHint={false}
+            feedbackRule=""
+            hideDefaultButton={true}
+            onGlyphClick={handleGlyphClick}
+          />
+        </div>
+
         {hasWordList ? (
-          <div className="w-full flex flex-col gap-4 text-left">
+          <div className="w-full flex flex-col gap-4 text-left mt-6">
             {wordList.map((entry, idx) => (
               <div
                 key={`${entry.khmer || entry.word || idx}`}
@@ -54,54 +76,7 @@ export default function ConsonantStreamDrill({
               </div>
             ))}
           </div>
-        ) : (
-          <div className="flex flex-wrap justify-center max-w-2xl text-5xl md:text-6xl leading-[1.35] font-semibold tracking-wide">
-            {chars.map((char, index) => {
-              const isRevealed = revealedSet.has(index);
-              const isTarget = isKhmerConsonant(char);
-
-              return (
-                <span
-                  key={index}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    if (isTarget) {
-                      // Если нажали на согласную - сообщаем наверх
-                      if (onConsonantClick) onConsonantClick(index, char);
-                    } else {
-                      // Если промахнулись
-                      if (onNonConsonantClick) onNonConsonantClick(index, char);
-                    }
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      if (isTarget) {
-                        if (onConsonantClick) onConsonantClick(index, char);
-                      } else if (onNonConsonantClick) {
-                        onNonConsonantClick(index, char);
-                      }
-                    }
-                  }}
-                  className={`inline-flex cursor-pointer focus-visible:outline-none ${isTarget ? 'mx-1' : ''}`}
-                  style={{
-                    color: isTarget
-                      ? (isRevealed ? '#34d399' : '#ffffff')
-                      : (revealedSet.size > 0 ? '#64748b' : '#ffffff'),
-                    transform: isRevealed ? 'scale(1.05)' : 'scale(1.0)',
-                    transition: 'color 200ms ease, transform 120ms ease'
-                  }}
-                  title={isTarget ? 'Consonant' : 'Not a consonant'}
-                >
-                  <span className={!isRevealed && isTarget ? 'hover:underline decoration-2 underline-offset-8' : ''}>
-                    {char}
-                  </span>
-                </span>
-              );
-            })}
-          </div>
-        )}
+        ) : null}
       </LessonCard>
     </div>
   );
