@@ -7,8 +7,7 @@ export default function ConsonantStreamDrill({
   revealedSet = new Set(), // Набор индексов уже найденных букв
   onConsonantClick,
   onNonConsonantClick,
-  wordList = [],
-  onWordClick
+  wordList = []
 }) {
   // Разбиваем текст на массив символов (правильно работая с Unicode)
   const chars = Array.from(text);
@@ -34,11 +33,9 @@ export default function ConsonantStreamDrill({
         {hasWordList ? (
           <div className="w-full flex flex-col gap-4 text-left">
             {wordList.map((entry, idx) => (
-              <button
+              <div
                 key={`${entry.khmer || entry.word || idx}`}
-                type="button"
-                onClick={() => onWordClick?.(entry, idx)}
-                className="flex w-full items-start justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left transition-colors hover:border-cyan-500/40 hover:bg-white/10"
+                className="flex items-start justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
               >
                 <div className="flex flex-col gap-1">
                   <div className="text-2xl md:text-3xl font-khmer text-white">
@@ -54,7 +51,7 @@ export default function ConsonantStreamDrill({
                 {entry.starred ? (
                   <div className="text-2xl">⭐</div>
                 ) : null}
-              </button>
+              </div>
             ))}
           </div>
         ) : (

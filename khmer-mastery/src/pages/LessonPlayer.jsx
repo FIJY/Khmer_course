@@ -67,12 +67,6 @@ export default function LessonPlayer() {
   } = useLessonPlayer();
 
   const safeItems = Array.isArray(items) ? items : [];
-  const current = safeItems[step]?.data;
-  const rawType = safeItems[step]?.type;
-  const type = rawType
-    ? rawType.toLowerCase().trim().replace(/[\s-]+/g, '_')
-    : '';
-  const noSpacesWordList = current?.word_list || current?.wordList || [];
 
   // --- ЛОГИКА ДЛЯ МАТРИЦЫ (No Spaces) ---
   const [revealedConsonants, setRevealedConsonants] = useState(new Set());
@@ -86,7 +80,6 @@ export default function LessonPlayer() {
   const [heroSelected, setHeroSelected] = useState(false);
   const [noSpacesHint, setNoSpacesHint] = useState(null);
   const [noSpacesSubscriptIndices, setNoSpacesSubscriptIndices] = useState(new Set());
-  const [noSpacesWordHint, setNoSpacesWordHint] = useState(null);
 
   // --- СБРОС СОСТОЯНИЯ ПРИ СМЕНЕ ШАГА ---
   useEffect(() => {
@@ -100,7 +93,6 @@ export default function LessonPlayer() {
     setHeroSelected(false);
     setNoSpacesHint(null);
     setNoSpacesSubscriptIndices(new Set());
-    setNoSpacesWordHint(null);
 
     const rawType = safeItems[step]?.type;
     const currentType = rawType
@@ -127,12 +119,6 @@ export default function LessonPlayer() {
 
   }, [step, safeItems, setCanAdvance]);
 
-  useEffect(() => {
-    if (type === 'no_spaces' && Array.isArray(noSpacesWordList) && noSpacesWordList.length > 0) {
-      setCanAdvance(true);
-    }
-  }, [noSpacesWordList, setCanAdvance, type]);
-
   // --- ОБЕРТКА ДЛЯ ПЕРЕХОДА (FIX STALE STATE) ---
   const handleContinue = () => {
     // Принудительно блокируем кнопку ПЕРЕД переходом,
@@ -141,6 +127,13 @@ export default function LessonPlayer() {
     setHeroSelected(false);
     handleNext();
   };
+
+  const current = safeItems[step]?.data;
+  const rawType = safeItems[step]?.type;
+  const type = rawType
+    ? rawType.toLowerCase().trim().replace(/[\s-]+/g, '_')
+    : '';
+  const noSpacesWordList = current?.word_list || current?.wordList || [];
 
   useEffect(() => {
     if (type === 'no_spaces' && Array.isArray(noSpacesWordList) && noSpacesWordList.length > 0) {
@@ -194,7 +187,7 @@ export default function LessonPlayer() {
   };
 
   useEffect(() => {
-    if (type !== 'no_spaces' || !current?.khmerText || noSpacesWordList.length > 0) return;
+    if (type !== 'no_spaces' || !current?.khmerText) return;
     let active = true;
 
     fetch(`${buildShapeApiUrl("/api/shape")}?text=${encodeURIComponent(current.khmerText)}`)
@@ -222,7 +215,7 @@ export default function LessonPlayer() {
     return () => {
       active = false;
     };
-  }, [current?.khmerText, noSpacesWordList.length, type]);
+  }, [current?.khmerText, type]);
 
   const updateNoSpacesHint = (index, char) => {
     const chars = Array.from(current?.khmerText || '');
@@ -248,48 +241,6 @@ export default function LessonPlayer() {
       hint: truncatedHint,
       isSubscript,
     });
-  };
-
-  const handleWordListClick = (entry) => {
-    const wordText = entry?.khmer || entry?.word || "";
-    if (!wordText) return;
-    fetch(`${buildShapeApiUrl("/api/shape")}?text=${encodeURIComponent(wordText)}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
-        return res.json();
-      })
-      .then((json) => {
-        const glyphs = Array.isArray(json) ? json : [];
-        const resolved = resolveGlyphMeta(glyphs, wordText);
-        const targetGlyph = resolved.find((glyph) => glyph.isSubscript)
-          || resolved.find((glyph) => /[\u1780-\u17A2]/.test(glyph.resolvedChar || glyph.char))
-          || resolved[0];
-        if (!targetGlyph) return;
-        const resolvedChar = targetGlyph.resolvedChar || targetGlyph.char;
-        const isSubscript = targetGlyph.isSubscript;
-        const normalized = normalizeGlyphChar(resolvedChar);
-        const { typeLabel, hint } = getGlyphHintContent({
-          glyphChar: normalized,
-          alphabetDb,
-          fallbackTypeLabel: fallbackTypeFromChar
-        });
-        const hintMaxChars = current?.hint_max_chars ?? current?.hintMaxChars;
-        const truncatedHint = truncateHint(hint, hintMaxChars);
-        const isSubscriptConsonant = isSubscript && /[\u1780-\u17A2]/.test(normalized);
-        setNoSpacesWordHint({
-          displayChar: buildGlyphDisplayChar({
-            glyphChar: normalized,
-            isSubscript,
-            isSubscriptConsonant,
-          }),
-          typeLabel,
-          hint: truncatedHint,
-          isSubscript,
-        });
-      })
-      .catch(() => {
-        setNoSpacesWordHint(null);
-      });
   };
 
   const handleConsonantClick = (index, char) => {
@@ -551,35 +502,20 @@ export default function LessonPlayer() {
             onConsonantClick={handleConsonantClick}
             onNonConsonantClick={handleNonConsonantClick}
             wordList={noSpacesWordList}
-            onWordClick={handleWordListClick}
           />
-          {noSpacesWordList.length === 0 ? (
-            <div className="mt-4 flex justify-center w-full">
-              <GlyphHintCard
-                displayChar={noSpacesHint?.displayChar}
-                typeLabel={noSpacesHint?.typeLabel}
-                hint={noSpacesHint?.hint}
-                isSubscript={noSpacesHint?.isSubscript}
-                placeholder="Tap a glyph"
-              />
-            </div>
-          ) : (
-            <div className="mt-4 flex justify-center w-full">
-              <GlyphHintCard
-                displayChar={noSpacesWordHint?.displayChar}
-                typeLabel={noSpacesWordHint?.typeLabel}
-                hint={noSpacesWordHint?.hint}
-                isSubscript={noSpacesWordHint?.isSubscript}
-                placeholder="Tap a word"
-              />
-            </div>
-          )}
-          {noSpacesWordList.length === 0 ? (
-            <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-white/10 text-xs text-gray-400 w-full text-center">
-              <span className="text-emerald-400 font-bold uppercase tracking-widest mr-2">Goal:</span>
-              Find all {Array.from(current.khmerText || '').filter(c => c.match(/[\u1780-\u17A2]/)).length} commanders
-            </div>
-          ) : null}
+          <div className="mt-4 flex justify-center w-full">
+            <GlyphHintCard
+              displayChar={noSpacesHint?.displayChar}
+              typeLabel={noSpacesHint?.typeLabel}
+              hint={noSpacesHint?.hint}
+              isSubscript={noSpacesHint?.isSubscript}
+              placeholder="Tap a glyph"
+            />
+          </div>
+          <div className="mt-4 p-4 bg-gray-900 rounded-2xl border border-white/10 text-xs text-gray-400 w-full text-center">
+            <span className="text-emerald-400 font-bold uppercase tracking-widest mr-2">Goal:</span>
+            Find all {Array.from(current.khmerText || '').filter(c => c.match(/[\u1780-\u17A2]/)).length} commanders
+          </div>
         </div>
       )}
     </SessionFrame>

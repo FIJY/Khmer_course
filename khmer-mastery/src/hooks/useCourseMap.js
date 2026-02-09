@@ -20,12 +20,35 @@ const isChapterCheck = (id) => {
   return numId < 100 || (numId >= 10000 && numId % 100 === 0);
 };
 
+const CYRILLIC_PATTERN = /[\u0400-\u04FF]/;
+
+const normalizeLessonTitle = (lesson, fallbackTitle) => {
+  const candidates = [
+    lesson?.title_en,
+    lesson?.title,
+    lesson?.name,
+    lesson?.label
+  ];
+  const cleaned = candidates
+    .map((candidate) => (typeof candidate === 'string' ? candidate.trim() : ''))
+    .find((candidate) => candidate.length >= 3 && !CYRILLIC_PATTERN.test(candidate));
+  return cleaned || fallbackTitle;
+};
+
+const prefixLessonNumber = (lessonId, title) => {
+  if (!Number.isFinite(lessonId) || lessonId >= 10000) return title;
+  if (typeof title !== 'string' || title.length === 0) return title;
+  if (/^\d/.test(title)) return title;
+  return `${lessonId}: ${title}`;
+};
+
 const buildChaptersMap = (allLessons) => {
   if (!allLessons || !Array.isArray(allLessons)) return {};
   const chaptersMap = {};
 
   // Pass 1: Create Chapters
   allLessons.forEach((lesson) => {
+<<<<<<< HEAD
     const id = Number(lesson.id);
     if (id === 999 || id === 99999) return;
 
@@ -37,6 +60,43 @@ const buildChaptersMap = (allLessons) => {
         subLessons: []
       };
     }
+=======
+    const lessonId = Number(lesson.id ?? lesson.lesson_id);
+    if (!Number.isFinite(lessonId)) return;
+
+    const chapterId = getChapterId(lessonId);
+    const displayId = getChapterDisplayId(chapterId);
+
+    if (isChapterLesson(lessonId)) {
+      chaptersMap[chapterId] = {
+        ...lesson,
+        id: chapterId,
+        displayId,
+        title: normalizeLessonTitle(lesson, `Chapter ${displayId}`),
+        subLessons: []
+      };
+      return;
+    }
+
+    if (!chaptersMap[chapterId]) {
+      chaptersMap[chapterId] = {
+        id: chapterId,
+        displayId,
+        title: `Chapter ${displayId}`,
+        description: 'Coming soon...',
+        subLessons: []
+      };
+    }
+
+    chaptersMap[chapterId].subLessons.push({
+      id: lessonId,
+      title: prefixLessonNumber(
+        lessonId,
+        normalizeLessonTitle(lesson, `Lesson ${lessonId}`)
+      ),
+      order_index: lesson.order_index ?? 0
+    });
+>>>>>>> 7df6f32610cf04eb02e91d4affda9c01becc4cfb
   });
 
   // Pass 2: Assign Children
