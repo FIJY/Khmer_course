@@ -47,11 +47,9 @@ const buildChaptersMap = (allLessons) => {
     if (!Number.isFinite(lessonId)) return;
 
     const moduleId = Number(lesson.module_id);
-    const chapterId = lessonId >= 10000
-      ? getChapterId(lessonId)
-      : (Number.isFinite(moduleId) && moduleId > 0
-        ? moduleId
-        : getChapterId(lessonId));
+    const chapterId = Number.isFinite(moduleId) && moduleId > 0
+      ? moduleId
+      : getChapterId(lessonId);
     const displayId = getChapterDisplayId(chapterId);
 
     if (isChapterLesson(lessonId)) {
