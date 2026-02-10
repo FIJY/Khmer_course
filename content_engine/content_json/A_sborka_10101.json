@@ -1,0 +1,160 @@
+{
+  "lesson_id": 10101,
+  "title": "UNIT R1.1 — Orientation & Heroes",
+  "desc": "Text looks like chaos. Learn the single rule: every block has one main consonant.",
+  "module_id": 10000,
+  "order_index": 0,
+  "content": [
+    {
+      "type": "theory",
+      "data": {
+        "examples": [
+          {
+            "kind": "latin",
+            "text": "HAVEYOUEVERSEENATEXTLIKETHISBEFORE"
+          }
+        ],
+        "description": [
+          "This is what Khmer feels like at first."
+        ],
+        "footer": "No spaces. No mercy."
+      }
+    },
+    {
+      "type": "theory",
+      "data": {
+        "examples": [
+          {
+            "kind": "khmer",
+            "text": "ភាសាខ្មែរមិនមានចន្លោះរវាងពាក្យទេ។"
+          }
+        ],
+        "description": [
+          "In Khmer, there are no spaces between words.",
+          "This is normal."
+        ],
+        "footer": "You're not broken. The system is just different."
+      }
+    },
+    {
+      "type": "theory",
+      "data": {
+        "description": [
+          "Khmer blocks have a main letter.",
+          "This letter is the Hero."
+        ],
+        "examples": [
+          {
+            "kind": "khmer",
+            "text": "ខ្ញុំ"
+          }
+        ],
+        "footer": "Everything else attaches to the Hero."
+      }
+    },
+    {
+      "type": "theory",
+      "data": {
+        "description": [
+          "✅ That was the Hero.",
+          "In Khmer, the Hero is the main consonant."
+        ],
+        "footer": "Now you’ll hunt Heroes in real words."
+      }
+    },
+    {
+      "type": "learn_char",
+      "data": {
+        "mode": "hunt",
+        "name": "Find the Hero.",
+        "description": [
+          "Tap the main consonant."
+        ],
+        "footer": "Accessories don’t count.",
+        "word": "អរគុណ",
+        "target": "គ",
+        "success_rule": "consonant",
+        "char_split": [
+          "អ",
+          "រ",
+          "គុ",
+          "ណ"
+        ]
+      }
+    },
+    {
+      "type": "learn_char",
+      "data": {
+        "mode": "hunt",
+        "name": "Find the Hero.",
+        "description": [
+          "Tap the main consonant."
+        ],
+        "footer": "Same rule. New block.",
+        "word": "សួស្តី",
+        "target": "ស",
+        "success_rule": "consonant",
+        "char_split": [
+          "សួ",
+          "ស្តី"
+        ]
+      }
+    },
+    {
+      "type": "learn_char",
+      "data": {
+        "mode": "hunt",
+        "name": "Find the Hero.",
+        "description": [
+          "Ignore the accessories."
+        ],
+        "footer": "Only the main consonant counts.",
+        "word": "កម្ពុជា",
+        "target": "ក",
+        "success_rule": "consonant",
+        "char_split": [
+          "កំ",
+          "ពុ",
+          "ជា"
+        ]
+      }
+    },
+    {
+      "type": "learn_char",
+      "data": {
+        "mode": "hunt",
+        "name": "Find the Hero.",
+        "description": [
+          "Position doesn’t matter."
+        ],
+        "footer": "Look for structure, not order.",
+        "word": "អរគុណ",
+        "target": "គ",
+        "success_rule": "consonant",
+        "char_split": [
+          "អ",
+          "រ",
+          "គុ",
+          "ណ"
+        ]
+      }
+    },
+    {
+      "type": "learn_char",
+      "data": {
+        "mode": "hunt",
+        "name": "Find the Hero.",
+        "description": [
+          "Big doesn’t mean Hero."
+        ],
+        "footer": "Only consonants count.",
+        "word": "កៅ",
+        "target": "ក",
+        "success_rule": "consonant",
+        "char_split": [
+          "កៅ"
+        ]
+      }
+    }
+  ]
+}

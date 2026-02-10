@@ -1,0 +1,26 @@
+{
+  "lesson_id": 10101,
+  "title": "PREVIEW — single card",
+  "desc": "Temporary preview lesson",
+  "module_id": 10000,
+  "order_index": 0,
+  "content": [
+    {
+      "type": "learn_char",
+      "data": {
+        "mode": "hunt",
+        "name": "Find the Hero.",
+        "description": [
+          "Big doesn’t mean Hero."
+        ],
+        "footer": "Only consonants count.",
+        "word": "កៅ",
+        "target": "ក",
+        "success_rule": "consonant",
+        "char_split": [
+          "កៅ"
+        ]
+      }
+    }
+  ]
+}

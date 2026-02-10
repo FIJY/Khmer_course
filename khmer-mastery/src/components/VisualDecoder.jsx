@@ -108,7 +108,10 @@ export default function VisualDecoder(props) {
     feedbackGapMs = 200,
   } = props;
   const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
-
+  const targetChar =
+    feedbackTargetChar ?? data?.target ?? data?.target_char ?? data?.targetChar ?? "";
+  const heroHighlight = data?.hero_highlight ?? data?.heroHighlight ?? null;
+  console.log("HERO HINT:", { heroHighlight, targetChar, text, data });
   const [glyphs, setGlyphs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -536,6 +539,10 @@ export default function VisualDecoder(props) {
               : selectedId === glyphId;
           const fillColor = colorForGlyph(glyph, i, isSelected);
           const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
+          const resolvedChar = resolvedGlyphChars[i] || glyph.char;
+          const isTarget = !!targetChar && resolvedChar === targetChar;
+          const forceHeroOutline = heroHighlight === "green_outline" && isTarget;
+
           const isSubscript = subscriptConsonantIndices.has(i);
           const hitStrokeWidth = isSubscript ? 120 : 60;
 
@@ -579,11 +586,17 @@ export default function VisualDecoder(props) {
               }
             }
           }
+          const hintOutlineOn = forceHeroOutline && !isSelected;
 
           if (!showSelectionOutline) {
-            outlineColor = "transparent";
-            outlineWidth = 0;
+                      outlineColor = "transparent";
+                      outlineWidth = 0;
+                    }
+          if (forceHeroOutline && !isSelected) {
+            outlineColor = "#22c55e";
+            outlineWidth = 4;
           }
+
 
           return (
             <g key={glyphId}>
@@ -605,7 +618,10 @@ export default function VisualDecoder(props) {
                   strokeWidth: outlineWidth,
                   vectorEffect: "non-scaling-stroke",
                   paintOrder: "stroke fill",
-                  filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
+                  filter: forceHeroOutline
+                    ? "drop-shadow(0 4px 6px rgba(0,0,0,0.5)) drop-shadow(0 0 10px rgba(34,197,94,0.85))"
+                    : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
+
                   cursor: "pointer",
                 }}
               />
