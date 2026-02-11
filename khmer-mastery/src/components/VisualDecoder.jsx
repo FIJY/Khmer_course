@@ -629,14 +629,13 @@ export default function VisualDecoder(props) {
           );
         })}
       </svg>
-      {showTapHint ? (
+      {showTapHint && lastTap ? (
         <div ref={hintRef} className="mt-3 w-full flex justify-center">
           <GlyphHintCard
             displayChar={lastTap?.displayChar}
             typeLabel={lastTap?.typeLabel}
             hint={lastTap?.hint}
             isSubscript={lastTap?.isSubscript}
-            placeholder="Tap a glyph"
           />
         </div>
       ) : null}
