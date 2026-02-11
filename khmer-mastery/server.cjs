@@ -21,11 +21,13 @@ const KHMER_CONSONANT_START = 0x1780;
 const KHMER_CONSONANT_END = 0x17a2;
 
 // ---- Helpers ----
-function shouldForceSplit(char) {
-  if (!char) return false;
-  const code = char.charCodeAt(0);
-  const splitList = [0x17b6, 0x17c1, 0x17c2, 0x17c3, 0x17c4, 0x17c5];
-  return splitList.includes(code);
+function shouldForceSplit() {
+  // NOTE:
+  // Dependent Khmer vowels/marks must stay attached to their consonant cluster.
+  // Splitting such glyphs and rendering them via charToGlyph() produces dotted-circle
+  // fallback outlines (e.g. "កៅ") and breaks hit-detection/visual layout.
+  // Keep native shaping output intact.
+  return false;
 }
 
 function isKhmerConsonantCodePoint(cp) {
