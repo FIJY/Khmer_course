@@ -20,18 +20,23 @@ const COENG = 0x17d2;
 const KHMER_CONSONANT_START = 0x1780;
 const KHMER_CONSONANT_END = 0x17a2;
 
-// ---- Helpers ----
-function shouldForceSplit() {
-  // NOTE:
-  // Dependent Khmer vowels/marks must stay attached to their consonant cluster.
-  // Splitting such glyphs and rendering them via charToGlyph() produces dotted-circle
-  // fallback outlines (e.g. "កៅ") and breaks hit-detection/visual layout.
-  // Keep native shaping output intact.
-  return false;
-}
+// ALL Khmer dependent vowels: U+17B6 - U+17C5
+const DEPENDENT_VOWEL_START = 0x17b6;
+const DEPENDENT_VOWEL_END = 0x17c5;
 
+// ---- Helpers ----
 function isKhmerConsonantCodePoint(cp) {
   return cp >= KHMER_CONSONANT_START && cp <= KHMER_CONSONANT_END;
+}
+
+function isDependentVowelCodePoint(cp) {
+  return cp >= DEPENDENT_VOWEL_START && cp <= DEPENDENT_VOWEL_END;
+}
+
+function shouldForceSplit(char) {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  return isDependentVowelCodePoint(code);
 }
 
 function resolveCharFromCodePoints(codePoints = []) {
@@ -82,7 +87,7 @@ async function init() {
   // opentype parse — safer to pass Buffer directly (not .buffer)
   const fontBuffer = fs.readFileSync(FONT_PATH);
 
-  // Buffer -> exact ArrayBuffer slice (важно!)
+  // Buffer -> exact ArrayBuffer slice
   const arrayBuffer = fontBuffer.buffer.slice(
     fontBuffer.byteOffset,
     fontBuffer.byteOffset + fontBuffer.byteLength
@@ -93,7 +98,7 @@ async function init() {
   console.log("✅ Fonts loaded. Shaping engine ready.");
 }
 
-// ---- Health routes (so / is not 404) ----
+// ---- Health routes ----
 app.get("/", (req, res) => res.status(200).send("OK"));
 app.get("/health", (req, res) => res.status(200).send("OK"));
 
@@ -142,12 +147,18 @@ app.get("/api/shape", (req, res) => {
         if (nextIndex !== -1) textIndex = nextIndex + 1;
       }
 
-      // Force split for certain vowels (Ka + Aa etc.)
-      if (codePoints.length > 1 && shouldForceSplit(String.fromCharCode(codePoints[1]))) {
-        const baseChar = String.fromCharCode(codePoints[0]);
-        const vowelChar = String.fromCharCode(codePoints[1]);
+      // ✅ FORCE SPLIT: Check if any codePoint is a dependent vowel
+      const vowelCP = codePoints.find(cp => isDependentVowelCodePoint(cp));
+      const consonantCP = codePoints.find(cp => isKhmerConsonantCodePoint(cp));
 
-        // 1) base
+      if (vowelCP && consonantCP) {
+        // Split into: consonant + vowel
+        const baseChar = String.fromCodePoint(consonantCP);
+        const vowelChar = String.fromCodePoint(vowelCP);
+
+        console.log(`✂️ Splitting cluster: ${baseChar} + ${vowelChar}`);
+
+        // 1) Render base consonant
         const baseOtGlyph = otFont.charToGlyph(baseChar);
         const basePath = baseOtGlyph.getPath(cursorX, 200, FONT_SIZE);
         const baseAdv = baseOtGlyph.advanceWidth * scale;
@@ -159,7 +170,7 @@ app.get("/api/shape", (req, res) => {
           bb: basePath.getBoundingBox(),
         });
 
-        // 2) vowel
+        // 2) Render vowel
         const vowelOtGlyph = otFont.charToGlyph(vowelChar);
         const vowelPath = vowelOtGlyph.getPath(cursorX + baseAdv, 200, FONT_SIZE);
         const vowelAdv = vowelOtGlyph.advanceWidth * scale;
@@ -171,10 +182,11 @@ app.get("/api/shape", (req, res) => {
           bb: vowelPath.getBoundingBox(),
         });
 
-        cursorX += baseAdv + vowelAdv;
+        cursorX += position.xAdvance * scale;
         continue;
       }
 
+      // No split needed - add as single glyph
       if (d && d.length > 5) {
         glyphsData.push({
           id: glyphsData.length,
