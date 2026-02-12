@@ -20,12 +20,24 @@ const COENG = 0x17d2;
 const KHMER_CONSONANT_START = 0x1780;
 const KHMER_CONSONANT_END = 0x17a2;
 
+// ALL Khmer dependent vowels: U+17B6 - U+17C5
+const DEPENDENT_VOWEL_START = 0x17b6;
+const DEPENDENT_VOWEL_END = 0x17c5;
+
 // ---- Helpers ----
 function isKhmerConsonantCodePoint(cp) {
   return cp >= KHMER_CONSONANT_START && cp <= KHMER_CONSONANT_END;
 }
 
+function isDependentVowelCodePoint(cp) {
+  return cp >= DEPENDENT_VOWEL_START && cp <= DEPENDENT_VOWEL_END;
+}
 
+function shouldForceSplit(char) {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  return isDependentVowelCodePoint(code);
+}
 
 function resolveCharFromCodePoints(codePoints = []) {
   if (!Array.isArray(codePoints) || codePoints.length === 0) return "";
@@ -133,6 +145,45 @@ app.get("/api/shape", (req, res) => {
       } else if (char) {
         const nextIndex = textChars.indexOf(char, textIndex);
         if (nextIndex !== -1) textIndex = nextIndex + 1;
+      }
+
+      // ✅ FORCE SPLIT: Check if any codePoint is a dependent vowel
+      const vowelCP = codePoints.find(cp => isDependentVowelCodePoint(cp));
+      const consonantCP = codePoints.find(cp => isKhmerConsonantCodePoint(cp));
+
+      if (vowelCP && consonantCP) {
+        // Split into: consonant + vowel
+        const baseChar = String.fromCodePoint(consonantCP);
+        const vowelChar = String.fromCodePoint(vowelCP);
+
+        console.log(`✂️ Splitting cluster: ${baseChar} + ${vowelChar}`);
+
+        // 1) Render base consonant
+        const baseOtGlyph = otFont.charToGlyph(baseChar);
+        const basePath = baseOtGlyph.getPath(cursorX, 200, FONT_SIZE);
+        const baseAdv = baseOtGlyph.advanceWidth * scale;
+
+        glyphsData.push({
+          id: glyphsData.length,
+          char: baseChar,
+          d: basePath.toPathData(3),
+          bb: basePath.getBoundingBox(),
+        });
+
+        // 2) Render vowel
+        const vowelOtGlyph = otFont.charToGlyph(vowelChar);
+        const vowelPath = vowelOtGlyph.getPath(cursorX + baseAdv, 200, FONT_SIZE);
+        const vowelAdv = vowelOtGlyph.advanceWidth * scale;
+
+        glyphsData.push({
+          id: glyphsData.length,
+          char: vowelChar,
+          d: vowelPath.toPathData(3),
+          bb: vowelPath.getBoundingBox(),
+        });
+
+        cursorX += position.xAdvance * scale;
+        continue;
       }
 
       // No split needed - add as single glyph

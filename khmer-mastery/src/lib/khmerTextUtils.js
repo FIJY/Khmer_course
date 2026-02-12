@@ -6,7 +6,6 @@ export const normalizeKhmerText = (value) => {
 
   return String(value)
     .replace(CONTROL_CHARS_TO_STRIP, "")
-    .normalize("NFC")
     .trim();
 };
 
