@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { GLYPH_COLORS, getKhmerGlyphStyle } from "../lib/khmerGlyphRenderer";
 import { buildShapeApiUrl } from "../lib/apiConfig";
+import { normalizeKhmerText } from "../lib/khmerTextUtils";
 
 const makeViewBoxFromGlyphs = (glyphs, padding = 60) => {
   if (!glyphs || glyphs.length === 0) return "0 0 100 100";
@@ -30,6 +31,7 @@ export default function KhmerColoredText({
   frequencyByChar = null,
   selectionStyle = "outline", // "outline" | "glow"
 }) {
+  const normalizedText = useMemo(() => normalizeKhmerText(text), [text]);
   const [glyphs, setGlyphs] = useState([]);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -38,7 +40,7 @@ export default function KhmerColoredText({
     let isMounted = true;
 
     const fetchGlyphs = async () => {
-      if (!text) {
+      if (!normalizedText) {
         setGlyphs([]);
         return;
       }
@@ -46,7 +48,7 @@ export default function KhmerColoredText({
       try {
         setError(null);
         const response = await fetch(
-          `${buildShapeApiUrl("/api/shape")}?text=${encodeURIComponent(text)}`
+          `${buildShapeApiUrl("/api/shape")}?text=${encodeURIComponent(normalizedText)}`
         );
 
         if (!response.ok) throw new Error(`Server error: ${response.status}`);
@@ -69,7 +71,7 @@ export default function KhmerColoredText({
     return () => {
       isMounted = false;
     };
-  }, [text]);
+  }, [normalizedText]);
 
   const viewBox = useMemo(() => makeViewBoxFromGlyphs(glyphs, 80), [glyphs]);
 
