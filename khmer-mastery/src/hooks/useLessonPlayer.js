@@ -6,6 +6,7 @@ import { markLessonCompleted } from '../data/progress';
 // ПРАВИЛЬНЫЙ ИМПОРТ: используем тот же путь, что в твоих файлах lessons.js и auth.js
 import { supabase } from '../supabaseClient';
 import useAudioPlayer from './useAudioPlayer';
+import { normalizeKhmerInStructure } from '../lib/khmerTextUtils';
 
 export default function useLessonPlayer() {
   const { id } = useParams();
@@ -54,13 +55,13 @@ export default function useLessonPlayer() {
     if (!data) return {};
     if (typeof data === 'string') {
       try {
-        return JSON.parse(data);
+        return normalizeKhmerInStructure(JSON.parse(data));
       } catch (parseError) {
         console.warn('Failed to parse lesson item data', parseError);
         return {};
       }
     }
-    if (typeof data === 'object') return data;
+    if (typeof data === 'object') return normalizeKhmerInStructure(data);
     return {};
   }, []);
 
