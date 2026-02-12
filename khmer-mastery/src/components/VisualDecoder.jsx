@@ -8,6 +8,7 @@ import {
   isKhmerConsonantChar,
 } from "../lib/khmerGlyphRenderer";
 import { buildShapeApiUrl } from "../lib/apiConfig";
+import { normalizeKhmerText } from "../lib/khmerTextUtils";
 import useAudioPlayer from "../hooks/useAudioPlayer";
 import {
   DEFAULT_FEEDBACK_SOUNDS,
@@ -107,9 +108,11 @@ export default function VisualDecoder(props) {
     feedbackSounds,
     feedbackGapMs = 200,
   } = props;
-  const text = propText || data?.word || data?.khmerText || "កាហ្វេ";
-  const targetChar =
-    feedbackTargetChar ?? data?.target ?? data?.target_char ?? data?.targetChar ?? "";
+  const rawText = propText || data?.word || data?.khmerText || "កាហ្វេ";
+  const text = useMemo(() => normalizeKhmerText(rawText), [rawText]);
+  const targetChar = normalizeKhmerText(
+    feedbackTargetChar ?? data?.target ?? data?.target_char ?? data?.targetChar ?? ""
+  );
   const heroHighlight = data?.hero_highlight ?? data?.heroHighlight ?? null;
   console.log("HERO HINT:", { heroHighlight, targetChar, text, data });
   const [glyphs, setGlyphs] = useState([]);

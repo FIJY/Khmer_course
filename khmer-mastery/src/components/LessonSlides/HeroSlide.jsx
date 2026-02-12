@@ -15,6 +15,7 @@ import {
   buildGlyphDisplayChar,
   normalizeGlyphChar,
 } from "../../lib/glyphHintUtils";
+import { normalizeKhmerText, normalizeKhmerInStructure } from "../../lib/khmerTextUtils";
 
 export default function HeroSlide({
   data,
@@ -33,9 +34,9 @@ export default function HeroSlide({
   const footerRef = useRef(null);
   const { playSequence } = useAudioPlayer();
 
-  const word = data?.word || "";
-  const targetChar = data?.target || data?.target_char || "";
-  const charSplit = data?.char_split || null;
+  const word = normalizeKhmerText(data?.word || "");
+  const targetChar = normalizeKhmerText(data?.target || data?.target_char || "");
+  const charSplit = normalizeKhmerInStructure(data?.char_split || null);
   const title = data?.title || data?.name || "Find the Hero";
   const description = Array.isArray(data?.description) ? data.description : [data?.description || ""];
   const footer = data?.footer || "";
