@@ -47,7 +47,7 @@ export const buildGlyphDisplayChar = ({ glyphChar, isSubscript, isSubscriptConso
   if (isSubscript) {
     return `${COENG_CHAR}${normalized}`;
   }
-  return glyphChar || "";
+  return normalized || "";
 };
 
 export const truncateHint = (hint, maxChars) => {
