@@ -1,4 +1,4 @@
-// server.cjs – ПОСИМВОЛЬНЫЙ ЛЕЙАУТ (РЕКОМЕНДОВАНО)
+// server.cjs – ГРУППИРОВКА ПО КЛАСТЕРАМ (РЕКОМЕНДОВАНО)
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
@@ -33,44 +33,57 @@ async function init() {
 app.get("/", (req, res) => res.send("OK"));
 app.get("/health", (req, res) => res.send("OK"));
 
-// ----------------------------------------------------------------------
-// НОВЫЙ ПОДХОД: обрабатываем каждый символ отдельно
-// ----------------------------------------------------------------------
 app.get("/api/shape", (req, res) => {
   const rawText = req.query.text;
   if (!rawText) return res.status(400).json({ error: "No text provided" });
   if (!fkFont || !otFont) return res.status(503).json({ error: "Fonts not ready" });
 
   try {
-    // 1. Нормализуем текст и разбиваем на символы
+    // 1. Нормализуем и декодируем текст
     const decodedText = decodeURIComponent(rawText);
     const text = decodedText.normalize("NFC");
-    const textChars = Array.from(text); // важно для работы с суррогатными парами
+    const textChars = Array.from(text);
 
-    console.log("\n=== SHAPING (per char) ===");
+    console.log("\n=== SHAPING (cluster-based) ===");
     console.log("Input text:", text);
     console.log("Characters:", textChars.map(c => c.codePointAt(0).toString(16)).join(' '));
 
     const scale = FONT_SIZE / unitsPerEm;
+
+    // 2. Layout всего текста сразу
+    const run = fkFont.layout(text);
+
+    // 3. Группируем глифы по кластерам (индексам исходных символов)
+    const clusters = new Map(); // clusterId -> массив { glyph, pos }
+    for (let i = 0; i < run.glyphs.length; i++) {
+      const glyph = run.glyphs[i];
+      const pos = run.positions[i];
+      const clusterIdx = glyph.cluster; // обычно это индекс символа в исходной строке
+      if (!clusters.has(clusterIdx)) {
+        clusters.set(clusterIdx, []);
+      }
+      clusters.get(clusterIdx).push({ glyph, pos });
+    }
+
+    // 4. Преобразуем в массив и сортируем по clusterIdx
+    const sortedClusters = Array.from(clusters.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([_, glyphs]) => glyphs);
+
     const glyphsData = [];
     let cursorX = 50; // начальная позиция X
 
-    // 2. Для каждого символа делаем отдельный layout
-    for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
-      const char = textChars[charIdx];
+    // 5. Обрабатываем каждый кластер (один символ)
+    for (let clusterIdx = 0; clusterIdx < sortedClusters.length; clusterIdx++) {
+      const clusterGlyphs = sortedClusters[clusterIdx];
+      const char = textChars[clusterIdx] || '?';
 
-      // Layout только этого символа
-      const run = fkFont.layout(char);
-
-      // Собираем все глифы этого символа
+      // Собираем пути и bounding box
       const paths = [];
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       let maxAdvance = 0;
 
-      for (let i = 0; i < run.glyphs.length; i++) {
-        const glyph = run.glyphs[i];
-        const pos = run.positions[i];
-
+      for (const { glyph, pos } of clusterGlyphs) {
         const otGlyph = otFont.glyphs.get(glyph.id);
         const x = cursorX + (pos.xOffset || 0) * scale;
         const y = 200 - (pos.yOffset || 0) * scale;
@@ -90,9 +103,7 @@ app.get("/api/shape", (req, res) => {
         maxAdvance = Math.max(maxAdvance, pos.xAdvance * scale);
       }
 
-      // Если глифы есть – создаём один объект на символ
       if (paths.length > 0) {
-        // Определяем тип символа
         const cp = char.codePointAt(0);
         const isConsonant = cp >= 0x1780 && cp <= 0x17A2;
         const isVowel = (cp >= 0x17B6 && cp <= 0x17C5) || (cp >= 0x17A3 && cp <= 0x17B3);
@@ -100,7 +111,7 @@ app.get("/api/shape", (req, res) => {
         const isDiacritic = cp >= 0x17C6 && cp <= 0x17D1 && cp !== 0x17D2;
 
         glyphsData.push({
-          id: glyphsData.length,
+          id: clusterIdx,
           char: char,
           d: paths.join(" "),
           bb: {
@@ -113,11 +124,11 @@ app.get("/api/shape", (req, res) => {
           isVowel,
           isSubscript,
           isDiacritic,
-          glyphCount: run.glyphs.length,
+          glyphCount: clusterGlyphs.length,
         });
       }
 
-      // Сдвигаем курсор на ширину символа
+      // Сдвигаем курсор на ширину кластера
       cursorX += maxAdvance || 50;
     }
 
