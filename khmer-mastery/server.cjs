@@ -11,7 +11,6 @@ app.use(cors());
 
 const PORT = Number(process.env.PORT) || 3001;
 const FONT_PATH = path.join(__dirname, "public/fonts/NotoSansKhmer-Regular.ttf");
-
 const FONT_SIZE = 120;
 
 let fkFont = null;
@@ -57,12 +56,75 @@ app.get("/api/shape", (req, res) => {
     let cursorX = 50;
     let outputId = 0;
 
+    // STEP 1: Analyze all glyphs and determine matches
+    const glyphAnalysis = [];
+
     for (let i = 0; i < run.glyphs.length; i++) {
       const glyph = run.glyphs[i];
       const pos = run.positions[i] || {};
       const codePoints = Array.isArray(glyph.codePoints) ? glyph.codePoints : [];
 
-      console.log(`\n  Glyph ${i}: cluster=${pos.cluster}, codePoints=[${codePoints.map(cp => `U+${cp.toString(16).toUpperCase()}`).join(',')}]`);
+      console.log(`  Glyph ${i}: cluster=${pos.cluster}, codePoints=[${codePoints.map(cp => `U+${cp.toString(16).toUpperCase()}`).join(',')}]`);
+
+      // Find which text chars this glyph represents
+      const matchedTextChars = [];
+      for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
+        const charCP = textCodePoints[charIdx];
+        if (codePoints.includes(charCP)) {
+          matchedTextChars.push(charIdx);
+        }
+      }
+
+      console.log(`    Matched text chars: [${matchedTextChars.join(',')}]`);
+
+      glyphAnalysis.push({
+        glyphIdx: i,
+        glyph,
+        pos,
+        codePoints,
+        matchedTextChars
+      });
+    }
+
+    // STEP 2: Assign clusters to unmatched glyphs
+    for (let i = 0; i < glyphAnalysis.length; i++) {
+      const analysis = glyphAnalysis[i];
+
+      if (analysis.matchedTextChars.length === 0) {
+        // Check if this is a component glyph (left/top parts of composite vowels)
+        const COMPONENT_CPS = [0x17C1, 0x17C4, 0x17C5]; // េ, ី, ៅ
+        const isComponent = analysis.codePoints.some(cp => COMPONENT_CPS.includes(cp));
+
+        if (isComponent) {
+          // Component glyphs belong to vowels, which are usually last
+          analysis.assignedCluster = textChars.length - 1;
+          console.log(`    → Assigning component glyph ${i} to cluster ${analysis.assignedCluster} (last char - likely vowel)`);
+        } else {
+          // Look for next glyph that has a match
+          let found = false;
+          for (let j = i + 1; j < glyphAnalysis.length; j++) {
+            if (glyphAnalysis[j].matchedTextChars.length > 0) {
+              // If next glyph matches multiple chars, use the LAST one (likely vowel)
+              const nextMatches = glyphAnalysis[j].matchedTextChars;
+              analysis.assignedCluster = nextMatches[nextMatches.length - 1];
+              console.log(`    → Assigning unmatched glyph ${i} to cluster ${analysis.assignedCluster} (from next glyph)`);
+              found = true;
+              break;
+            }
+          }
+
+          // If still no match, use last text char
+          if (!found) {
+            analysis.assignedCluster = textChars.length - 1;
+            console.log(`    → Assigning unmatched glyph ${i} to cluster ${analysis.assignedCluster} (last char)`);
+          }
+        }
+      }
+    }
+
+    // STEP 3: Render glyphs
+    for (const analysis of glyphAnalysis) {
+      const { glyphIdx, glyph, pos, codePoints, matchedTextChars, assignedCluster } = analysis;
 
       const advUnits =
         (typeof pos.xAdvance === "number" ? pos.xAdvance : null) ??
@@ -76,17 +138,6 @@ app.get("/api/shape", (req, res) => {
       const d = path.toPathData(3);
       const bb = path.getBoundingBox();
 
-      // Check if this glyph contains multiple text characters
-      const matchedTextChars = [];
-      for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
-        const charCP = textCodePoints[charIdx];
-        if (codePoints.includes(charCP)) {
-          matchedTextChars.push(charIdx);
-        }
-      }
-
-      console.log(`    Matched text chars: [${matchedTextChars.join(',')}]`);
-
       if (matchedTextChars.length > 1) {
         // SPLIT: Create separate glyph entry for each text char
         console.log(`    → Splitting into ${matchedTextChars.length} separate glyphs`);
@@ -95,10 +146,10 @@ app.get("/api/shape", (req, res) => {
           const charCP = textCodePoints[charIdx];
           glyphsData.push({
             id: outputId++,
-            glyphIdx: i,
+            glyphIdx,
             char: textChars[charIdx],
             codePoints: [charCP],
-            cluster: charIdx,  // ← Each gets its own cluster!
+            cluster: charIdx,
             d,
             bb: { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 },
             advance: advUnits * scale,
@@ -110,7 +161,7 @@ app.get("/api/shape", (req, res) => {
         const charIdx = matchedTextChars[0];
         glyphsData.push({
           id: outputId++,
-          glyphIdx: i,
+          glyphIdx,
           char: textChars[charIdx],
           codePoints: [textCodePoints[charIdx]],
           cluster: charIdx,
@@ -120,20 +171,19 @@ app.get("/api/shape", (req, res) => {
         });
         console.log(`    → Output glyph ${outputId - 1}: char="${textChars[charIdx]}", cluster=${charIdx}`);
       } else {
-        // FALLBACK: No match, use fontkit cluster
+        // FALLBACK: Use assigned cluster
         const primaryChar = codePoints.length > 0 ? String.fromCodePoint(codePoints[0]) : "";
-        const fallbackCluster = typeof pos.cluster === "number" ? pos.cluster : i;
         glyphsData.push({
           id: outputId++,
-          glyphIdx: i,
+          glyphIdx,
           char: primaryChar,
           codePoints,
-          cluster: fallbackCluster,
+          cluster: assignedCluster,
           d,
           bb: { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 },
           advance: advUnits * scale,
         });
-        console.log(`    → Output glyph ${outputId - 1}: char="${primaryChar}", cluster=${fallbackCluster} (fallback)`);
+        console.log(`    → Output glyph ${outputId - 1}: char="${primaryChar}", cluster=${assignedCluster}`);
       }
 
       cursorX += advUnits * scale;
