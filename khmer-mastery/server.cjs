@@ -1,49 +1,4 @@
-// server.cjs
-const express = require("express");
-const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
-const fontkit = require("fontkit");
-const opentype = require("opentype.js");
-
-const app = express();
-app.use(cors());
-
-const PORT = Number(process.env.PORT) || 3001;
-
-// ---- Paths / constants ----
-const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
-const FONT_SIZE = 120;
-
-// ---- Font state ----
-let fkFont = null;
-let otFont = null;
-let unitsPerEm = 1000;
-
-async function init() {
-  if (!fs.existsSync(FONT_PATH)) {
-    throw new Error(`Font not found: ${FONT_PATH}`);
-  }
-
-  fkFont = fontkit.openSync(FONT_PATH);
-  unitsPerEm = fkFont.unitsPerEm || 1000;
-
-  const fontBuffer = fs.readFileSync(FONT_PATH);
-  const arrayBuffer = fontBuffer.buffer.slice(
-    fontBuffer.byteOffset,
-    fontBuffer.byteOffset + fontBuffer.byteLength
-  );
-
-  otFont = opentype.parse(arrayBuffer);
-
-  console.log("✅ Fonts loaded. Shaping engine ready.");
-}
-
-// ---- Health routes ----
-app.get("/", (req, res) => res.status(200).send("OK"));
-app.get("/health", (req, res) => res.status(200).send("OK"));
-
-// ---- Main API ----
+// server.cjs (исправленная версия)
 app.get("/api/shape", (req, res) => {
   const text = req.query.text;
   if (!text) return res.status(400).json({ error: "No text provided" });
@@ -51,37 +6,59 @@ app.get("/api/shape", (req, res) => {
 
   try {
     const scale = FONT_SIZE / unitsPerEm;
-    const textChars = Array.from(text);
 
     console.log("\n=== SHAPING:", text);
-    console.log("Text characters:", textChars.length);
+
+    // ✅ ПРАВИЛЬНО: Обрабатываем ВЕСЬ текст сразу
+    const run = fkFont.layout(text);
+
+    console.log(`Fontkit layout returned ${run.glyphs.length} glyphs`);
 
     const glyphsData = [];
     let cursorX = 50;
+    let currentCluster = null;
+    let clusterGlyphs = [];
 
-    // ✅ RELIABLE APPROACH: Layout each character separately
-    for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
-      const char = textChars[charIdx];
+    // Группируем глифы по кластерам (исходным символам)
+    for (let i = 0; i < run.glyphs.length; i++) {
+      const glyph = run.glyphs[i];
+      const position = run.positions[i];
+      const cluster = glyph.id; // или используйте glyph.cluster если доступно
 
-      console.log(`\n📝 Character ${charIdx}: "${char}" (U+${char.codePointAt(0).toString(16).toUpperCase()})`);
+      // Начало нового кластера
+      if (i === 0 || cluster !== run.glyphs[i-1].id) {
+        // Сохраняем предыдущий кластер
+        if (clusterGlyphs.length > 0) {
+          processCluster(clusterGlyphs, cursorX);
+          cursorX += getClusterAdvance(clusterGlyphs) * scale;
+        }
+        clusterGlyphs = [];
+      }
 
-      // Shape this single character
-      const run = fkFont.layout(char);
+      clusterGlyphs.push({ glyph, position });
+    }
 
-      console.log(`  Fontkit returned ${run.glyphs.length} glyph(s)`);
+    // Обрабатываем последний кластер
+    if (clusterGlyphs.length > 0) {
+      processCluster(clusterGlyphs, cursorX);
+    }
 
-      // Collect all paths for this character
+    function processCluster(glyphs, baseX) {
       const paths = [];
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      let totalAdvance = 0;
+      let firstGlyph = true;
+      let charCode = null;
 
-      for (let i = 0; i < run.glyphs.length; i++) {
-        const fkGlyph = run.glyphs[i];
-        const position = run.positions[i];
+      // Получаем исходный символ (если возможно)
+      if (glyphs[0].glyph.codePoints && glyphs[0].glyph.codePoints.length > 0) {
+        charCode = glyphs[0].glyph.codePoints[0];
+      }
 
+      for (const { glyph: fkGlyph, position } of glyphs) {
         const otGlyph = otFont.glyphs.get(fkGlyph.id);
 
-        const x = cursorX + position.xOffset * scale;
+        // Координаты с учетом смещений
+        const x = baseX + position.xOffset * scale;
         const y = 200 - position.yOffset * scale;
 
         const path = otGlyph.getPath(x, y, FONT_SIZE);
@@ -96,27 +73,30 @@ app.get("/api/shape", (req, res) => {
           maxX = Math.max(maxX, bb.x2);
           maxY = Math.max(maxY, bb.y2);
         }
-
-        totalAdvance = Math.max(totalAdvance, position.xAdvance * scale);
       }
 
       if (paths.length > 0) {
         glyphsData.push({
           id: glyphsData.length,
-          char: char,
+          char: charCode ? String.fromCodePoint(charCode) : '�',
           d: paths.join(" "),
-          bb: { x1: minX, y1: minY, x2: maxX, y2: maxY }
+          bb: { x1: minX, y1: minY, x2: maxX, y2: maxY },
+          glyphCount: glyphs.length
         });
 
-        console.log(`  ✅ Created glyph: id=${glyphsData.length - 1}, ${paths.length} paths`);
-        console.log(`     bbox: [${minX.toFixed(1)}, ${minY.toFixed(1)} -> ${maxX.toFixed(1)}, ${maxY.toFixed(1)}]`);
-        console.log(`     advance: ${totalAdvance.toFixed(1)}`);
+        console.log(`✅ Cluster ${glyphsData.length-1}: "${String.fromCodePoint(charCode || 32)}" -> ${glyphs.length} glyphs`);
       }
-
-      cursorX += totalAdvance;
     }
 
-    console.log(`\n✅ Final: ${glyphsData.length} clickable glyphs`);
+    function getClusterAdvance(glyphs) {
+      let advance = 0;
+      for (const { position } of glyphs) {
+        advance += position.xAdvance;
+      }
+      return advance;
+    }
+
+    console.log(`\n✅ Final: ${glyphsData.length} clickable clusters`);
 
     return res.json(glyphsData);
   } catch (err) {
@@ -124,15 +104,3 @@ app.get("/api/shape", (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 });
-
-// ---- Boot ----
-init()
-  .then(() => {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`✅ Glyph Server listening on port ${PORT}`);
-    });
-  })
-  .catch((e) => {
-    console.error("❌ Init failed:", e);
-    process.exit(1);
-  });
