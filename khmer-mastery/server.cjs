@@ -1,4 +1,4 @@
-// server.cjs – ГРУППИРОВКА ПО КЛАСТЕРАМ (РЕКОМЕНДОВАНО)
+// server.cjs - Smart grouping by codePoints
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
@@ -34,105 +34,202 @@ app.get("/", (req, res) => res.send("OK"));
 app.get("/health", (req, res) => res.send("OK"));
 
 app.get("/api/shape", (req, res) => {
-  const rawText = req.query.text;
-  if (!rawText) return res.status(400).json({ error: "No text provided" });
+  const text = req.query.text;
+  if (!text) return res.status(400).json({ error: "No text provided" });
   if (!fkFont || !otFont) return res.status(503).json({ error: "Fonts not ready" });
 
   try {
-    // 1. Нормализуем и декодируем текст
-    const decodedText = decodeURIComponent(rawText);
-    const text = decodedText.normalize("NFC");
-    const textChars = Array.from(text);
+    const normalizedText = text.normalize("NFC");
+    const textChars = Array.from(normalizedText);
+    const textCodePoints = textChars.map(c => c.codePointAt(0));
 
-    console.log("\n=== SHAPING (cluster-based) ===");
-    console.log("Input text:", text);
-    console.log("Characters:", textChars.map(c => c.codePointAt(0).toString(16)).join(' '));
+    console.log("\n=== SHAPING:", normalizedText);
+    console.log("Text chars:", textChars.map((c, i) => `${i}:"${c}"(U+${c.codePointAt(0).toString(16).toUpperCase()})`).join(', '));
 
     const scale = FONT_SIZE / unitsPerEm;
+    const run = fkFont.layout(normalizedText);
 
-    // 2. Layout всего текста сразу
-    const run = fkFont.layout(text);
+    console.log("Fontkit glyphs:", run.glyphs.length);
 
-    // 3. Группируем глифы по кластерам (индексам исходных символов)
-    const clusters = new Map(); // clusterId -> массив { glyph, pos }
+    // STEP 1: Render all glyphs
+    const allGlyphs = [];
+    let cursorX = 50;
+
     for (let i = 0; i < run.glyphs.length; i++) {
       const glyph = run.glyphs[i];
       const pos = run.positions[i];
-      const clusterIdx = glyph.cluster; // обычно это индекс символа в исходной строке
-      if (!clusters.has(clusterIdx)) {
-        clusters.set(clusterIdx, []);
-      }
-      clusters.get(clusterIdx).push({ glyph, pos });
+      const codePoints = glyph.codePoints || [];
+
+      const x = cursorX + (pos.xOffset || 0) * scale;
+      const y = 200 - (pos.yOffset || 0) * scale;
+
+      const otGlyph = otFont.glyphs.get(glyph.id);
+      const path = otGlyph.getPath(x, y, FONT_SIZE);
+      const d = path.toPathData(3);
+      const bb = path.getBoundingBox();
+
+      allGlyphs.push({
+        glyphIdx: i,
+        codePoints: codePoints,
+        cluster: pos.cluster ?? i,
+        d: d,
+        bb: bb,
+        advance: pos.xAdvance * scale
+      });
+
+      cursorX += pos.xAdvance * scale;
+
+      console.log(`  Glyph ${i}: cluster=${pos.cluster}, codePoints=[${codePoints.map(cp => 'U+' + cp.toString(16).toUpperCase()).join(',')}], bbox=[${bb.x1.toFixed(1)}, ${bb.y1.toFixed(1)} -> ${bb.x2.toFixed(1)}, ${bb.y2.toFixed(1)}]`);
     }
 
-    // 4. Преобразуем в массив и сортируем по clusterIdx
-    const sortedClusters = Array.from(clusters.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([_, glyphs]) => glyphs);
+    // STEP 2: Smart grouping - match glyphs to text chars
+    const textCharToGlyphs = Array.from({ length: textChars.length }, () => []);
+    const assignedGlyphs = new Set();
 
-    const glyphsData = [];
-    let cursorX = 50; // начальная позиция X
+    // First pass: exact codePoint match
+    for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
+      const targetCP = textCodePoints[charIdx];
 
-    // 5. Обрабатываем каждый кластер (один символ)
-    for (let clusterIdx = 0; clusterIdx < sortedClusters.length; clusterIdx++) {
-      const clusterGlyphs = sortedClusters[clusterIdx];
-      const char = textChars[clusterIdx] || '?';
+      for (let glyphIdx = 0; glyphIdx < allGlyphs.length; glyphIdx++) {
+        if (assignedGlyphs.has(glyphIdx)) continue;
 
-      // Собираем пути и bounding box
-      const paths = [];
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      let maxAdvance = 0;
-
-      for (const { glyph, pos } of clusterGlyphs) {
-        const otGlyph = otFont.glyphs.get(glyph.id);
-        const x = cursorX + (pos.xOffset || 0) * scale;
-        const y = 200 - (pos.yOffset || 0) * scale;
-
-        const path = otGlyph.getPath(x, y, FONT_SIZE);
-        const d = path.toPathData(3);
-        if (d && d.length > 5) {
-          paths.push(d);
+        const glyph = allGlyphs[glyphIdx];
+        if (glyph.codePoints.includes(targetCP)) {
+          textCharToGlyphs[charIdx].push(glyphIdx);
+          assignedGlyphs.add(glyphIdx);
+          console.log(`  ✓ Glyph ${glyphIdx} → Char ${charIdx} (exact match: U+${targetCP.toString(16).toUpperCase()})`);
         }
-
-        const bb = path.getBoundingBox();
-        minX = Math.min(minX, bb.x1);
-        minY = Math.min(minY, bb.y1);
-        maxX = Math.max(maxX, bb.x2);
-        maxY = Math.max(maxY, bb.y2);
-
-        maxAdvance = Math.max(maxAdvance, pos.xAdvance * scale);
       }
-
-      if (paths.length > 0) {
-        const cp = char.codePointAt(0);
-        const isConsonant = cp >= 0x1780 && cp <= 0x17A2;
-        const isVowel = (cp >= 0x17B6 && cp <= 0x17C5) || (cp >= 0x17A3 && cp <= 0x17B3);
-        const isSubscript = cp === 0x17D2;
-        const isDiacritic = cp >= 0x17C6 && cp <= 0x17D1 && cp !== 0x17D2;
-
-        glyphsData.push({
-          id: clusterIdx,
-          char: char,
-          d: paths.join(" "),
-          bb: {
-            x1: minX === Infinity ? cursorX : minX,
-            y1: minY === Infinity ? 0 : minY,
-            x2: maxX === -Infinity ? cursorX + 50 : maxX,
-            y2: maxY === -Infinity ? 200 : maxY,
-          },
-          isConsonant,
-          isVowel,
-          isSubscript,
-          isDiacritic,
-          glyphCount: clusterGlyphs.length,
-        });
-      }
-
-      // Сдвигаем курсор на ширину кластера
-      cursorX += maxAdvance || 50;
     }
 
-    console.log(`→ Отправлено ${glyphsData.length} объектов (по одному на символ)`);
+    // Second pass: assign remaining glyphs by position
+    for (let glyphIdx = 0; glyphIdx < allGlyphs.length; glyphIdx++) {
+      if (assignedGlyphs.has(glyphIdx)) continue;
+
+      const glyph = allGlyphs[glyphIdx];
+
+      // Try cluster index first
+      let targetCharIdx = glyph.cluster;
+      if (targetCharIdx >= textChars.length) {
+        targetCharIdx = textChars.length - 1;
+      }
+
+      // If that char already has glyphs, put this one there too
+      // (probably a multi-component glyph)
+      if (textCharToGlyphs[targetCharIdx].length > 0) {
+        textCharToGlyphs[targetCharIdx].push(glyphIdx);
+        assignedGlyphs.add(glyphIdx);
+        console.log(`  ✓ Glyph ${glyphIdx} → Char ${targetCharIdx} (cluster fallback)`);
+      } else {
+        // Assign to nearest non-empty char
+        for (let offset = 1; offset < textChars.length; offset++) {
+          const nextIdx = targetCharIdx + offset;
+          if (nextIdx < textChars.length && textCharToGlyphs[nextIdx].length > 0) {
+            textCharToGlyphs[nextIdx].push(glyphIdx);
+            assignedGlyphs.add(glyphIdx);
+            console.log(`  ✓ Glyph ${glyphIdx} → Char ${nextIdx} (nearest match)`);
+            break;
+          }
+          const prevIdx = targetCharIdx - offset;
+          if (prevIdx >= 0 && textCharToGlyphs[prevIdx].length > 0) {
+            textCharToGlyphs[prevIdx].push(glyphIdx);
+            assignedGlyphs.add(glyphIdx);
+            console.log(`  ✓ Glyph ${glyphIdx} → Char ${prevIdx} (nearest match)`);
+            break;
+          }
+        }
+      }
+    }
+
+    // Third pass: AGGRESSIVE FALLBACK - if still unassigned, distribute evenly
+    const stillUnassigned = [];
+    for (let glyphIdx = 0; glyphIdx < allGlyphs.length; glyphIdx++) {
+      if (!assignedGlyphs.has(glyphIdx)) {
+        stillUnassigned.push(glyphIdx);
+      }
+    }
+
+    if (stillUnassigned.length > 0) {
+      console.log(`\n⚠️ Still ${stillUnassigned.length} unassigned glyphs - using aggressive fallback`);
+
+      // Find empty char slots
+      const emptyCharSlots = [];
+      for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
+        if (textCharToGlyphs[charIdx].length === 0) {
+          emptyCharSlots.push(charIdx);
+        }
+      }
+
+      // Assign to empty slots first
+      for (let i = 0; i < stillUnassigned.length && i < emptyCharSlots.length; i++) {
+        const glyphIdx = stillUnassigned[i];
+        const charIdx = emptyCharSlots[i];
+        textCharToGlyphs[charIdx].push(glyphIdx);
+        assignedGlyphs.add(glyphIdx);
+        console.log(`  ✓ Glyph ${glyphIdx} → Char ${charIdx} (aggressive: empty slot)`);
+      }
+
+      // If still have unassigned, distribute to last char
+      for (let glyphIdx of stillUnassigned) {
+        if (!assignedGlyphs.has(glyphIdx)) {
+          const lastCharIdx = textChars.length - 1;
+          textCharToGlyphs[lastCharIdx].push(glyphIdx);
+          assignedGlyphs.add(glyphIdx);
+          console.log(`  ✓ Glyph ${glyphIdx} → Char ${lastCharIdx} (aggressive: last char)`);
+        }
+      }
+    }
+
+    console.log("\nFinal grouping:");
+    textCharToGlyphs.forEach((glyphIdxs, charIdx) => {
+      console.log(`  Char ${charIdx} "${textChars[charIdx]}": glyphs [${glyphIdxs.join(',')}]`);
+    });
+
+    // STEP 3: Create one object per text character
+    const glyphsData = [];
+
+    for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
+      const char = textChars[charIdx];
+      const glyphIndices = textCharToGlyphs[charIdx];
+
+      if (glyphIndices.length === 0) {
+        console.log(`⚠️ No glyphs for char ${charIdx}: "${char}"`);
+        continue;
+      }
+
+      const paths = glyphIndices.map(idx => allGlyphs[idx].d).filter(d => d && d.length > 5);
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const idx of glyphIndices) {
+        const g = allGlyphs[idx];
+        minX = Math.min(minX, g.bb.x1);
+        minY = Math.min(minY, g.bb.y1);
+        maxX = Math.max(maxX, g.bb.x2);
+        maxY = Math.max(maxY, g.bb.y2);
+      }
+
+      const cp = char.codePointAt(0);
+      const isConsonant = cp >= 0x1780 && cp <= 0x17A2;
+      const isVowel = (cp >= 0x17B6 && cp <= 0x17C5) || (cp >= 0x17A3 && cp <= 0x17B3);
+      const isSubscript = cp === 0x17D2;
+      const isDiacritic = cp >= 0x17C6 && cp <= 0x17D1 && cp !== 0x17D2;
+
+      glyphsData.push({
+        id: glyphsData.length,
+        char: char,
+        d: paths.join(" "),
+        bb: { x1: minX, y1: minY, x2: maxX, y2: maxY },
+        isConsonant,
+        isVowel,
+        isSubscript,
+        isDiacritic,
+        glyphCount: paths.length
+      });
+
+      console.log(`📝 Created: id=${glyphsData.length - 1}, char="${char}", ${paths.length} paths, type: ${isConsonant ? 'consonant' : isVowel ? 'vowel' : 'other'}`);
+    }
+
+    console.log(`\n✅ Final: ${glyphsData.length} clickable glyphs`);
     res.json(glyphsData);
   } catch (err) {
     console.error("Shape error:", err);
