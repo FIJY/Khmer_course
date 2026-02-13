@@ -111,7 +111,8 @@
         "target": "ក",
         "success_rule": "consonant",
         "char_split": [
-          "កៅ"
+          "ក",
+          "ៅ"
         ],
         "hero_highlight": "green_outline"
       }

@@ -3,13 +3,12 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
-const fontkit = require("fontkit");     // shaping
-const opentype = require("opentype.js"); // rendering
+const fontkit = require("fontkit");
+const opentype = require("opentype.js");
 
 const app = express();
 app.use(cors());
 
-// ✅ Render expects you to listen on process.env.PORT
 const PORT = Number(process.env.PORT) || 3001;
 
 // ---- Paths / constants ----
@@ -20,59 +19,14 @@ const COENG = 0x17d2;
 const KHMER_CONSONANT_START = 0x1780;
 const KHMER_CONSONANT_END = 0x17a2;
 
-// ALL Khmer dependent vowels: U+17B6 - U+17C5
-const DEPENDENT_VOWEL_START = 0x17b6;
-const DEPENDENT_VOWEL_END = 0x17c5;
-
 // ---- Helpers ----
 function isKhmerConsonantCodePoint(cp) {
   return cp >= KHMER_CONSONANT_START && cp <= KHMER_CONSONANT_END;
 }
 
-function isDependentVowelCodePoint(cp) {
-  return cp >= DEPENDENT_VOWEL_START && cp <= DEPENDENT_VOWEL_END;
-}
-
-function shouldForceSplit(char) {
-  if (!char) return false;
-  const code = char.charCodeAt(0);
-  return isDependentVowelCodePoint(code);
-}
-
-function resolveCharFromCodePoints(codePoints = []) {
-  if (!Array.isArray(codePoints) || codePoints.length === 0) return "";
-
-  const consonant = codePoints.find((cp) => isKhmerConsonantCodePoint(cp));
-  if (consonant) return String.fromCodePoint(consonant);
-
-  const nonCoeng = codePoints.find((cp) => cp !== COENG);
-  if (nonCoeng) return String.fromCodePoint(nonCoeng);
-
-  return String.fromCodePoint(codePoints[0]);
-}
-
-function findNextConsonantAfterCoeng(textChars, startIndex) {
-  let coengIndex = -1;
-  for (let i = startIndex; i < textChars.length; i++) {
-    if (textChars[i].codePointAt(0) === COENG) {
-      coengIndex = i;
-      break;
-    }
-  }
-
-  const searchStart = coengIndex >= 0 ? coengIndex + 1 : startIndex;
-  for (let i = searchStart; i < textChars.length; i++) {
-    if (isKhmerConsonantCodePoint(textChars[i].codePointAt(0))) {
-      return { char: textChars[i], index: i };
-    }
-  }
-
-  return { char: "", index: -1 };
-}
-
 // ---- Font state ----
-let fkFont = null; // fontkit instance
-let otFont = null; // opentype instance
+let fkFont = null;
+let otFont = null;
 let unitsPerEm = 1000;
 
 async function init() {
@@ -80,14 +34,10 @@ async function init() {
     throw new Error(`Font not found: ${FONT_PATH}`);
   }
 
-  // fontkit (sync)
   fkFont = fontkit.openSync(FONT_PATH);
   unitsPerEm = fkFont.unitsPerEm || 1000;
 
-  // opentype parse — safer to pass Buffer directly (not .buffer)
   const fontBuffer = fs.readFileSync(FONT_PATH);
-
-  // Buffer -> exact ArrayBuffer slice
   const arrayBuffer = fontBuffer.buffer.slice(
     fontBuffer.byteOffset,
     fontBuffer.byteOffset + fontBuffer.byteLength
@@ -110,94 +60,110 @@ app.get("/api/shape", (req, res) => {
 
   try {
     const run = fkFont.layout(text);
-
     const scale = FONT_SIZE / unitsPerEm;
-    let cursorX = 50;
-    const glyphsData = [];
+
+    console.log("\n=== SHAPING:", text);
+    console.log("Input chars:", Array.from(text).map(c => `${c} (U+${c.codePointAt(0).toString(16)})`).join(", "));
+    console.log("Total glyphs from fontkit:", run.glyphs.length);
 
     const textChars = Array.from(text);
-    let textIndex = 0;
+    const charToGlyphs = new Map(); // Map<textIndex, glyphData[]>
 
+    // Initialize map for each text position
+    textChars.forEach((_, idx) => charToGlyphs.set(idx, []));
+
+    let cursorX = 50;
+
+    // Process each glyph and assign to text position
     for (let i = 0; i < run.glyphs.length; i++) {
       const fkGlyph = run.glyphs[i];
       const position = run.positions[i];
-
       const codePoints = fkGlyph.codePoints || [];
 
-      // Convert fontkit glyph id -> opentype glyph for path rendering
-      const otGlyph = otFont.glyphs.get(fkGlyph.id);
+      console.log(`\nGlyph ${i}:`, {
+        codePoints: codePoints.map(cp => `U+${cp.toString(16)}`),
+        cluster: position.cluster
+      });
 
-      const x = cursorX + position.xOffset * scale;
-      const y = 200 - position.yOffset * scale; // SVG Y flip
+      // Determine which text position this glyph belongs to
+      let textIndex = -1;
 
-      const p = otGlyph.getPath(x, y, FONT_SIZE);
-      const d = p.toPathData(3);
+      // Strategy: Find which text character these codePoints came from
+      for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
+        const charCP = textChars[charIdx].codePointAt(0);
 
-      // Determine "char" for audio mapping / logic
-      let char = resolveCharFromCodePoints(codePoints);
-
-      if (char === String.fromCodePoint(COENG)) {
-        const { char: fallbackChar, index } = findNextConsonantAfterCoeng(textChars, textIndex);
-        if (fallbackChar) {
-          char = fallbackChar;
-          textIndex = index + 1;
+        // If any codePoint matches the text char, it belongs to that position
+        if (codePoints.includes(charCP)) {
+          textIndex = charIdx;
+          console.log(`  → Belongs to text position ${charIdx} (${textChars[charIdx]})`);
+          break;
         }
-      } else if (char) {
-        const nextIndex = textChars.indexOf(char, textIndex);
-        if (nextIndex !== -1) textIndex = nextIndex + 1;
       }
 
-      // ✅ FORCE SPLIT: Check if any codePoint is a dependent vowel
-      const vowelCP = codePoints.find(cp => isDependentVowelCodePoint(cp));
-      const consonantCP = codePoints.find(cp => isKhmerConsonantCodePoint(cp));
-
-      if (vowelCP && consonantCP) {
-        // Split into: consonant + vowel
-        const baseChar = String.fromCodePoint(consonantCP);
-        const vowelChar = String.fromCodePoint(vowelCP);
-
-        console.log(`✂️ Splitting cluster: ${baseChar} + ${vowelChar}`);
-
-        // 1) Render base consonant
-        const baseOtGlyph = otFont.charToGlyph(baseChar);
-        const basePath = baseOtGlyph.getPath(cursorX, 200, FONT_SIZE);
-        const baseAdv = baseOtGlyph.advanceWidth * scale;
-
-        glyphsData.push({
-          id: glyphsData.length,
-          char: baseChar,
-          d: basePath.toPathData(3),
-          bb: basePath.getBoundingBox(),
-        });
-
-        // 2) Render vowel
-        const vowelOtGlyph = otFont.charToGlyph(vowelChar);
-        const vowelPath = vowelOtGlyph.getPath(cursorX + baseAdv, 200, FONT_SIZE);
-        const vowelAdv = vowelOtGlyph.advanceWidth * scale;
-
-        glyphsData.push({
-          id: glyphsData.length,
-          char: vowelChar,
-          d: vowelPath.toPathData(3),
-          bb: vowelPath.getBoundingBox(),
-        });
-
-        cursorX += position.xAdvance * scale;
-        continue;
+      // Fallback: use cluster index if we couldn't determine from codePoints
+      if (textIndex === -1 && position.cluster !== undefined) {
+        textIndex = Math.min(position.cluster, textChars.length - 1);
+        console.log(`  → Using cluster index ${textIndex}`);
       }
 
-      // No split needed - add as single glyph
+      // Fallback: sequential assignment
+      if (textIndex === -1) {
+        textIndex = Math.min(i, textChars.length - 1);
+        console.log(`  → Using sequential index ${textIndex}`);
+      }
+
+      const otGlyph = otFont.glyphs.get(fkGlyph.id);
+      const x = cursorX + position.xOffset * scale;
+      const y = 200 - position.yOffset * scale;
+      const path = otGlyph.getPath(x, y, FONT_SIZE);
+      const d = path.toPathData(3);
+
       if (d && d.length > 5) {
-        glyphsData.push({
-          id: glyphsData.length,
-          char,
+        charToGlyphs.get(textIndex).push({
           d,
-          bb: p.getBoundingBox(),
+          bb: path.getBoundingBox(),
+          xAdvance: position.xAdvance * scale
         });
       }
 
       cursorX += position.xAdvance * scale;
     }
+
+    // Build final output - one entry per text character
+    const glyphsData = [];
+
+    for (let textIdx = 0; textIdx < textChars.length; textIdx++) {
+      const char = textChars[textIdx];
+      const glyphParts = charToGlyphs.get(textIdx);
+
+      console.log(`\nText position ${textIdx} (${char}): ${glyphParts.length} glyph(s)`);
+
+      if (glyphParts.length === 0) continue;
+
+      // Merge all paths for this character
+      const mergedPath = glyphParts.map(g => g.d).join(" ");
+
+      // Calculate combined bounding box
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const part of glyphParts) {
+        minX = Math.min(minX, part.bb.x1);
+        minY = Math.min(minY, part.bb.y1);
+        maxX = Math.max(maxX, part.bb.x2);
+        maxY = Math.max(maxY, part.bb.y2);
+      }
+
+      glyphsData.push({
+        id: glyphsData.length,
+        char,
+        d: mergedPath,
+        bb: { x1: minX, y1: minY, x2: maxX, y2: maxY },
+        textIndex: textIdx
+      });
+
+      console.log(`  → Created glyph: id=${glyphsData.length - 1}, pathCount=${glyphParts.length}`);
+    }
+
+    console.log(`\nFinal output: ${glyphsData.length} clickable glyphs\n`);
 
     return res.json(glyphsData);
   } catch (err) {
