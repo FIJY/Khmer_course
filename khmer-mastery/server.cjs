@@ -50,87 +50,46 @@ app.get("/api/shape", (req, res) => {
   if (!fkFont || !otFont) return res.status(503).json({ error: "Fonts not initialized yet" });
 
   try {
-    // ✅ NEW STRATEGY: Use fontkit for shaping, then map back to text chars
-    const run = fkFont.layout(text);
     const scale = FONT_SIZE / unitsPerEm;
+    const textChars = Array.from(text);
 
     console.log("\n=== SHAPING:", text);
-    const textChars = Array.from(text);
-    console.log("Text chars:", textChars.map((c, i) => `${i}:"${c}"`).join(', '));
-    console.log("Fontkit glyphs:", run.glyphs.length);
+    console.log("Text characters:", textChars.length);
 
-    // Debug: show what fontkit gave us
-    for (let i = 0; i < run.glyphs.length; i++) {
-      const g = run.glyphs[i];
-      const p = run.positions[i];
-      console.log(`  Glyph ${i}: id=${g.id}, cluster=${p.cluster}, codePoints=[${(g.codePoints || []).map(cp => 'U+' + cp.toString(16).toUpperCase()).join(',')}]`);
-    }
-
-    // ✅ HYBRID: Use fontkit shaping, group by text char via codePoints
     const glyphsData = [];
     let cursorX = 50;
 
-    // Group glyphs by which text character they represent
-    const charGroups = Array.from({ length: textChars.length }, () => []);
-
-    for (let i = 0; i < run.glyphs.length; i++) {
-      const glyph = run.glyphs[i];
-      const pos = run.positions[i];
-      const codePoints = glyph.codePoints || [];
-
-      // Find which text character this glyph represents
-      let matchedCharIdx = -1;
-
-      for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
-        const charCP = textChars[charIdx].codePointAt(0);
-        if (codePoints.includes(charCP)) {
-          matchedCharIdx = charIdx;
-          break;
-        }
-      }
-
-      // Fallback: use cluster index
-      if (matchedCharIdx === -1) {
-        matchedCharIdx = pos.cluster ?? i;
-      }
-
-      if (matchedCharIdx >= 0 && matchedCharIdx < textChars.length) {
-        charGroups[matchedCharIdx].push({ glyph, pos, idx: i });
-      }
-    }
-
-    console.log("\nGrouped by text chars:");
-    charGroups.forEach((group, idx) => {
-      console.log(`  Char ${idx} "${textChars[idx]}": ${group.length} glyphs`);
-    });
-
-    // Render each character group
+    // ✅ RELIABLE APPROACH: Layout each character separately
     for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
       const char = textChars[charIdx];
-      const glyphGroup = charGroups[charIdx];
 
-      if (glyphGroup.length === 0) {
-        console.log(`\n⚠️ No glyphs for char ${charIdx}: "${char}"`);
-        continue;
-      }
+      console.log(`\n📝 Character ${charIdx}: "${char}" (U+${char.codePointAt(0).toString(16).toUpperCase()})`);
 
-      console.log(`\n📝 Char ${charIdx} "${char}": collecting ${glyphGroup.length} glyphs`);
+      // Shape this single character
+      const run = fkFont.layout(char);
 
+      console.log(`  Fontkit returned ${run.glyphs.length} glyph(s)`);
+
+      // Collect all paths for this character
       const paths = [];
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       let totalAdvance = 0;
 
-      for (const { glyph, pos } of glyphGroup) {
-        const otGlyph = otFont.glyphs.get(glyph.id);
+      for (let i = 0; i < run.glyphs.length; i++) {
+        const fkGlyph = run.glyphs[i];
+        const position = run.positions[i];
 
-        const x = cursorX + pos.xOffset * scale;
-        const y = 200 - pos.yOffset * scale;
+        const otGlyph = otFont.glyphs.get(fkGlyph.id);
+
+        const x = cursorX + position.xOffset * scale;
+        const y = 200 - position.yOffset * scale;
 
         const path = otGlyph.getPath(x, y, FONT_SIZE);
         const d = path.toPathData(3);
 
         if (d && d.length > 5) {
           paths.push(d);
+
           const bb = path.getBoundingBox();
           minX = Math.min(minX, bb.x1);
           minY = Math.min(minY, bb.y1);
@@ -138,7 +97,7 @@ app.get("/api/shape", (req, res) => {
           maxY = Math.max(maxY, bb.y2);
         }
 
-        totalAdvance = pos.xAdvance * scale;
+        totalAdvance = Math.max(totalAdvance, position.xAdvance * scale);
       }
 
       if (paths.length > 0) {
@@ -149,13 +108,15 @@ app.get("/api/shape", (req, res) => {
           bb: { x1: minX, y1: minY, x2: maxX, y2: maxY }
         });
 
-        console.log(`  ✅ Created: id=${glyphsData.length - 1}, ${paths.length} paths, bbox=[${minX.toFixed(1)},${minY.toFixed(1)} -> ${maxX.toFixed(1)},${maxY.toFixed(1)}]`);
+        console.log(`  ✅ Created glyph: id=${glyphsData.length - 1}, ${paths.length} paths`);
+        console.log(`     bbox: [${minX.toFixed(1)}, ${minY.toFixed(1)} -> ${maxX.toFixed(1)}, ${maxY.toFixed(1)}]`);
+        console.log(`     advance: ${totalAdvance.toFixed(1)}`);
       }
 
       cursorX += totalAdvance;
     }
 
-    console.log(`\n✅ Final: ${glyphsData.length} glyphs for ${textChars.length} characters`);
+    console.log(`\n✅ Final: ${glyphsData.length} clickable glyphs`);
 
     return res.json(glyphsData);
   } catch (err) {
