@@ -1,4 +1,48 @@
-// server.cjs - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// server.cjs - ПОЛНЫЙ РАБОЧИЙ ФАЙЛ
+const express = require("express");
+const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
+const fontkit = require("fontkit");
+const opentype = require("opentype.js");
+
+const app = express(); // 👈 ЭТОЙ СТРОКИ НЕ ХВАТАЛО!
+app.use(cors());
+
+const PORT = Number(process.env.PORT) || 3001;
+
+// ---- Paths / constants ----
+const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
+const FONT_SIZE = 120;
+
+// ---- Font state ----
+let fkFont = null;
+let otFont = null;
+let unitsPerEm = 1000;
+
+async function init() {
+  if (!fs.existsSync(FONT_PATH)) {
+    throw new Error(`Font not found: ${FONT_PATH}`);
+  }
+
+  fkFont = fontkit.openSync(FONT_PATH);
+  unitsPerEm = fkFont.unitsPerEm || 1000;
+
+  const fontBuffer = fs.readFileSync(FONT_PATH);
+  const arrayBuffer = fontBuffer.buffer.slice(
+    fontBuffer.byteOffset,
+    fontBuffer.byteOffset + fontBuffer.byteLength
+  );
+
+  otFont = opentype.parse(arrayBuffer);
+  console.log("✅ Fonts loaded. Shaping engine ready.");
+}
+
+// ---- Health routes ----
+app.get("/", (req, res) => res.status(200).send("OK"));
+app.get("/health", (req, res) => res.status(200).send("OK"));
+
+// ---- Main API ----
 app.get("/api/shape", (req, res) => {
   const text = req.query.text;
   if (!text) return res.status(400).json({ error: "No text provided" });
@@ -7,10 +51,10 @@ app.get("/api/shape", (req, res) => {
   try {
     const scale = FONT_SIZE / unitsPerEm;
 
-    // 1. Шейпим ВСЁ сразу
+    // Шейпим ВЕСЬ текст целиком
     const run = fkFont.layout(text);
 
-    // 2. Группируем в кластеры (по смещениям xAdvance)
+    // Группируем глифы в кластеры
     const clusters = [];
     let currentCluster = [];
     let lastAdvance = 0;
@@ -19,9 +63,6 @@ app.get("/api/shape", (req, res) => {
       const glyph = run.glyphs[i];
       const pos = run.positions[i];
 
-      // Новый кластер если:
-      // - Есть значительный xAdvance (>0) И это не первый глиф
-      // - Или глиф не должен прикрепляться к предыдущему
       if (pos.xAdvance > 5 && currentCluster.length > 0) {
         clusters.push(currentCluster);
         currentCluster = [];
@@ -33,9 +74,7 @@ app.get("/api/shape", (req, res) => {
       clusters.push(currentCluster);
     }
 
-    console.log(`Text: "${text}" → ${run.glyphs.length} глифов → ${clusters.length} кластеров`);
-
-    // 3. Отрисовываем кластеры
+    // Отрисовываем кластеры
     const glyphsData = [];
     let cursorX = 50;
 
@@ -47,7 +86,6 @@ app.get("/api/shape", (req, res) => {
       cluster.forEach(({ glyph, pos }) => {
         const otGlyph = otFont.glyphs.get(glyph.id);
 
-        // Важно: yOffset может быть отрицательным (диакритика над буквой)
         const x = cursorX + (pos.xOffset || 0) * scale;
         const y = 200 - (pos.yOffset || 0) * scale;
 
@@ -65,7 +103,7 @@ app.get("/api/shape", (req, res) => {
 
       glyphsData.push({
         id: idx,
-        char: text[idx] || '?', // приблизительно
+        char: text[idx] || '?',
         d: paths.join(' '),
         bb: {
           x1: minX === Infinity ? 0 : minX,
@@ -75,7 +113,7 @@ app.get("/api/shape", (req, res) => {
         }
       });
 
-      cursorX += maxAdvance || 50; // если нет advance - используем дефолт
+      cursorX += maxAdvance || 50;
     });
 
     res.json(glyphsData);
@@ -85,3 +123,15 @@ app.get("/api/shape", (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ---- Boot ----
+init()
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`✅ Glyph Server listening on port ${PORT}`);
+    });
+  })
+  .catch((e) => {
+    console.error("❌ Init failed:", e);
+    process.exit(1);
+  });
