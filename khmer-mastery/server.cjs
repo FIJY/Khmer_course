@@ -15,15 +15,6 @@ const PORT = Number(process.env.PORT) || 3001;
 const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
 const FONT_SIZE = 120;
 
-const COENG = 0x17d2;
-const KHMER_CONSONANT_START = 0x1780;
-const KHMER_CONSONANT_END = 0x17a2;
-
-// ---- Helpers ----
-function isKhmerConsonantCodePoint(cp) {
-  return cp >= KHMER_CONSONANT_START && cp <= KHMER_CONSONANT_END;
-}
-
 // ---- Font state ----
 let fkFont = null;
 let otFont = null;
@@ -59,111 +50,112 @@ app.get("/api/shape", (req, res) => {
   if (!fkFont || !otFont) return res.status(503).json({ error: "Fonts not initialized yet" });
 
   try {
+    // ✅ NEW STRATEGY: Use fontkit for shaping, then map back to text chars
     const run = fkFont.layout(text);
     const scale = FONT_SIZE / unitsPerEm;
 
     console.log("\n=== SHAPING:", text);
-    console.log("Input chars:", Array.from(text).map(c => `${c} (U+${c.codePointAt(0).toString(16)})`).join(", "));
-    console.log("Total glyphs from fontkit:", run.glyphs.length);
-
     const textChars = Array.from(text);
-    const charToGlyphs = new Map(); // Map<textIndex, glyphData[]>
+    console.log("Text chars:", textChars.map((c, i) => `${i}:"${c}"`).join(', '));
+    console.log("Fontkit glyphs:", run.glyphs.length);
 
-    // Initialize map for each text position
-    textChars.forEach((_, idx) => charToGlyphs.set(idx, []));
+    // Debug: show what fontkit gave us
+    for (let i = 0; i < run.glyphs.length; i++) {
+      const g = run.glyphs[i];
+      const p = run.positions[i];
+      console.log(`  Glyph ${i}: id=${g.id}, cluster=${p.cluster}, codePoints=[${(g.codePoints || []).map(cp => 'U+' + cp.toString(16).toUpperCase()).join(',')}]`);
+    }
 
+    // ✅ HYBRID: Use fontkit shaping, group by text char via codePoints
+    const glyphsData = [];
     let cursorX = 50;
 
-    // Process each glyph and assign to text position
+    // Group glyphs by which text character they represent
+    const charGroups = Array.from({ length: textChars.length }, () => []);
+
     for (let i = 0; i < run.glyphs.length; i++) {
-      const fkGlyph = run.glyphs[i];
-      const position = run.positions[i];
-      const codePoints = fkGlyph.codePoints || [];
+      const glyph = run.glyphs[i];
+      const pos = run.positions[i];
+      const codePoints = glyph.codePoints || [];
 
-      console.log(`\nGlyph ${i}:`, {
-        codePoints: codePoints.map(cp => `U+${cp.toString(16)}`),
-        cluster: position.cluster
-      });
+      // Find which text character this glyph represents
+      let matchedCharIdx = -1;
 
-      // Determine which text position this glyph belongs to
-      let textIndex = -1;
-
-      // Strategy: Find which text character these codePoints came from
       for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
         const charCP = textChars[charIdx].codePointAt(0);
-
-        // If any codePoint matches the text char, it belongs to that position
         if (codePoints.includes(charCP)) {
-          textIndex = charIdx;
-          console.log(`  → Belongs to text position ${charIdx} (${textChars[charIdx]})`);
+          matchedCharIdx = charIdx;
           break;
         }
       }
 
-      // Fallback: use cluster index if we couldn't determine from codePoints
-      if (textIndex === -1 && position.cluster !== undefined) {
-        textIndex = Math.min(position.cluster, textChars.length - 1);
-        console.log(`  → Using cluster index ${textIndex}`);
+      // Fallback: use cluster index
+      if (matchedCharIdx === -1) {
+        matchedCharIdx = pos.cluster ?? i;
       }
 
-      // Fallback: sequential assignment
-      if (textIndex === -1) {
-        textIndex = Math.min(i, textChars.length - 1);
-        console.log(`  → Using sequential index ${textIndex}`);
+      if (matchedCharIdx >= 0 && matchedCharIdx < textChars.length) {
+        charGroups[matchedCharIdx].push({ glyph, pos, idx: i });
       }
-
-      const otGlyph = otFont.glyphs.get(fkGlyph.id);
-      const x = cursorX + position.xOffset * scale;
-      const y = 200 - position.yOffset * scale;
-      const path = otGlyph.getPath(x, y, FONT_SIZE);
-      const d = path.toPathData(3);
-
-      if (d && d.length > 5) {
-        charToGlyphs.get(textIndex).push({
-          d,
-          bb: path.getBoundingBox(),
-          xAdvance: position.xAdvance * scale
-        });
-      }
-
-      cursorX += position.xAdvance * scale;
     }
 
-    // Build final output - one entry per text character
-    const glyphsData = [];
+    console.log("\nGrouped by text chars:");
+    charGroups.forEach((group, idx) => {
+      console.log(`  Char ${idx} "${textChars[idx]}": ${group.length} glyphs`);
+    });
 
-    for (let textIdx = 0; textIdx < textChars.length; textIdx++) {
-      const char = textChars[textIdx];
-      const glyphParts = charToGlyphs.get(textIdx);
+    // Render each character group
+    for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
+      const char = textChars[charIdx];
+      const glyphGroup = charGroups[charIdx];
 
-      console.log(`\nText position ${textIdx} (${char}): ${glyphParts.length} glyph(s)`);
+      if (glyphGroup.length === 0) {
+        console.log(`\n⚠️ No glyphs for char ${charIdx}: "${char}"`);
+        continue;
+      }
 
-      if (glyphParts.length === 0) continue;
+      console.log(`\n📝 Char ${charIdx} "${char}": collecting ${glyphGroup.length} glyphs`);
 
-      // Merge all paths for this character
-      const mergedPath = glyphParts.map(g => g.d).join(" ");
-
-      // Calculate combined bounding box
+      const paths = [];
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      for (const part of glyphParts) {
-        minX = Math.min(minX, part.bb.x1);
-        minY = Math.min(minY, part.bb.y1);
-        maxX = Math.max(maxX, part.bb.x2);
-        maxY = Math.max(maxY, part.bb.y2);
+      let totalAdvance = 0;
+
+      for (const { glyph, pos } of glyphGroup) {
+        const otGlyph = otFont.glyphs.get(glyph.id);
+
+        const x = cursorX + pos.xOffset * scale;
+        const y = 200 - pos.yOffset * scale;
+
+        const path = otGlyph.getPath(x, y, FONT_SIZE);
+        const d = path.toPathData(3);
+
+        if (d && d.length > 5) {
+          paths.push(d);
+          const bb = path.getBoundingBox();
+          minX = Math.min(minX, bb.x1);
+          minY = Math.min(minY, bb.y1);
+          maxX = Math.max(maxX, bb.x2);
+          maxY = Math.max(maxY, bb.y2);
+        }
+
+        totalAdvance = pos.xAdvance * scale;
       }
 
-      glyphsData.push({
-        id: glyphsData.length,
-        char,
-        d: mergedPath,
-        bb: { x1: minX, y1: minY, x2: maxX, y2: maxY },
-        textIndex: textIdx
-      });
+      if (paths.length > 0) {
+        glyphsData.push({
+          id: glyphsData.length,
+          char: char,
+          d: paths.join(" "),
+          bb: { x1: minX, y1: minY, x2: maxX, y2: maxY }
+        });
 
-      console.log(`  → Created glyph: id=${glyphsData.length - 1}, pathCount=${glyphParts.length}`);
+        console.log(`  ✅ Created: id=${glyphsData.length - 1}, ${paths.length} paths, bbox=[${minX.toFixed(1)},${minY.toFixed(1)} -> ${maxX.toFixed(1)},${maxY.toFixed(1)}]`);
+      }
+
+      cursorX += totalAdvance;
     }
 
-    console.log(`\nFinal output: ${glyphsData.length} clickable glyphs\n`);
+    console.log(`\n✅ Final: ${glyphsData.length} glyphs for ${textChars.length} characters`);
 
     return res.json(glyphsData);
   } catch (err) {
