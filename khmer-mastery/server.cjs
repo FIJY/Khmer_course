@@ -10,7 +10,7 @@ const app = express();
 app.use(cors());
 
 const PORT = Number(process.env.PORT) || 3001;
-const FONT_PATH = path.join(__dirname, "public/fonts/NotoSansKhmer-Regular.ttf");
+const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
 const FONT_SIZE = 120;
 
 let fkFont = null;
