@@ -1,4 +1,49 @@
-// server.cjs - ИСПРАВЛЕННАЯ ГРУППИРОВКА
+// server.cjs - ПОЛНЫЙ РАБОЧИЙ ФАЙЛ ДЛЯ RENDER
+const express = require("express");
+const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
+const fontkit = require("fontkit");
+const opentype = require("opentype.js");
+
+// ЭТО ДОЛЖНО БЫТЬ САМОЙ ПЕРВОЙ СТРОКОЙ ПОСЛЕ require!!!
+const app = express();
+app.use(cors());
+
+const PORT = Number(process.env.PORT) || 3001;
+
+// ---- Paths / constants ----
+const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
+const FONT_SIZE = 120;
+
+// ---- Font state ----
+let fkFont = null;
+let otFont = null;
+let unitsPerEm = 1000;
+
+async function init() {
+  if (!fs.existsSync(FONT_PATH)) {
+    throw new Error(`Font not found: ${FONT_PATH}`);
+  }
+
+  fkFont = fontkit.openSync(FONT_PATH);
+  unitsPerEm = fkFont.unitsPerEm || 1000;
+
+  const fontBuffer = fs.readFileSync(FONT_PATH);
+  const arrayBuffer = fontBuffer.buffer.slice(
+    fontBuffer.byteOffset,
+    fontBuffer.byteOffset + fontBuffer.byteLength
+  );
+
+  otFont = opentype.parse(arrayBuffer);
+  console.log("✅ Fonts loaded. Shaping engine ready.");
+}
+
+// ---- Health routes ----
+app.get("/", (req, res) => res.status(200).send("OK"));
+app.get("/health", (req, res) => res.status(200).send("OK"));
+
+// ---- Main API ----
 app.get("/api/shape", (req, res) => {
   const text = req.query.text;
   if (!text) return res.status(400).json({ error: "No text provided" });
@@ -9,21 +54,19 @@ app.get("/api/shape", (req, res) => {
 
     console.log("\n=== SHAPING:", text);
 
-    // 1. Шейпим ВЕСЬ текст сразу
+    // Шейпим ВЕСЬ текст сразу
     const run = fkFont.layout(text);
     console.log(`Fontkit layout: ${run.glyphs.length} глифов`);
 
-    // 2. Группируем глифы в кластеры по ПОЗИЦИЯМ!
+    // Группируем глифы в кластеры
     const clusters = [];
     let currentCluster = [];
-    let lastX = 0;
 
     for (let i = 0; i < run.glyphs.length; i++) {
       const glyph = run.glyphs[i];
       const pos = run.positions[i];
 
-      // КЛЮЧЕВОЕ: Новый кластер только если xAdvance > 0 И это не диакритика
-      // Для кхмерского: гласные и подписные имеют xAdvance = 0
+      // Новый кластер только если есть значительный xAdvance
       if (pos.xAdvance > 1 && currentCluster.length > 0) {
         clusters.push([...currentCluster]);
         currentCluster = [];
@@ -32,37 +75,22 @@ app.get("/api/shape", (req, res) => {
       currentCluster.push({ glyph, pos });
     }
 
-    // Добавляем последний кластер
     if (currentCluster.length > 0) {
       clusters.push([...currentCluster]);
     }
 
-    console.log(`📦 Сгруппировано в ${clusters.length} кластеров:`);
+    console.log(`📦 Сгруппировано в ${clusters.length} кластеров`);
 
-    // 3. Собираем исходные символы для каждого кластера
+    // Отрисовываем кластеры
     const glyphsData = [];
     let cursorX = 50;
 
     clusters.forEach((cluster, idx) => {
-      // Собираем ВСЕ символы из кластера
+      // Собираем символы кластера
       let clusterChars = '';
-      let isConsonant = false;
-      let isVowel = false;
-      let isSubscript = false;
-      let isDiacritic = false;
-
-      // Проходим по глифам и собираем символы
       cluster.forEach(({ glyph }) => {
         if (glyph.codePoints && glyph.codePoints.length > 0) {
-          const codePoint = glyph.codePoints[0];
-          const char = String.fromCodePoint(codePoint);
-          clusterChars += char;
-
-          // Определяем типы
-          if (codePoint >= 0x1780 && codePoint <= 0x17A2) isConsonant = true;
-          else if (codePoint >= 0x17B6 && codePoint <= 0x17C5) isVowel = true;
-          else if (codePoint === 0x17D2) isSubscript = true;
-          else if (codePoint >= 0x17C6 && codePoint <= 0x17D1) isDiacritic = true;
+          clusterChars += String.fromCodePoint(glyph.codePoints[0]);
         }
       });
 
@@ -71,7 +99,7 @@ app.get("/api/shape", (req, res) => {
         clusterChars = text[idx] || '?';
       }
 
-      // Отрисовываем ВСЕ глифы кластера ВМЕСТЕ
+      // Отрисовываем ВСЕ глифы кластера
       const paths = [];
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       let maxAdvance = 0;
@@ -79,7 +107,6 @@ app.get("/api/shape", (req, res) => {
       cluster.forEach(({ glyph, pos }) => {
         const otGlyph = otFont.glyphs.get(glyph.id);
 
-        // Важно: используем cursorX ДЛЯ ВСЕХ глифов кластера!
         const x = cursorX + (pos.xOffset || 0) * scale;
         const y = 200 - (pos.yOffset || 0) * scale;
 
@@ -97,7 +124,7 @@ app.get("/api/shape", (req, res) => {
 
       glyphsData.push({
         id: idx,
-        char: clusterChars, // ВЕСЬ кластер как строка!
+        char: clusterChars,
         d: paths.join(" "),
         bb: {
           x1: minX === Infinity ? cursorX : minX,
@@ -105,20 +132,13 @@ app.get("/api/shape", (req, res) => {
           x2: maxX === -Infinity ? cursorX + 50 : maxX,
           y2: maxY === -Infinity ? 200 : maxY
         },
-        isConsonant,
-        isVowel,
-        isSubscript,
-        isDiacritic,
         glyphCount: cluster.length
       });
 
-      console.log(`  Кластер ${idx}: "${clusterChars}" → ${cluster.length} глифов`);
-
-      // Сдвигаем курсор ТОЛЬКО на xAdvance последнего глифа
-      cursorX += maxAdvance;
+      cursorX += maxAdvance || 50;
     });
 
-    console.log(`\n✅ Всего кластеров: ${glyphsData.length}`);
+    console.log(`✅ Отправлено ${glyphsData.length} кластеров`);
     res.json(glyphsData);
 
   } catch (err) {
@@ -126,3 +146,15 @@ app.get("/api/shape", (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ---- Boot ----
+init()
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`✅ Glyph Server listening on port ${PORT}`);
+    });
+  })
+  .catch((e) => {
+    console.error("❌ Init failed:", e);
+    process.exit(1);
+  });
