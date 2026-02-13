@@ -20,8 +20,8 @@ import {
   getGlyphHintContent,
   truncateHint,
 } from "../lib/glyphHintUtils";
+import { COMPOUND_CHAR_MAP } from "../lib/khmerCompoundChars";
 
-// Режимы подсветки
 export const HIGHLIGHT_MODES = {
   ALL: "all",
   CONSONANTS: "consonants",
@@ -84,83 +84,6 @@ function isVowelIndCp(cp) {
 
 function isDiacriticCp(cp) {
   return cp >= 0x17C6 && cp <= 0x17D1 && cp !== COENG_CP;
-}
-
-// --- Построение блоков из кластеров ---
-function buildBlocksFromClusters(clusters) {
-  const blocks = [];
-
-  for (let i = 0; i < clusters.length; i++) {
-    const clusterGlyphs = clusters[i];
-    const clusterCodePoints = clusterGlyphs.flatMap(g => g.codePoints || []);
-
-    const hasCoeng = clusterCodePoints.some(isCoengCp);
-
-    if (hasCoeng && i + 1 < clusters.length) {
-      const nextClusterGlyphs = clusters[i + 1];
-      const nextCodePoints = nextClusterGlyphs.flatMap(g => g.codePoints || []);
-      const nextHasConsonant = nextCodePoints.some(isConsonantCp);
-
-      if (nextHasConsonant) {
-        const mergedGlyphs = [...clusterGlyphs, ...nextClusterGlyphs];
-        blocks.push({
-          glyphs: mergedGlyphs,
-          codePoints: [...clusterCodePoints, ...nextCodePoints],
-        });
-        i++;
-        continue;
-      }
-    }
-
-    blocks.push({
-      glyphs: clusterGlyphs,
-      codePoints: clusterCodePoints,
-    });
-  }
-
-  return blocks.map(block => {
-    const { glyphs, codePoints } = block;
-
-    let type = 'other';
-    let isSubscript = false;
-    let primaryCp = null;
-
-    const hasConsonant = codePoints.some(isConsonantCp);
-    const hasCoeng = codePoints.some(isCoengCp);
-    const hasVowelDep = codePoints.some(isVowelDepCp);
-    const hasVowelInd = codePoints.some(isVowelIndCp);
-    const hasDiacritic = codePoints.some(isDiacriticCp);
-
-    if (hasCoeng && hasConsonant) {
-      type = 'subscript';
-      isSubscript = true;
-      primaryCp = codePoints.find(isConsonantCp);
-    } else if (hasConsonant) {
-      type = 'consonant';
-      primaryCp = codePoints.find(isConsonantCp);
-    } else if (hasVowelDep) {
-      type = 'vowel_dep';
-      primaryCp = codePoints.find(isVowelDepCp);
-    } else if (hasVowelInd) {
-      type = 'vowel_ind';
-      primaryCp = codePoints.find(isVowelIndCp);
-    } else if (hasDiacritic) {
-      type = 'diacritic';
-      primaryCp = codePoints.find(isDiacriticCp);
-    } else if (codePoints.length > 0) {
-      primaryCp = codePoints[0];
-    }
-
-    const primaryChar = primaryCp ? String.fromCodePoint(primaryCp) : '';
-
-    return {
-      glyphs,
-      type,
-      isSubscript,
-      primaryChar,
-      codePoints,
-    };
-  });
 }
 
 function makeViewBoxFromBlocks(blocks, pad = 60) {
@@ -252,7 +175,6 @@ export default function VisualDecoder(props) {
     setLastTap(null);
   }, [text]);
 
-  // Скролл к подсказке
   useEffect(() => {
     if (!lastTap) return;
     const target = scrollTargetRef?.current || hintRef.current;
@@ -267,7 +189,7 @@ export default function VisualDecoder(props) {
     }
   }, [lastTap, scrollTargetRef]);
 
-  // Загрузка глифов и построение блоков
+  // Загрузка глифов
   useEffect(() => {
     let active = true;
     if (!text) {
@@ -290,20 +212,104 @@ export default function VisualDecoder(props) {
         const arr = Array.isArray(json) ? json : [];
         setGlyphs(arr);
 
-        // 1. Группировка по cluster
-        const map = new Map();
-        arr.forEach(g => {
-          const clusterId = g.cluster ?? 0;
-          if (!map.has(clusterId)) map.set(clusterId, []);
-          map.get(clusterId).push(g);
-        });
-        const sortedClusters = Array.from(map.entries())
-          .sort(([a], [b]) => a - b)
-          .map(([_, clusterGlyphs]) => clusterGlyphs);
+        // --- Группировка по char_split (если есть) ---
+        if (data?.char_split && Array.isArray(data.char_split) && data.char_split.length > 0) {
+          // Для каждого элемента split создаём запись с компонентами
+          const splitItems = data.char_split.map((part, idx) => {
+            const partCodePoints = Array.from(part).map(c => c.codePointAt(0));
+            // Если для этого символа есть составные части, добавляем их codePoints к списку
+            const extraCodePoints = COMPOUND_CHAR_MAP[part] || [];
+            return {
+              index: idx,
+              part,
+              codePoints: [...partCodePoints, ...extraCodePoints],
+            };
+          });
 
-        // 2. Построение блоков
-        const newBlocks = buildBlocksFromClusters(sortedClusters);
-        setBlocks(newBlocks);
+          // Для каждого глифа определяем, к какому splitItem он относится
+          const glyphToSplit = arr.map(glyph => {
+            const glyphCPs = glyph.codePoints || [];
+            const matches = [];
+            splitItems.forEach(item => {
+              if (glyphCPs.some(cp => item.codePoints.includes(cp))) {
+                matches.push(item.index);
+              }
+            });
+            return matches;
+          });
+
+          // Объединяем splitItem, которые имеют общие глифы
+          const splitGroups = [];
+          const visited = new Array(splitItems.length).fill(false);
+
+          for (let i = 0; i < splitItems.length; i++) {
+            if (visited[i]) continue;
+
+            const groupIndices = new Set([i]);
+            const stack = [i];
+            while (stack.length) {
+              const current = stack.pop();
+              visited[current] = true;
+              for (let g = 0; g < arr.length; g++) {
+                if (glyphToSplit[g].includes(current)) {
+                  glyphToSplit[g].forEach(otherIdx => {
+                    if (!visited[otherIdx] && !groupIndices.has(otherIdx)) {
+                      groupIndices.add(otherIdx);
+                      stack.push(otherIdx);
+                    }
+                  });
+                }
+              }
+            }
+            splitGroups.push(Array.from(groupIndices).sort());
+          }
+
+          // Для каждой группы собираем глифы
+          const newBlocks = splitGroups.map((groupIndices, blockIdx) => {
+            const groupGlyphs = [];
+            const groupCPs = new Set();
+            groupIndices.forEach(idx => {
+              arr.forEach((glyph, gIdx) => {
+                if (glyphToSplit[gIdx].includes(idx)) {
+                  if (!groupGlyphs.includes(glyph)) {
+                    groupGlyphs.push(glyph);
+                    glyph.codePoints?.forEach(cp => groupCPs.add(cp));
+                  }
+                }
+              });
+            });
+
+            // Первый символ группы (для подсказки) — берём из первого splitItem
+            const primaryChar = splitItems[groupIndices[0]].part[0] || '?';
+
+            return {
+              glyphs: groupGlyphs,
+              codePoints: Array.from(groupCPs),
+              primaryChar,
+              splitIndices: groupIndices,
+            };
+          });
+
+          setBlocks(newBlocks);
+        } else {
+          // Если char_split нет, группируем по cluster
+          const map = new Map();
+          arr.forEach(g => {
+            const clusterId = g.cluster ?? 0;
+            if (!map.has(clusterId)) map.set(clusterId, []);
+            map.get(clusterId).push(g);
+          });
+          const sortedClusters = Array.from(map.entries())
+            .sort(([a], [b]) => a - b)
+            .map(([_, clusterGlyphs]) => clusterGlyphs);
+
+          const fallbackBlocks = sortedClusters.map(cluster => ({
+            glyphs: cluster,
+            codePoints: cluster.flatMap(g => g.codePoints || []),
+            primaryChar: cluster[0]?.char || '?',
+          }));
+          setBlocks(fallbackBlocks);
+        }
 
         setLoading(false);
       })
@@ -315,9 +321,9 @@ export default function VisualDecoder(props) {
       });
 
     return () => { active = false; };
-  }, [text]);
+  }, [text, data?.char_split]);
 
-  // Звуки (оставляем как есть)
+  // Звуки (без изменений)
   useEffect(() => {
     if (!glyphs.length || !data?.char_split) return;
 
@@ -368,7 +374,7 @@ export default function VisualDecoder(props) {
     [blocks, viewBoxPad]
   );
 
-  // Оповещаем о рендере (передаём блоки в плоском виде для совместимости)
+  // Оповещаем о рендере
   useEffect(() => {
     if (!onGlyphsRendered) return;
     const flatMeta = blocks.flatMap((block, blockIdx) =>
@@ -377,7 +383,7 @@ export default function VisualDecoder(props) {
         blockIndex: blockIdx,
         glyphIndexInBlock: gIdx,
         resolvedChar: block.primaryChar,
-        isSubscript: block.isSubscript,
+        isSubscript: false,
       }))
     );
     onGlyphsRendered(flatMeta);
@@ -425,15 +431,20 @@ export default function VisualDecoder(props) {
     const { blockIdx, glyph } = hit;
     const block = blocks[blockIdx];
 
-    // Определяем, какой символ из блока выбран (для составных глифов)
     let selectedChar = block.primaryChar;
-    if (block.codePoints.length > 1 && block.glyphs[0]?.bb) {
+
+    // Если блок содержит несколько splitIndices, пытаемся разделить по горизонтали
+    if (block.splitIndices && block.splitIndices.length > 1 && block.glyphs[0]?.bb) {
       const bbox = block.glyphs[0].bb;
-      const midX = (bbox.x1 + bbox.x2) / 2;
-      if (p.x < midX) {
-        selectedChar = String.fromCodePoint(block.codePoints[0]);
-      } else {
-        selectedChar = String.fromCodePoint(block.codePoints[1]);
+      const totalWidth = bbox.x2 - bbox.x1;
+      // Пропорции можно настроить под конкретный шрифт, пока 50/50
+      const partWidth = totalWidth / block.splitIndices.length;
+      const clickX = p.x - bbox.x1;
+      const partIndex = Math.floor(clickX / partWidth);
+      if (partIndex >= 0 && partIndex < block.splitIndices.length) {
+        const splitIdx = block.splitIndices[partIndex];
+        const splitPart = data.char_split[splitIdx];
+        selectedChar = splitPart[0] || selectedChar;
       }
     }
 
@@ -443,12 +454,12 @@ export default function VisualDecoder(props) {
         glyphs: block.glyphs,
         primaryChar: selectedChar,
         allChars: block.codePoints.map(cp => String.fromCodePoint(cp)),
-        isSubscript: block.isSubscript,
+        isSubscript: false,
       });
     }
 
     if (showTapHint) {
-      const isSubscriptConsonant = block.isSubscript && isKhmerConsonant(selectedChar);
+      const isSubscriptConsonant = false;
       const { typeLabel, hint } = getGlyphHintContent({
         glyphChar: selectedChar,
         alphabetDb,
@@ -472,14 +483,10 @@ export default function VisualDecoder(props) {
 
       setLastTap({
         char: selectedChar,
-        displayChar: buildGlyphDisplayChar({
-          glyphChar: selectedChar,
-          isSubscript: block.isSubscript,
-          isSubscriptConsonant,
-        }),
+        displayChar: selectedChar,
         typeLabel,
         hint: truncatedHint,
-        isSubscript: block.isSubscript,
+        isSubscript: false,
       });
     }
 
@@ -499,7 +506,7 @@ export default function VisualDecoder(props) {
       const isSuccess = evaluateGlyphSuccess({
         rule: effectiveRule,
         glyphChar: selectedChar,
-        glyphMeta: { isSubscript: block.isSubscript },
+        glyphMeta: { isSubscript: false },
         targetChar,
       });
       const sounds = {
@@ -594,27 +601,21 @@ export default function VisualDecoder(props) {
 
           const isTarget = !!targetChar && block.codePoints.some(cp => String.fromCodePoint(cp) === targetChar);
           const forceHeroOutline = heroHighlight === "green_outline" && isTarget;
-          const isConsonant = block.type === 'consonant' || block.type === 'subscript';
+          const isConsonant = block.codePoints.some(isConsonantCp);
 
           return (
             <g key={blockIdx}>
               {block.glyphs.map((glyph, gIdx) => {
                 const fillColor = colorForGlyph(glyph, blockIdx, gIdx, isBlockSelected);
-                const isSubscript = block.isSubscript;
 
                 let outlineColor = isBlockSelected ? FALLBACK.SELECTED : "transparent";
                 let outlineWidth = isBlockSelected ? 5 : 0;
-
-                if (highlightSubscripts && isSubscript && !isBlockSelected) {
-                  outlineColor = "#facc15";
-                  outlineWidth = 2;
-                }
 
                 if (interactionMode === "persistent_select") {
                   if (isBlockSelected) {
                     outlineWidth = 4;
                     if (isConsonant) {
-                      outlineColor = isSubscript ? "#facc15" : "#22c55e";
+                      outlineColor = "#22c55e";
                     } else {
                       outlineColor = "#ef4444";
                     }
@@ -626,19 +627,6 @@ export default function VisualDecoder(props) {
                   } else {
                     outlineWidth = 0;
                     outlineColor = "transparent";
-                  }
-                }
-
-                if (interactionMode === "decoder_select") {
-                  outlineWidth = isBlockSelected ? 4 : 0;
-                  if (isBlockSelected) {
-                    if (isSubscript) {
-                      outlineColor = "#facc15";
-                    } else if (isConsonant) {
-                      outlineColor = "#22c55e";
-                    } else {
-                      outlineColor = "#94a3b8";
-                    }
                   }
                 }
 
