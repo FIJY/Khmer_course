@@ -21,7 +21,7 @@ import {
   truncateHint,
 } from "../lib/glyphHintUtils";
 
-// Режимы подсветки (экспортируются для других компонентов)
+// Режимы подсветки
 export const HIGHLIGHT_MODES = {
   ALL: "all",
   CONSONANTS: "consonants",
@@ -29,7 +29,7 @@ export const HIGHLIGHT_MODES = {
 };
 
 const COENG_CHAR = "្";
-const HIT_DISTANCE_THRESHOLD = 35; // не используется, оставим для совместимости
+const COENG_CP = 0x17D2;
 
 const FALLBACK = {
   MUTED: "rgba(255,255,255,0.18)",
@@ -66,14 +66,111 @@ function isKhmerConsonant(ch) {
   }
 }
 
-function makeViewBoxFromClusters(clusters, pad = 60) {
-  if (!clusters || clusters.length === 0) {
+function isConsonantCp(cp) {
+  return cp >= 0x1780 && cp <= 0x17A2;
+}
+
+function isCoengCp(cp) {
+  return cp === COENG_CP;
+}
+
+function isVowelDepCp(cp) {
+  return cp >= 0x17B6 && cp <= 0x17C5;
+}
+
+function isVowelIndCp(cp) {
+  return cp >= 0x17A3 && cp <= 0x17B3;
+}
+
+function isDiacriticCp(cp) {
+  return cp >= 0x17C6 && cp <= 0x17D1 && cp !== COENG_CP;
+}
+
+// --- Построение блоков из кластеров ---
+function buildBlocksFromClusters(clusters) {
+  const blocks = [];
+
+  for (let i = 0; i < clusters.length; i++) {
+    const clusterGlyphs = clusters[i];
+    const clusterCodePoints = clusterGlyphs.flatMap(g => g.codePoints || []);
+
+    const hasCoeng = clusterCodePoints.some(isCoengCp);
+
+    if (hasCoeng && i + 1 < clusters.length) {
+      const nextClusterGlyphs = clusters[i + 1];
+      const nextCodePoints = nextClusterGlyphs.flatMap(g => g.codePoints || []);
+      const nextHasConsonant = nextCodePoints.some(isConsonantCp);
+
+      if (nextHasConsonant) {
+        const mergedGlyphs = [...clusterGlyphs, ...nextClusterGlyphs];
+        blocks.push({
+          glyphs: mergedGlyphs,
+          codePoints: [...clusterCodePoints, ...nextCodePoints],
+        });
+        i++;
+        continue;
+      }
+    }
+
+    blocks.push({
+      glyphs: clusterGlyphs,
+      codePoints: clusterCodePoints,
+    });
+  }
+
+  return blocks.map(block => {
+    const { glyphs, codePoints } = block;
+
+    let type = 'other';
+    let isSubscript = false;
+    let primaryCp = null;
+
+    const hasConsonant = codePoints.some(isConsonantCp);
+    const hasCoeng = codePoints.some(isCoengCp);
+    const hasVowelDep = codePoints.some(isVowelDepCp);
+    const hasVowelInd = codePoints.some(isVowelIndCp);
+    const hasDiacritic = codePoints.some(isDiacriticCp);
+
+    if (hasCoeng && hasConsonant) {
+      type = 'subscript';
+      isSubscript = true;
+      primaryCp = codePoints.find(isConsonantCp);
+    } else if (hasConsonant) {
+      type = 'consonant';
+      primaryCp = codePoints.find(isConsonantCp);
+    } else if (hasVowelDep) {
+      type = 'vowel_dep';
+      primaryCp = codePoints.find(isVowelDepCp);
+    } else if (hasVowelInd) {
+      type = 'vowel_ind';
+      primaryCp = codePoints.find(isVowelIndCp);
+    } else if (hasDiacritic) {
+      type = 'diacritic';
+      primaryCp = codePoints.find(isDiacriticCp);
+    } else if (codePoints.length > 0) {
+      primaryCp = codePoints[0];
+    }
+
+    const primaryChar = primaryCp ? String.fromCodePoint(primaryCp) : '';
+
+    return {
+      glyphs,
+      type,
+      isSubscript,
+      primaryChar,
+      codePoints,
+    };
+  });
+}
+
+function makeViewBoxFromBlocks(blocks, pad = 60) {
+  if (!blocks || blocks.length === 0) {
     return { minX: 0, minY: 0, w: 300, h: 300 };
   }
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  clusters.forEach(cluster => {
-    cluster.forEach(g => {
+  blocks.forEach(block => {
+    block.glyphs.forEach(g => {
       if (g.bb) {
         minX = Math.min(minX, g.bb.x1);
         minY = Math.min(minY, g.bb.y1);
@@ -131,11 +228,11 @@ export default function VisualDecoder(props) {
   );
   const heroHighlight = data?.hero_highlight ?? data?.heroHighlight ?? null;
 
-  const [glyphs, setGlyphs] = useState([]); // все глифы с сервера
-  const [clusters, setClusters] = useState([]); // сгруппированные по cluster
+  const [glyphs, setGlyphs] = useState([]);
+  const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedId, setSelectedId] = useState(null); // id кластера (индекс в clusters)
+  const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [lastTap, setLastTap] = useState(null);
   const [glyphSoundMap, setGlyphSoundMap] = useState({});
@@ -170,12 +267,12 @@ export default function VisualDecoder(props) {
     }
   }, [lastTap, scrollTargetRef]);
 
-  // Загрузка глифов
+  // Загрузка глифов и построение блоков
   useEffect(() => {
     let active = true;
     if (!text) {
       setGlyphs([]);
-      setClusters([]);
+      setBlocks([]);
       setLoading(false);
       return;
     }
@@ -193,18 +290,20 @@ export default function VisualDecoder(props) {
         const arr = Array.isArray(json) ? json : [];
         setGlyphs(arr);
 
-        // Группируем по cluster
+        // 1. Группировка по cluster
         const map = new Map();
         arr.forEach(g => {
           const clusterId = g.cluster ?? 0;
           if (!map.has(clusterId)) map.set(clusterId, []);
           map.get(clusterId).push(g);
         });
-        // Преобразуем в массив кластеров, сортируя по clusterId
         const sortedClusters = Array.from(map.entries())
           .sort(([a], [b]) => a - b)
           .map(([_, clusterGlyphs]) => clusterGlyphs);
-        setClusters(sortedClusters);
+
+        // 2. Построение блоков
+        const newBlocks = buildBlocksFromClusters(sortedClusters);
+        setBlocks(newBlocks);
 
         setLoading(false);
       })
@@ -218,7 +317,7 @@ export default function VisualDecoder(props) {
     return () => { active = false; };
   }, [text]);
 
-  // Звуки (можно оставить без изменений, полагаясь на getSoundFileForChar)
+  // Звуки (оставляем как есть)
   useEffect(() => {
     if (!glyphs.length || !data?.char_split) return;
 
@@ -264,29 +363,27 @@ export default function VisualDecoder(props) {
     setGlyphSoundMap(newMap);
   }, [glyphs, data]);
 
-  // Вычисляем viewBox на основе кластеров
   const vb = useMemo(
-    () => makeViewBoxFromClusters(clusters, viewBoxPad),
-    [clusters, viewBoxPad]
+    () => makeViewBoxFromBlocks(blocks, viewBoxPad),
+    [blocks, viewBoxPad]
   );
 
-  // Оповещаем о рендере (передаём кластеры, преобразованные в формат, ожидаемый родителем)
+  // Оповещаем о рендере (передаём блоки в плоском виде для совместимости)
   useEffect(() => {
     if (!onGlyphsRendered) return;
-    // Преобразуем кластеры в плоский массив с мета-информацией (для совместимости)
-    const flatMeta = clusters.flatMap((cluster, clusterIdx) => {
-      return cluster.map((g, gIdx) => ({
+    const flatMeta = blocks.flatMap((block, blockIdx) =>
+      block.glyphs.map((g, gIdx) => ({
         ...g,
-        clusterIndex: clusterIdx,
-        glyphIndexInCluster: gIdx,
-        resolvedChar: getPrimaryCharFromGlyph(g),
-        isSubscript: false, // можно вычислить позже, если нужно
-      }));
-    });
+        blockIndex: blockIdx,
+        glyphIndexInBlock: gIdx,
+        resolvedChar: block.primaryChar,
+        isSubscript: block.isSubscript,
+      }))
+    );
     onGlyphsRendered(flatMeta);
-  }, [onGlyphsRendered, clusters]);
+  }, [onGlyphsRendered, blocks]);
 
-  // ---- НОВАЯ ЛОГИКА ВЫБОРА КЛАСТЕРА ----
+  // ---- Логика выбора блока ----
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
     if (!svg) return null;
@@ -298,21 +395,18 @@ export default function VisualDecoder(props) {
     return pt.matrixTransform(ctm.inverse());
   }
 
-  function pickClusterAtPoint(p) {
-    if (!p || !clusters.length) return null;
+  function pickBlockAtPoint(p) {
+    if (!p || !blocks.length) return null;
 
-    // Проходим по всем глифам всех кластеров в порядке, удобном для поиска
-    // Но чтобы определить кластер, нам достаточно найти любой глиф, в который попала точка,
-    // и вернуть его кластер.
-    for (let clusterIdx = 0; clusterIdx < clusters.length; clusterIdx++) {
-      const cluster = clusters[clusterIdx];
-      for (let gIdx = 0; gIdx < cluster.length; gIdx++) {
-        const glyph = cluster[gIdx];
-        const pathEl = document.getElementById(`glyph-${clusterIdx}-${gIdx}`);
+    for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
+      const block = blocks[blockIdx];
+      for (let gIdx = 0; gIdx < block.glyphs.length; gIdx++) {
+        const glyph = block.glyphs[gIdx];
+        const pathEl = document.getElementById(`glyph-${blockIdx}-${gIdx}`);
         if (!pathEl) continue;
         try {
           if (pathEl.isPointInFill(p)) {
-            return { clusterIdx, glyph, glyphIdx: gIdx };
+            return { blockIdx, glyph, glyphIdx: gIdx };
           }
         } catch {
           // ignore
@@ -325,31 +419,38 @@ export default function VisualDecoder(props) {
   const handlePointerDown = (e) => {
     e.preventDefault();
     const p = svgPointFromEvent(e);
-    const hit = pickClusterAtPoint(p);
+    const hit = pickBlockAtPoint(p);
     if (!hit) return;
 
-    const { clusterIdx, glyph } = hit;
-    const cluster = clusters[clusterIdx];
-    const primaryChar = getPrimaryCharFromGlyph(glyph); // можно взять от любого глифа кластера, они все относятся к одному символу
-    const allChars = getAllCharsFromGlyph(glyph); // все codePoints этого глифа
+    const { blockIdx, glyph } = hit;
+    const block = blocks[blockIdx];
 
-    const hitId = clusterIdx; // используем индекс кластера как идентификатор
+    // Определяем, какой символ из блока выбран (для составных глифов)
+    let selectedChar = block.primaryChar;
+    if (block.codePoints.length > 1 && block.glyphs[0]?.bb) {
+      const bbox = block.glyphs[0].bb;
+      const midX = (bbox.x1 + bbox.x2) / 2;
+      if (p.x < midX) {
+        selectedChar = String.fromCodePoint(block.codePoints[0]);
+      } else {
+        selectedChar = String.fromCodePoint(block.codePoints[1]);
+      }
+    }
 
     if (onGlyphClick) {
-      onGlyphClick(primaryChar, {
-        clusterIdx,
-        glyphs: cluster,
-        primaryChar,
-        allChars,
-        isSubscript: false, // можно вычислить позже
+      onGlyphClick(selectedChar, {
+        blockIdx,
+        glyphs: block.glyphs,
+        primaryChar: selectedChar,
+        allChars: block.codePoints.map(cp => String.fromCodePoint(cp)),
+        isSubscript: block.isSubscript,
       });
     }
 
     if (showTapHint) {
-      const isSubscript = false; // пока упростим
-      const isSubscriptConsonant = false;
+      const isSubscriptConsonant = block.isSubscript && isKhmerConsonant(selectedChar);
       const { typeLabel, hint } = getGlyphHintContent({
-        glyphChar: primaryChar,
+        glyphChar: selectedChar,
         alphabetDb,
         fallbackTypeLabel: (ch) => {
           const cat = getKhmerGlyphCategory(ch);
@@ -370,32 +471,35 @@ export default function VisualDecoder(props) {
       const truncatedHint = truncateHint(hint, hintMaxChars);
 
       setLastTap({
-        char: primaryChar,
-        displayChar: primaryChar, // просто символ, без ◌
+        char: selectedChar,
+        displayChar: buildGlyphDisplayChar({
+          glyphChar: selectedChar,
+          isSubscript: block.isSubscript,
+          isSubscriptConsonant,
+        }),
         typeLabel,
         hint: truncatedHint,
-        isSubscript,
+        isSubscript: block.isSubscript,
       });
     }
 
     if (selectionMode === "multi") {
-      setSelectedIds((prev) => (prev.includes(hitId) ? prev : [...prev, hitId]));
+      setSelectedIds((prev) => (prev.includes(blockIdx) ? prev : [...prev, blockIdx]));
     } else {
-      setSelectedId(hitId);
+      setSelectedId(blockIdx);
     }
 
-    // Звук: попробуем найти для первого символа
-    let soundFile = glyphSoundMap[glyph.id]; // осторожно: glyphSoundMap индексирован по индексу глифа в исходном массиве glyphs, а не по кластеру
+    let soundFile = glyphSoundMap[glyph.id];
     if (!soundFile) {
-      soundFile = getSoundFileForChar(primaryChar);
+      soundFile = getSoundFileForChar(selectedChar);
     }
 
     const effectiveRule = feedbackRule ?? data?.success_rule ?? data?.successRule;
     if (effectiveRule) {
       const isSuccess = evaluateGlyphSuccess({
         rule: effectiveRule,
-        glyphChar: primaryChar,
-        glyphMeta: { isSubscript: false },
+        glyphChar: selectedChar,
+        glyphMeta: { isSubscript: block.isSubscript },
         targetChar,
       });
       const sounds = {
@@ -431,18 +535,19 @@ export default function VisualDecoder(props) {
     setSelectedIds([]);
   }, [resetSelectionKey]);
 
-  // Цвет заливки для глифа (учитываем выделение кластера)
-  function colorForGlyph(glyph, clusterIdx, gIdx, isSelected) {
-    const primaryChar = getPrimaryCharFromGlyph(glyph);
+  // Цвет заливки для глифа
+  function colorForGlyph(glyph, blockIdx, gIdx, isSelected) {
+    const block = blocks[blockIdx];
+    const primaryChar = block.primaryChar;
     const base = getKhmerGlyphColor(primaryChar);
     const resolvedIsSelected = isSelected ?? (selectionMode === "multi"
-      ? selectedIds.includes(clusterIdx)
-      : selectedId === clusterIdx);
+      ? selectedIds.includes(blockIdx)
+      : selectedId === blockIdx);
 
     if (typeof getGlyphFillColor === "function") {
       const override = getGlyphFillColor({
         glyph,
-        idx: clusterIdx, // передаём индекс кластера
+        idx: blockIdx,
         isSelected: resolvedIsSelected,
         resolvedChar: primaryChar,
       });
@@ -464,7 +569,7 @@ export default function VisualDecoder(props) {
     return <div className="text-white animate-pulse text-center p-10">Deciphering...</div>;
   }
 
-  if (error || !clusters || clusters.length === 0) {
+  if (error || !blocks || blocks.length === 0) {
     return <div className="text-red-400 text-center p-10">Error loading glyphs</div>;
   }
 
@@ -481,35 +586,32 @@ export default function VisualDecoder(props) {
         }}
         onPointerDown={handlePointerDown}
       >
-        {clusters.map((cluster, clusterIdx) => {
-          const isClusterSelected =
+        {blocks.map((block, blockIdx) => {
+          const isBlockSelected =
             selectionMode === "multi"
-              ? selectedIds.includes(clusterIdx)
-              : selectedId === clusterIdx;
+              ? selectedIds.includes(blockIdx)
+              : selectedId === blockIdx;
 
-          // Определяем, является ли кластер целевым (если его основной символ совпадает с targetChar)
-          const primaryChar = getPrimaryCharFromGlyph(cluster[0]); // берём первый глиф
-          const allChars = cluster.flatMap(g => getAllCharsFromGlyph(g));
-          const isTarget = !!targetChar && allChars.includes(targetChar);
+          const isTarget = !!targetChar && block.codePoints.some(cp => String.fromCodePoint(cp) === targetChar);
           const forceHeroOutline = heroHighlight === "green_outline" && isTarget;
+          const isConsonant = block.type === 'consonant' || block.type === 'subscript';
 
           return (
-            <g key={clusterIdx}>
-              {cluster.map((glyph, gIdx) => {
-                const fillColor = colorForGlyph(glyph, clusterIdx, gIdx, isClusterSelected);
-                const isConsonant = isKhmerConsonant(primaryChar);
-                const isSubscript = false; // TODO: можно определить по наличию COENG в исходном тексте
+            <g key={blockIdx}>
+              {block.glyphs.map((glyph, gIdx) => {
+                const fillColor = colorForGlyph(glyph, blockIdx, gIdx, isBlockSelected);
+                const isSubscript = block.isSubscript;
 
-                let outlineColor = isClusterSelected ? FALLBACK.SELECTED : "transparent";
-                let outlineWidth = isClusterSelected ? 5 : 0;
+                let outlineColor = isBlockSelected ? FALLBACK.SELECTED : "transparent";
+                let outlineWidth = isBlockSelected ? 5 : 0;
 
-                if (highlightSubscripts && isSubscript && !isClusterSelected) {
+                if (highlightSubscripts && isSubscript && !isBlockSelected) {
                   outlineColor = "#facc15";
                   outlineWidth = 2;
                 }
 
                 if (interactionMode === "persistent_select") {
-                  if (isClusterSelected) {
+                  if (isBlockSelected) {
                     outlineWidth = 4;
                     if (isConsonant) {
                       outlineColor = isSubscript ? "#facc15" : "#22c55e";
@@ -518,19 +620,18 @@ export default function VisualDecoder(props) {
                     }
                   }
                 } else if (interactionMode === "find_consonant" && selectedId !== null) {
-                  outlineWidth = 4;
-                  if (isClusterSelected) {
+                  if (isBlockSelected) {
+                    outlineWidth = 4;
                     outlineColor = "#22c55e";
-                  } else if (isSubscript) {
-                    outlineColor = "#facc15";
                   } else {
-                    outlineColor = "#ef4444";
+                    outlineWidth = 0;
+                    outlineColor = "transparent";
                   }
                 }
 
                 if (interactionMode === "decoder_select") {
-                  outlineWidth = isClusterSelected ? 4 : 0;
-                  if (isClusterSelected) {
+                  outlineWidth = isBlockSelected ? 4 : 0;
+                  if (isBlockSelected) {
                     if (isSubscript) {
                       outlineColor = "#facc15";
                     } else if (isConsonant) {
@@ -546,15 +647,15 @@ export default function VisualDecoder(props) {
                   outlineWidth = 0;
                 }
 
-                if (forceHeroOutline && !isClusterSelected) {
+                if (forceHeroOutline && !isBlockSelected) {
                   outlineColor = "#22c55e";
                   outlineWidth = 4;
                 }
 
                 return (
                   <path
-                    key={`${clusterIdx}-${gIdx}`}
-                    id={`glyph-${clusterIdx}-${gIdx}`}
+                    key={`${blockIdx}-${gIdx}`}
+                    id={`glyph-${blockIdx}-${gIdx}`}
                     d={glyph.d}
                     fill={fillColor}
                     pointerEvents="none"

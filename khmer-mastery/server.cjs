@@ -1,4 +1,4 @@
-// server.cjs
+// server.cjs - Split glyphs with multiple text chars
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
@@ -10,7 +10,7 @@ const app = express();
 app.use(cors());
 
 const PORT = Number(process.env.PORT) || 3001;
-const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
+const FONT_PATH = path.join(__dirname, "public/fonts/NotoSansKhmer-Regular.ttf");
 const FONT_SIZE = 120;
 
 let fkFont = null;
@@ -41,17 +41,27 @@ app.get("/api/shape", (req, res) => {
   try {
     const decodedText = decodeURIComponent(rawText);
     const text = decodedText.normalize("NFC");
+    const textChars = Array.from(text);
+    const textCodePoints = textChars.map(c => c.codePointAt(0));
+
+    console.log("\n=== SHAPING:", text);
+    console.log("Text chars:", textChars.map((c, i) => `${i}:"${c}"(U+${c.codePointAt(0).toString(16).toUpperCase()})`).join(', '));
 
     const scale = FONT_SIZE / unitsPerEm;
     const run = fkFont.layout(text);
 
+    console.log("Fontkit glyphs:", run.glyphs.length);
+
     const glyphsData = [];
     let cursorX = 50;
+    let outputId = 0;
 
     for (let i = 0; i < run.glyphs.length; i++) {
       const glyph = run.glyphs[i];
       const pos = run.positions[i] || {};
       const codePoints = Array.isArray(glyph.codePoints) ? glyph.codePoints : [];
+
+      console.log(`\n  Glyph ${i}: cluster=${pos.cluster}, codePoints=[${codePoints.map(cp => `U+${cp.toString(16).toUpperCase()}`).join(',')}]`);
 
       const advUnits =
         (typeof pos.xAdvance === "number" ? pos.xAdvance : null) ??
@@ -65,23 +75,70 @@ app.get("/api/shape", (req, res) => {
       const d = path.toPathData(3);
       const bb = path.getBoundingBox();
 
-      const primaryChar = codePoints.length > 0 ? String.fromCodePoint(codePoints[0]) : "";
+      // Check if this glyph contains multiple text characters
+      const matchedTextChars = [];
+      for (let charIdx = 0; charIdx < textChars.length; charIdx++) {
+        const charCP = textCodePoints[charIdx];
+        if (codePoints.includes(charCP)) {
+          matchedTextChars.push(charIdx);
+        }
+      }
 
-      glyphsData.push({
-        id: i,
-        glyphIdx: i,
-        char: primaryChar,
-        codePoints,
-        cluster: typeof pos.cluster === "number" ? pos.cluster : i, // важно!
-        d,
-        bb: { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 },
-        advance: advUnits * scale,
-      });
+      console.log(`    Matched text chars: [${matchedTextChars.join(',')}]`);
+
+      if (matchedTextChars.length > 1) {
+        // SPLIT: Create separate glyph entry for each text char
+        console.log(`    → Splitting into ${matchedTextChars.length} separate glyphs`);
+
+        for (const charIdx of matchedTextChars) {
+          const charCP = textCodePoints[charIdx];
+          glyphsData.push({
+            id: outputId++,
+            glyphIdx: i,
+            char: textChars[charIdx],
+            codePoints: [charCP],
+            cluster: charIdx,  // ← Each gets its own cluster!
+            d,
+            bb: { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 },
+            advance: advUnits * scale,
+          });
+          console.log(`      → Output glyph ${outputId - 1}: char="${textChars[charIdx]}", cluster=${charIdx}`);
+        }
+      } else if (matchedTextChars.length === 1) {
+        // NORMAL: Single text char
+        const charIdx = matchedTextChars[0];
+        glyphsData.push({
+          id: outputId++,
+          glyphIdx: i,
+          char: textChars[charIdx],
+          codePoints: [textCodePoints[charIdx]],
+          cluster: charIdx,
+          d,
+          bb: { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 },
+          advance: advUnits * scale,
+        });
+        console.log(`    → Output glyph ${outputId - 1}: char="${textChars[charIdx]}", cluster=${charIdx}`);
+      } else {
+        // FALLBACK: No match, use fontkit cluster
+        const primaryChar = codePoints.length > 0 ? String.fromCodePoint(codePoints[0]) : "";
+        const fallbackCluster = typeof pos.cluster === "number" ? pos.cluster : i;
+        glyphsData.push({
+          id: outputId++,
+          glyphIdx: i,
+          char: primaryChar,
+          codePoints,
+          cluster: fallbackCluster,
+          d,
+          bb: { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 },
+          advance: advUnits * scale,
+        });
+        console.log(`    → Output glyph ${outputId - 1}: char="${primaryChar}", cluster=${fallbackCluster} (fallback)`);
+      }
 
       cursorX += advUnits * scale;
     }
 
-    console.log(`→ Отправлено ${glyphsData.length} глифов`);
+    console.log(`\n✅ Final: ${glyphsData.length} output glyphs from ${run.glyphs.length} fontkit glyphs`);
     res.json(glyphsData);
   } catch (err) {
     console.error("Shape error:", err);
