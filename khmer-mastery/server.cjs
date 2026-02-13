@@ -1,4 +1,4 @@
-// server.cjs - С ВАШЕЙ КЛАССИФИКАЦИЕЙ + КЛАСТЕРНЫЙ ПОДХОД
+// server.cjs - ИСПРАВЛЕННАЯ ГРУППИРОВКА
 app.get("/api/shape", (req, res) => {
   const text = req.query.text;
   if (!text) return res.status(400).json({ error: "No text provided" });
@@ -6,116 +6,98 @@ app.get("/api/shape", (req, res) => {
 
   try {
     const scale = FONT_SIZE / unitsPerEm;
-    const textChars = Array.from(text);
 
     console.log("\n=== SHAPING:", text);
-    console.log("Text characters:", textChars.length);
 
-    // 1. Шейпим ВЕСЬ текст сразу (это критично!)
+    // 1. Шейпим ВЕСЬ текст сразу
     const run = fkFont.layout(text);
-    console.log(`Fontkit layout returned ${run.glyphs.length} glyphs`);
+    console.log(`Fontkit layout: ${run.glyphs.length} глифов`);
 
-    // 2. Группируем глифы в кластеры (ваша логика определения типов)
+    // 2. Группируем глифы в кластеры по ПОЗИЦИЯМ!
     const clusters = [];
     let currentCluster = [];
-    let clusterChars = [];
-    let charIndex = 0;
+    let lastX = 0;
 
     for (let i = 0; i < run.glyphs.length; i++) {
       const glyph = run.glyphs[i];
-      const position = run.positions[i];
+      const pos = run.positions[i];
 
-      // Начинаем новый кластер при значительном xAdvance
-      if (position.xAdvance > 5 && currentCluster.length > 0) {
-        clusters.push({
-          glyphs: currentCluster,
-          chars: clusterChars,
-          char: clusterChars.join('')
-        });
+      // КЛЮЧЕВОЕ: Новый кластер только если xAdvance > 0 И это не диакритика
+      // Для кхмерского: гласные и подписные имеют xAdvance = 0
+      if (pos.xAdvance > 1 && currentCluster.length > 0) {
+        clusters.push([...currentCluster]);
         currentCluster = [];
-        clusterChars = [];
-        charIndex++;
       }
 
-      currentCluster.push({ glyph, position });
-
-      // Сохраняем исходный символ (если есть)
-      if (glyph.codePoints && glyph.codePoints.length > 0) {
-        const codePoint = glyph.codePoints[0];
-        const char = String.fromCodePoint(codePoint);
-        if (!clusterChars.includes(char)) {
-          clusterChars.push(char);
-        }
-      }
+      currentCluster.push({ glyph, pos });
     }
 
-    // Последний кластер
+    // Добавляем последний кластер
     if (currentCluster.length > 0) {
-      clusters.push({
-        glyphs: currentCluster,
-        chars: clusterChars,
-        char: clusterChars.join('')
-      });
+      clusters.push([...currentCluster]);
     }
 
-    console.log(`\n📦 Сгруппировано в ${clusters.length} кластеров:`);
+    console.log(`📦 Сгруппировано в ${clusters.length} кластеров:`);
 
-    // 3. Отрисовываем кластеры с ВАШЕЙ классификацией
+    // 3. Собираем исходные символы для каждого кластера
     const glyphsData = [];
     let cursorX = 50;
 
     clusters.forEach((cluster, idx) => {
-      // ВАША ЛОГИКА определения типа
+      // Собираем ВСЕ символы из кластера
+      let clusterChars = '';
       let isConsonant = false;
       let isVowel = false;
       let isSubscript = false;
       let isDiacritic = false;
 
-      // Определяем типы символов в кластере
-      cluster.chars.forEach(char => {
-        const code = char.codePointAt(0);
-        // Кхмерские согласные: 0x1780-0x17A2
-        if (code >= 0x1780 && code <= 0x17A2) isConsonant = true;
-        // Гласные: 0x17B6-0x17C5
-        else if (code >= 0x17B6 && code <= 0x17C5) isVowel = true;
-        // Подписные: 0x17D2 + согласная
-        else if (code === 0x17D2) isSubscript = true;
-        // Диакритики: 0x17C6-0x17D1
-        else if (code >= 0x17C6 && code <= 0x17D1) isDiacritic = true;
+      // Проходим по глифам и собираем символы
+      cluster.forEach(({ glyph }) => {
+        if (glyph.codePoints && glyph.codePoints.length > 0) {
+          const codePoint = glyph.codePoints[0];
+          const char = String.fromCodePoint(codePoint);
+          clusterChars += char;
+
+          // Определяем типы
+          if (codePoint >= 0x1780 && codePoint <= 0x17A2) isConsonant = true;
+          else if (codePoint >= 0x17B6 && codePoint <= 0x17C5) isVowel = true;
+          else if (codePoint === 0x17D2) isSubscript = true;
+          else if (codePoint >= 0x17C6 && codePoint <= 0x17D1) isDiacritic = true;
+        }
       });
 
-      // Собираем пути
+      // Если не удалось собрать символы, берем из исходного текста
+      if (!clusterChars) {
+        clusterChars = text[idx] || '?';
+      }
+
+      // Отрисовываем ВСЕ глифы кластера ВМЕСТЕ
       const paths = [];
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      let totalAdvance = 0;
+      let maxAdvance = 0;
 
-      cluster.glyphs.forEach(({ glyph, position }) => {
+      cluster.forEach(({ glyph, pos }) => {
         const otGlyph = otFont.glyphs.get(glyph.id);
 
-        // Координаты с учетом смещений
-        const x = cursorX + (position.xOffset || 0) * scale;
-        const y = 200 - (position.yOffset || 0) * scale;
+        // Важно: используем cursorX ДЛЯ ВСЕХ глифов кластера!
+        const x = cursorX + (pos.xOffset || 0) * scale;
+        const y = 200 - (pos.yOffset || 0) * scale;
 
         const path = otGlyph.getPath(x, y, FONT_SIZE);
-        const d = path.toPathData(3);
+        paths.push(path.toPathData(3));
 
-        if (d && d.length > 5) {
-          paths.push(d);
+        const bb = path.getBoundingBox();
+        minX = Math.min(minX, bb.x1);
+        minY = Math.min(minY, bb.y1);
+        maxX = Math.max(maxX, bb.x2);
+        maxY = Math.max(maxY, bb.y2);
 
-          const bb = path.getBoundingBox();
-          minX = Math.min(minX, bb.x1);
-          minY = Math.min(minY, bb.y1);
-          maxX = Math.max(maxX, bb.x2);
-          maxY = Math.max(maxY, bb.y2);
-        }
-
-        totalAdvance = Math.max(totalAdvance, (position.xAdvance || 0) * scale);
+        maxAdvance = Math.max(maxAdvance, pos.xAdvance * scale);
       });
 
-      // ВАША структура данных
       glyphsData.push({
         id: idx,
-        char: cluster.char || text[idx] || '?',
+        char: clusterChars, // ВЕСЬ кластер как строка!
         d: paths.join(" "),
         bb: {
           x1: minX === Infinity ? cursorX : minX,
@@ -123,24 +105,24 @@ app.get("/api/shape", (req, res) => {
           x2: maxX === -Infinity ? cursorX + 50 : maxX,
           y2: maxY === -Infinity ? 200 : maxY
         },
-        // ВАША классификация
         isConsonant,
         isVowel,
         isSubscript,
         isDiacritic,
-        glyphCount: cluster.glyphs.length
+        glyphCount: cluster.length
       });
 
-      console.log(`  Кластер ${idx}: "${cluster.char}" → ${cluster.glyphs.length} глифов | Согл:${isConsonant}, Глас:${isVowel}, Подп:${isSubscript}, Диак:${isDiacritic}`);
+      console.log(`  Кластер ${idx}: "${clusterChars}" → ${cluster.length} глифов`);
 
-      cursorX += totalAdvance || 50;
+      // Сдвигаем курсор ТОЛЬКО на xAdvance последнего глифа
+      cursorX += maxAdvance;
     });
 
-    console.log(`\n✅ Итого: ${glyphsData.length} кликабельных кластеров`);
-    return res.json(glyphsData);
+    console.log(`\n✅ Всего кластеров: ${glyphsData.length}`);
+    res.json(glyphsData);
 
   } catch (err) {
     console.error("Shape error:", err);
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
