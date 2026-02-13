@@ -10,26 +10,14 @@ import {
 import { buildShapeApiUrl } from "../lib/apiConfig";
 import { normalizeKhmerText } from "../lib/khmerTextUtils";
 import useAudioPlayer from "../hooks/useAudioPlayer";
-import {
-  DEFAULT_FEEDBACK_SOUNDS,
-  evaluateGlyphSuccess
-} from "../lib/glyphFeedback";
+import { DEFAULT_FEEDBACK_SOUNDS, evaluateGlyphSuccess } from "../lib/glyphFeedback";
 import GlyphHintCard from "./UI/GlyphHintCard";
 import {
-  buildGlyphDisplayChar,
   getGlyphHintContent,
   resolveGlyphMeta,
   truncateHint,
 } from "../lib/glyphHintUtils";
 
-// --- Константы режимов подсветки (без export, экспортируем в конце) ---
-const HIGHLIGHT_MODES = {
-  ALL: "all",
-  CONSONANTS: "consonants",
-  OFF: "off",
-};
-
-const COENG_CHAR = "្";
 const HIT_DISTANCE_THRESHOLD = 35;
 
 const FALLBACK = {
@@ -38,7 +26,13 @@ const FALLBACK = {
   SELECTED: GLYPH_COLORS?.SELECTED ?? "#22d3ee",
 };
 
-// --- Хелперы ---
+// Режимы подсветки (экспортируются для других компонентов)
+export const HIGHLIGHT_MODES = {
+  ALL: "all",
+  CONSONANTS: "consonants",
+  OFF: "off",
+};
+
 function isKhmerConsonant(ch) {
   if (!ch) return false;
   try {
@@ -50,13 +44,42 @@ function isKhmerConsonant(ch) {
   }
 }
 
+function getPrimaryCharFromGlyph(glyph) {
+  const cps = glyph?.codePoints;
+  if (Array.isArray(cps) && cps.length > 0) {
+    try {
+      return String.fromCodePoint(cps[0]);
+    } catch {
+      // ignore
+    }
+  }
+  return glyph?.char || "";
+}
+
+function getAllCharsFromGlyph(glyph) {
+  const cps = glyph?.codePoints;
+  if (Array.isArray(cps) && cps.length > 0) {
+    try {
+      return cps.map((cp) => String.fromCodePoint(cp));
+    } catch {
+      // ignore
+    }
+  }
+  const c = glyph?.char || "";
+  return c ? [c] : [];
+}
+
 function makeViewBoxFromGlyphs(glyphs, pad = 60) {
   if (!glyphs || glyphs.length === 0) {
     return { minX: 0, minY: 0, w: 300, h: 300 };
   }
 
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  glyphs.forEach(g => {
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+
+  glyphs.forEach((g) => {
     if (g.bb) {
       minX = Math.min(minX, g.bb.x1);
       minY = Math.min(minY, g.bb.y1);
@@ -64,6 +87,7 @@ function makeViewBoxFromGlyphs(glyphs, pad = 60) {
       maxY = Math.max(maxY, g.bb.y2);
     }
   });
+
   if (minX === Infinity) minX = 0;
   if (minY === Infinity) minY = 0;
   if (maxX === -Infinity) maxX = 100;
@@ -84,7 +108,6 @@ function distanceToBBox(point, bb) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// --- Компонент ---
 export default function VisualDecoder(props) {
   const {
     data,
@@ -116,9 +139,15 @@ export default function VisualDecoder(props) {
 
   const rawText = propText || data?.word || data?.khmerText || "កាហ្វេ";
   const text = useMemo(() => normalizeKhmerText(rawText), [rawText]);
+
   const targetChar = normalizeKhmerText(
-    feedbackTargetChar ?? data?.target ?? data?.target_char ?? data?.targetChar ?? ""
+    feedbackTargetChar ??
+      data?.target ??
+      data?.target_char ??
+      data?.targetChar ??
+      ""
   );
+
   const heroHighlight = data?.hero_highlight ?? data?.heroHighlight ?? null;
 
   const [glyphs, setGlyphs] = useState([]);
@@ -133,7 +162,6 @@ export default function VisualDecoder(props) {
   const svgRef = useRef(null);
   const hintRef = useRef(null);
 
-  // Сброс выбора
   useEffect(() => {
     if (interactionMode !== "persistent_select") return;
     setSelectedIds([]);
@@ -144,7 +172,6 @@ export default function VisualDecoder(props) {
     setLastTap(null);
   }, [text]);
 
-  // Скролл к подсказке
   useEffect(() => {
     if (!lastTap) return;
     const target = scrollTargetRef?.current || hintRef.current;
@@ -159,9 +186,9 @@ export default function VisualDecoder(props) {
     }
   }, [lastTap, scrollTargetRef]);
 
-  // Загрузка глифов
   useEffect(() => {
     let active = true;
+
     if (!text) {
       setGlyphs([]);
       setLoading(false);
@@ -189,10 +216,11 @@ export default function VisualDecoder(props) {
         setLoading(false);
       });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [text]);
 
-  // Метаданные глифов
   const resolvedGlyphMeta = useMemo(() => {
     return resolveGlyphMeta(glyphs, text);
   }, [glyphs, text]);
@@ -202,7 +230,6 @@ export default function VisualDecoder(props) {
     onGlyphsRendered(resolvedGlyphMeta);
   }, [onGlyphsRendered, resolvedGlyphMeta]);
 
-  // Звуки
   useEffect(() => {
     if (!glyphs.length || !data?.char_split) return;
 
@@ -239,37 +266,30 @@ export default function VisualDecoder(props) {
     const queuesCopy = JSON.parse(JSON.stringify(soundQueues));
 
     glyphs.forEach((glyph, idx) => {
-      const char = glyph.char;
-      if (queuesCopy[char] && queuesCopy[char].length > 0) {
-        newMap[idx] = queuesCopy[char].shift();
+      const primaryChar = getPrimaryCharFromGlyph(glyph);
+      if (queuesCopy[primaryChar] && queuesCopy[primaryChar].length > 0) {
+        newMap[idx] = queuesCopy[primaryChar].shift();
       }
     });
 
     setGlyphSoundMap(newMap);
   }, [glyphs, data]);
 
-  const vb = useMemo(
-    () => makeViewBoxFromGlyphs(glyphs, viewBoxPad),
-    [glyphs, viewBoxPad]
-  );
-
-  const resolvedGlyphChars = useMemo(
-    () => resolvedGlyphMeta.map((glyph) => glyph.resolvedChar || glyph.char || ""),
-    [resolvedGlyphMeta]
-  );
+  const vb = useMemo(() => makeViewBoxFromGlyphs(glyphs, viewBoxPad), [glyphs, viewBoxPad]);
 
   const subscriptConsonantIndices = useMemo(() => {
     const indices = new Set();
     if (!resolvedGlyphMeta) return indices;
     resolvedGlyphMeta.forEach((glyph, idx) => {
-      if (glyph.isSubscript && isKhmerConsonant(glyph.resolvedChar || glyph.char)) {
+      const primaryChar = getPrimaryCharFromGlyph(glyphs?.[idx]);
+      if (glyph.isSubscript && isKhmerConsonant(primaryChar)) {
         indices.add(idx);
       }
     });
     return indices;
-  }, [resolvedGlyphMeta]);
+  }, [resolvedGlyphMeta, glyphs]);
 
-  // ---- НОВАЯ ЛОГИКА ВЫБОРА ----
+  // ---------- HIT TESTING ----------
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
     if (!svg) return null;
@@ -284,46 +304,42 @@ export default function VisualDecoder(props) {
   function pickGlyphAtPoint(p) {
     if (!p || !glyphs.length) return null;
 
-    let bestHit = null;
-    let bestDistance = Infinity;
-    let bestArea = Infinity;
+    let bestFillHit = null;
+    let bestFillArea = Infinity;
+    let bestDistHit = null;
+    let bestDist = Infinity;
 
-    // 1. Точное попадание в заливку
     for (let i = 0; i < glyphs.length; i++) {
       const glyph = glyphs[i];
       const pathEl = document.getElementById(`glyph-path-${i}`);
       if (!pathEl) continue;
 
+      // Exact hit test
       try {
         if (pathEl.isPointInFill(p)) {
-          const area = (glyph.bb?.x2 - glyph.bb?.x1) * (glyph.bb?.y2 - glyph.bb?.y1) || 0;
-          if (area < bestArea) {
-            bestHit = { idx: i, g: glyph };
-            bestArea = area;
+          const area =
+            (glyph.bb?.x2 - glyph.bb?.x1) * (glyph.bb?.y2 - glyph.bb?.y1) || 0;
+          if (area < bestFillArea) {
+            bestFillHit = { idx: i, g: glyph };
+            bestFillArea = area;
           }
         }
       } catch {
         // ignore
       }
-    }
 
-    if (bestHit) return bestHit;
-
-    // 2. Ближайший по bounding box
-    for (let i = 0; i < glyphs.length; i++) {
-      const glyph = glyphs[i];
-      if (!glyph.bb) continue;
-      const dist = distanceToBBox(p, glyph.bb);
-      if (dist < bestDistance) {
-        bestDistance = dist;
-        bestHit = { idx: i, g: glyph };
+      // BBox fallback distance
+      if (glyph.bb) {
+        const dist = distanceToBBox(p, glyph.bb);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestDistHit = { idx: i, g: glyph };
+        }
       }
     }
 
-    if (bestDistance <= HIT_DISTANCE_THRESHOLD) {
-      return bestHit;
-    }
-
+    if (bestFillHit) return bestFillHit;
+    if (bestDistHit && bestDist <= HIT_DISTANCE_THRESHOLD) return bestDistHit;
     return null;
   }
 
@@ -334,13 +350,16 @@ export default function VisualDecoder(props) {
     if (!hit) return;
 
     const hitId = hit.g.id ?? hit.idx;
-    const resolvedChar = resolvedGlyphChars[hit.idx] || hit.g.char;
+
+    const resolvedChar = getPrimaryCharFromGlyph(hit.g);   // ✅ "ៅ" stays "ៅ"
+    const glyphChars = getAllCharsFromGlyph(hit.g);        // for target matching (includes marks)
 
     if (onGlyphClick) {
       const glyphMeta = resolvedGlyphMeta?.[hit.idx] || {};
       onGlyphClick(resolvedChar, {
         ...glyphMeta,
         resolvedChar,
+        glyphChars,
         isSubscript: glyphMeta?.isSubscript ?? false,
       });
     }
@@ -348,7 +367,7 @@ export default function VisualDecoder(props) {
     if (showTapHint) {
       const glyphMeta = resolvedGlyphMeta?.[hit.idx] || {};
       const isSubscript = glyphMeta?.isSubscript ?? false;
-      const isSubscriptConsonant = isSubscript && isKhmerConsonant(resolvedChar);
+
       const { typeLabel, hint } = getGlyphHintContent({
         glyphChar: resolvedChar,
         alphabetDb,
@@ -367,16 +386,13 @@ export default function VisualDecoder(props) {
           return map[cat] || "";
         },
       });
+
       const hintMaxChars = data?.hint_max_chars ?? data?.hintMaxChars;
       const truncatedHint = truncateHint(hint, hintMaxChars);
 
       setLastTap({
         char: resolvedChar,
-        displayChar: buildGlyphDisplayChar({
-          glyphChar: resolvedChar,
-          isSubscript,
-          isSubscriptConsonant,
-        }),
+        displayChar: resolvedChar, // ✅ NO "◌": show exactly "ៅ"
         typeLabel,
         hint: truncatedHint,
         isSubscript,
@@ -395,17 +411,21 @@ export default function VisualDecoder(props) {
     }
 
     const effectiveRule = feedbackRule ?? data?.success_rule ?? data?.successRule;
+
     if (effectiveRule) {
       const isSuccess = evaluateGlyphSuccess({
         rule: effectiveRule,
         glyphChar: resolvedChar,
         glyphMeta: resolvedGlyphMeta?.[hit.idx],
         targetChar: feedbackTargetChar ?? data?.target ?? data?.target_char,
+        glyphChars, // (harmless extra, even if glyphFeedback ignores it)
       });
+
       const sounds = {
         ...DEFAULT_FEEDBACK_SOUNDS,
         ...(feedbackSounds || {}),
       };
+
       const feedbackSound = isSuccess ? sounds.success : sounds.error;
       const sequence = soundFile ? [feedbackSound, soundFile] : [feedbackSound];
       playSequence(sequence, { gapMs: feedbackGapMs });
@@ -416,7 +436,6 @@ export default function VisualDecoder(props) {
     if (onComplete) onComplete();
   };
 
-  // Оповещение о выборе
   useEffect(() => {
     if (!onSelectionChange) return;
     if (selectionMode === "multi") {
@@ -428,17 +447,16 @@ export default function VisualDecoder(props) {
     }
   }, [onSelectionChange, selectedId, selectedIds, selectionMode]);
 
-  // Сброс выбора
   useEffect(() => {
     if (resetSelectionKey === undefined) return;
     setSelectedId(null);
     setSelectedIds([]);
   }, [resetSelectionKey]);
 
-  // Цвет заливки
   function colorForGlyph(glyph, idx, isSelected) {
-    const resolved = resolvedGlyphChars[idx] || glyph.char || "";
-    const base = getKhmerGlyphColor(glyph.char);
+    const primaryChar = getPrimaryCharFromGlyph(glyph);
+    const base = getKhmerGlyphColor(primaryChar);
+
     const glyphId = glyph.id ?? idx;
     const resolvedIsSelected =
       isSelected ??
@@ -451,24 +469,26 @@ export default function VisualDecoder(props) {
         glyph,
         idx,
         isSelected: resolvedIsSelected,
-        resolvedChar: resolved,
+        resolvedChar: primaryChar,
       });
       if (override) return override;
     }
 
-    if (revealOnSelect && !resolvedIsSelected) {
-      return FALLBACK.MUTED;
-    }
+    if (revealOnSelect && !resolvedIsSelected) return FALLBACK.MUTED;
 
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
-      return isKhmerConsonant(resolved) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
+      return isKhmerConsonant(primaryChar) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
     }
     return FALLBACK.NEUTRAL;
   }
 
   if (loading) {
-    return <div className="text-white animate-pulse text-center p-10">Deciphering...</div>;
+    return (
+      <div className="text-white animate-pulse text-center p-10">
+        Deciphering...
+      </div>
+    );
   }
 
   if (error || !glyphs || glyphs.length === 0) {
@@ -490,14 +510,22 @@ export default function VisualDecoder(props) {
       >
         {glyphs.map((glyph, i) => {
           const glyphId = glyph.id ?? i;
+
           const isSelected =
             selectionMode === "multi"
               ? selectedIds.includes(glyphId)
               : selectedId === glyphId;
+
           const fillColor = colorForGlyph(glyph, i, isSelected);
-          const isConsonant = isKhmerConsonant(resolvedGlyphChars[i] || glyph.char);
-          const resolvedChar = resolvedGlyphChars[i] || glyph.char;
-          const isTarget = !!targetChar && resolvedChar === targetChar;
+
+          const primaryChar = getPrimaryCharFromGlyph(glyph);
+          const glyphChars = getAllCharsFromGlyph(glyph);
+
+          const isConsonant = isKhmerConsonant(primaryChar);
+
+          // ✅ target match across all codepoints of the shaped glyph
+          const isTarget = !!targetChar && glyphChars.includes(targetChar);
+
           const forceHeroOutline = heroHighlight === "green_outline" && isTarget;
           const isSubscript = subscriptConsonantIndices.has(i);
 
@@ -600,6 +628,3 @@ export default function VisualDecoder(props) {
     </div>
   );
 }
-
-// --- Экспортируем константу для других компонентов ---
-export { HIGHLIGHT_MODES };
