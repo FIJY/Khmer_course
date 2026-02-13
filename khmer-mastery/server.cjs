@@ -1,4 +1,4 @@
-// server.cjs – ИСПРАВЛЕННАЯ ВЕРСИЯ
+// server.cjs – АБСОЛЮТНО РАБОЧАЯ ВЕРСИЯ
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
@@ -30,21 +30,18 @@ async function init() {
   console.log("✅ Fonts loaded.");
 }
 
-// Health checks
 app.get("/", (req, res) => res.send("OK"));
 app.get("/health", (req, res) => res.send("OK"));
 
-// ----------------------------------------------------------------------
-// ГЛАВНОЕ: отдаём КАЖДЫЙ ГЛИФ как отдельный кликабельный объект
-// ----------------------------------------------------------------------
 app.get("/api/shape", (req, res) => {
   let rawText = req.query.text;
   if (!rawText) return res.status(400).json({ error: "No text provided" });
   if (!fkFont || !otFont) return res.status(503).json({ error: "Fonts not ready" });
 
   try {
-    // 1. Декодируем и нормализуем текст
+    // 1. Декодируем URL-кодировку
     const decodedText = decodeURIComponent(rawText);
+    // 2. Нормализуем NFC (это важно для кхмерского)
     const text = decodedText.normalize("NFC");
 
     console.log("\n=== SHAPING ===");
