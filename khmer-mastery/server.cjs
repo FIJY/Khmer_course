@@ -6,13 +6,12 @@ const path = require("path");
 const fontkit = require("fontkit");
 const opentype = require("opentype.js");
 
+console.log("SERVER VERSION: 2026-02-13 glyph-per-shaped-glyph"); // <-- должно появиться в логах
+
 const app = express();
 app.use(cors());
 
-// ✅ Render expects you to listen on process.env.PORT
 const PORT = Number(process.env.PORT) || 3001;
-
-// ---- Paths / constants ----
 const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
 const FONT_SIZE = 120;
 
@@ -39,13 +38,8 @@ app.get("/", (req, res) => res.send("OK"));
 app.get("/health", (req, res) => res.send("OK"));
 
 /**
- * IMPORTANT CHANGE:
- * We now return 1 clickable object per SHAPED GLYPH (run.glyphs),
- * NOT "1 object per Unicode character".
- *
- * This fixes:
- * - overlay/stacking when grouping merges glyphs incorrectly
- * - inability to click vowels/diacritics that are separate glyphs (marks)
+ * Returns 1 object per SHAPED GLYPH (run.glyphs[i]).
+ * This is the only robust model for Khmer (base + marks, 0 advance marks, etc).
  */
 app.get("/api/shape", (req, res) => {
   const text = req.query.text;
@@ -54,9 +48,20 @@ app.get("/api/shape", (req, res) => {
 
   try {
     const normalizedText = String(text).normalize("NFC");
-    const scale = FONT_SIZE / unitsPerEm;
 
+    console.log("\n=== SHAPING (glyph-per-shaped-glyph) ===");
+    console.log("Input text:", normalizedText);
+    console.log(
+      "Characters:",
+      Array.from(normalizedText)
+        .map((c) => c.codePointAt(0).toString(16))
+        .join(" ")
+    );
+
+    const scale = FONT_SIZE / unitsPerEm;
     const run = fkFont.layout(normalizedText);
+
+    console.log("run.glyphs.length:", run.glyphs.length);
 
     const glyphsData = [];
     let cursorX = 50;
@@ -66,7 +71,7 @@ app.get("/api/shape", (req, res) => {
       const pos = run.positions[i] || {};
       const codePoints = Array.isArray(glyph.codePoints) ? glyph.codePoints : [];
 
-      // ✅ advance fallback (key to avoid "everything overlaps" issues)
+      // ✅ advance fallback (prevents overlay when xAdvance is 0/undefined)
       const advUnits =
         (typeof pos.xAdvance === "number" ? pos.xAdvance : null) ??
         (typeof glyph.advanceWidth === "number" ? glyph.advanceWidth : 0);
@@ -79,33 +84,31 @@ app.get("/api/shape", (req, res) => {
       const d = pathObj.toPathData(3);
       const bb = pathObj.getBoundingBox();
 
-      // Primary char (first codepoint) for quick UI categorization
       const primaryChar =
         codePoints.length > 0 ? String.fromCodePoint(codePoints[0]) : "";
 
       glyphsData.push({
         id: i,
         glyphIdx: i,
-
-        // primary "char" for this shaped glyph (can be mark or base)
         char: primaryChar,
-
-        // ALL codepoints this glyph is associated with (important for target matching)
         codePoints,
-
-        // cluster index from shaping (fallback to i if missing)
         cluster: typeof pos.cluster === "number" ? pos.cluster : i,
-
         d,
         bb: { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 },
-
-        // rendered advance in px (not used by client right now, but useful for debugging)
         advance: advUnits * scale,
       });
+
+      console.log(
+        `  glyph ${i}: cluster=${typeof pos.cluster === "number" ? pos.cluster : i
+        }, xAdv=${pos.xAdvance}, advWidth=${glyph.advanceWidth}, codePoints=[${codePoints
+          .map((cp) => "U+" + cp.toString(16).toUpperCase())
+          .join(", ")}], primaryChar="${primaryChar}"`
+      );
 
       cursorX += advUnits * scale;
     }
 
+    console.log(`→ Sending ${glyphsData.length} shaped glyph objects`);
     res.json(glyphsData);
   } catch (err) {
     console.error("Shape error:", err);

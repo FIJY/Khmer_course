@@ -12,11 +12,7 @@ import { normalizeKhmerText } from "../lib/khmerTextUtils";
 import useAudioPlayer from "../hooks/useAudioPlayer";
 import { DEFAULT_FEEDBACK_SOUNDS, evaluateGlyphSuccess } from "../lib/glyphFeedback";
 import GlyphHintCard from "./UI/GlyphHintCard";
-import {
-  getGlyphHintContent,
-  resolveGlyphMeta,
-  truncateHint,
-} from "../lib/glyphHintUtils";
+import { getGlyphHintContent, resolveGlyphMeta, truncateHint } from "../lib/glyphHintUtils";
 
 const HIT_DISTANCE_THRESHOLD = 35;
 
@@ -26,7 +22,6 @@ const FALLBACK = {
   SELECTED: GLYPH_COLORS?.SELECTED ?? "#22d3ee",
 };
 
-// Режимы подсветки (экспортируются для других компонентов)
 export const HIGHLIGHT_MODES = {
   ALL: "all",
   CONSONANTS: "consonants",
@@ -70,9 +65,7 @@ function getAllCharsFromGlyph(glyph) {
 }
 
 function makeViewBoxFromGlyphs(glyphs, pad = 60) {
-  if (!glyphs || glyphs.length === 0) {
-    return { minX: 0, minY: 0, w: 300, h: 300 };
-  }
+  if (!glyphs || glyphs.length === 0) return { minX: 0, minY: 0, w: 300, h: 300 };
 
   let minX = Infinity,
     minY = Infinity,
@@ -141,11 +134,7 @@ export default function VisualDecoder(props) {
   const text = useMemo(() => normalizeKhmerText(rawText), [rawText]);
 
   const targetChar = normalizeKhmerText(
-    feedbackTargetChar ??
-      data?.target ??
-      data?.target_char ??
-      data?.targetChar ??
-      ""
+    feedbackTargetChar ?? data?.target ?? data?.target_char ?? data?.targetChar ?? ""
   );
 
   const heroHighlight = data?.hero_highlight ?? data?.heroHighlight ?? null;
@@ -205,8 +194,7 @@ export default function VisualDecoder(props) {
       })
       .then((json) => {
         if (!active) return;
-        const arr = Array.isArray(json) ? json : [];
-        setGlyphs(arr);
+        setGlyphs(Array.isArray(json) ? json : []);
         setLoading(false);
       })
       .catch((err) => {
@@ -221,9 +209,7 @@ export default function VisualDecoder(props) {
     };
   }, [text]);
 
-  const resolvedGlyphMeta = useMemo(() => {
-    return resolveGlyphMeta(glyphs, text);
-  }, [glyphs, text]);
+  const resolvedGlyphMeta = useMemo(() => resolveGlyphMeta(glyphs, text), [glyphs, text]);
 
   useEffect(() => {
     if (!onGlyphsRendered) return;
@@ -279,17 +265,13 @@ export default function VisualDecoder(props) {
 
   const subscriptConsonantIndices = useMemo(() => {
     const indices = new Set();
-    if (!resolvedGlyphMeta) return indices;
-    resolvedGlyphMeta.forEach((glyph, idx) => {
+    resolvedGlyphMeta.forEach((meta, idx) => {
       const primaryChar = getPrimaryCharFromGlyph(glyphs?.[idx]);
-      if (glyph.isSubscript && isKhmerConsonant(primaryChar)) {
-        indices.add(idx);
-      }
+      if (meta?.isSubscript && isKhmerConsonant(primaryChar)) indices.add(idx);
     });
     return indices;
   }, [resolvedGlyphMeta, glyphs]);
 
-  // ---------- HIT TESTING ----------
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
     if (!svg) return null;
@@ -314,7 +296,6 @@ export default function VisualDecoder(props) {
       const pathEl = document.getElementById(`glyph-path-${i}`);
       if (!pathEl) continue;
 
-      // Exact hit test
       try {
         if (pathEl.isPointInFill(p)) {
           const area =
@@ -328,7 +309,6 @@ export default function VisualDecoder(props) {
         // ignore
       }
 
-      // BBox fallback distance
       if (glyph.bb) {
         const dist = distanceToBBox(p, glyph.bb);
         if (dist < bestDist) {
@@ -351,14 +331,19 @@ export default function VisualDecoder(props) {
 
     const hitId = hit.g.id ?? hit.idx;
 
-    const resolvedChar = getPrimaryCharFromGlyph(hit.g);   // ✅ "ៅ" stays "ៅ"
-    const glyphChars = getAllCharsFromGlyph(hit.g);        // for target matching (includes marks)
+    const resolvedChar = getPrimaryCharFromGlyph(hit.g);
+    const glyphChars = getAllCharsFromGlyph(hit.g);
+
+    // ✅ If the lesson has a targetChar (e.g. "ៅ") and it exists inside this glyph,
+    // show EXACTLY targetChar in the hint (no ◌)
+    const hintChar =
+      targetChar && glyphChars.includes(targetChar) ? targetChar : resolvedChar;
 
     if (onGlyphClick) {
       const glyphMeta = resolvedGlyphMeta?.[hit.idx] || {};
-      onGlyphClick(resolvedChar, {
+      onGlyphClick(hintChar, {
         ...glyphMeta,
-        resolvedChar,
+        resolvedChar: hintChar,
         glyphChars,
         isSubscript: glyphMeta?.isSubscript ?? false,
       });
@@ -369,7 +354,7 @@ export default function VisualDecoder(props) {
       const isSubscript = glyphMeta?.isSubscript ?? false;
 
       const { typeLabel, hint } = getGlyphHintContent({
-        glyphChar: resolvedChar,
+        glyphChar: hintChar,
         alphabetDb,
         fallbackTypeLabel: (ch) => {
           const cat = getKhmerGlyphCategory(ch);
@@ -391,8 +376,8 @@ export default function VisualDecoder(props) {
       const truncatedHint = truncateHint(hint, hintMaxChars);
 
       setLastTap({
-        char: resolvedChar,
-        displayChar: resolvedChar, // ✅ NO "◌": show exactly "ៅ"
+        char: hintChar,
+        displayChar: hintChar, // ✅ show exactly "ៅ"
         typeLabel,
         hint: truncatedHint,
         isSubscript,
@@ -405,28 +390,23 @@ export default function VisualDecoder(props) {
       setSelectedId(hitId);
     }
 
+    // ✅ sound based on hintChar (so target "ៅ" can play its sound)
     let soundFile = glyphSoundMap[hit.idx];
-    if (!soundFile) {
-      soundFile = getSoundFileForChar(resolvedChar);
-    }
+    if (!soundFile) soundFile = getSoundFileForChar(hintChar);
 
     const effectiveRule = feedbackRule ?? data?.success_rule ?? data?.successRule;
 
     if (effectiveRule) {
       const isSuccess = evaluateGlyphSuccess({
         rule: effectiveRule,
-        glyphChar: resolvedChar,
+        glyphChar: hintChar,
         glyphMeta: resolvedGlyphMeta?.[hit.idx],
         targetChar: feedbackTargetChar ?? data?.target ?? data?.target_char,
-        glyphChars, // (harmless extra, even if glyphFeedback ignores it)
       });
 
-      const sounds = {
-        ...DEFAULT_FEEDBACK_SOUNDS,
-        ...(feedbackSounds || {}),
-      };
-
+      const sounds = { ...DEFAULT_FEEDBACK_SOUNDS, ...(feedbackSounds || {}) };
       const feedbackSound = isSuccess ? sounds.success : sounds.error;
+
       const sequence = soundFile ? [feedbackSound, soundFile] : [feedbackSound];
       playSequence(sequence, { gapMs: feedbackGapMs });
     } else if (onLetterClick) {
@@ -438,13 +418,9 @@ export default function VisualDecoder(props) {
 
   useEffect(() => {
     if (!onSelectionChange) return;
-    if (selectionMode === "multi") {
-      onSelectionChange(selectedIds);
-    } else if (selectedId !== null) {
-      onSelectionChange([selectedId]);
-    } else {
-      onSelectionChange([]);
-    }
+    if (selectionMode === "multi") onSelectionChange(selectedIds);
+    else if (selectedId !== null) onSelectionChange([selectedId]);
+    else onSelectionChange([]);
   }, [onSelectionChange, selectedId, selectedIds, selectionMode]);
 
   useEffect(() => {
@@ -460,9 +436,7 @@ export default function VisualDecoder(props) {
     const glyphId = glyph.id ?? idx;
     const resolvedIsSelected =
       isSelected ??
-      (selectionMode === "multi"
-        ? selectedIds.includes(glyphId)
-        : selectedId === glyphId);
+      (selectionMode === "multi" ? selectedIds.includes(glyphId) : selectedId === glyphId);
 
     if (typeof getGlyphFillColor === "function") {
       const override = getGlyphFillColor({
@@ -484,11 +458,7 @@ export default function VisualDecoder(props) {
   }
 
   if (loading) {
-    return (
-      <div className="text-white animate-pulse text-center p-10">
-        Deciphering...
-      </div>
-    );
+    return <div className="text-white animate-pulse text-center p-10">Deciphering...</div>;
   }
 
   if (error || !glyphs || glyphs.length === 0) {
@@ -510,11 +480,8 @@ export default function VisualDecoder(props) {
       >
         {glyphs.map((glyph, i) => {
           const glyphId = glyph.id ?? i;
-
           const isSelected =
-            selectionMode === "multi"
-              ? selectedIds.includes(glyphId)
-              : selectedId === glyphId;
+            selectionMode === "multi" ? selectedIds.includes(glyphId) : selectedId === glyphId;
 
           const fillColor = colorForGlyph(glyph, i, isSelected);
 
@@ -523,7 +490,7 @@ export default function VisualDecoder(props) {
 
           const isConsonant = isKhmerConsonant(primaryChar);
 
-          // ✅ target match across all codepoints of the shaped glyph
+          // ✅ target highlight across all codepoints of shaped glyph
           const isTarget = !!targetChar && glyphChars.includes(targetChar);
 
           const forceHeroOutline = heroHighlight === "green_outline" && isTarget;
@@ -540,33 +507,22 @@ export default function VisualDecoder(props) {
           if (interactionMode === "persistent_select") {
             if (isSelected) {
               outlineWidth = 4;
-              if (isConsonant) {
-                outlineColor = isSubscript ? "#facc15" : "#22c55e";
-              } else {
-                outlineColor = "#ef4444";
-              }
+              if (isConsonant) outlineColor = isSubscript ? "#facc15" : "#22c55e";
+              else outlineColor = "#ef4444";
             }
           } else if (interactionMode === "find_consonant" && selectedId !== null) {
             outlineWidth = 4;
-            if (isSelected) {
-              outlineColor = "#22c55e";
-            } else if (isSubscript) {
-              outlineColor = "#facc15";
-            } else {
-              outlineColor = "#ef4444";
-            }
+            if (isSelected) outlineColor = "#22c55e";
+            else if (isSubscript) outlineColor = "#facc15";
+            else outlineColor = "#ef4444";
           }
 
           if (interactionMode === "decoder_select") {
             outlineWidth = isSelected ? 4 : 0;
             if (isSelected) {
-              if (isSubscript) {
-                outlineColor = "#facc15";
-              } else if (isConsonant) {
-                outlineColor = "#22c55e";
-              } else {
-                outlineColor = "#94a3b8";
-              }
+              if (isSubscript) outlineColor = "#facc15";
+              else if (isConsonant) outlineColor = "#22c55e";
+              else outlineColor = "#94a3b8";
             }
           }
 
