@@ -39,6 +39,7 @@ app.get("/health", (req, res) => res.send("OK"));
 
 // Main API
 // server.cjs - ПРАВИЛЬНАЯ ГРУППИРОВКА ДЛЯ КХМЕРСКОГО
+// server.cjs - ПРАВИЛЬНАЯ ГРУППИРОВКА ПО CLUSTER
 app.get("/api/shape", (req, res) => {
   const text = req.query.text;
   if (!text) return res.status(400).json({ error: "No text provided" });
@@ -53,75 +54,75 @@ app.get("/api/shape", (req, res) => {
     const run = fkFont.layout(text);
     console.log(`Всего глифов: ${run.glyphs.length}`);
 
-    // ✅ КРИТИЧЕСКИ ВАЖНО: группируем ПО КЛАСТЕРАМ, а не по xAdvance!
-    const clusters = [];
-    let currentCluster = [];
-    let lastClusterId = null;
+    // ✅ ПРАВИЛЬНО: группируем по run.positions[i].cluster
+    const clusters = new Map(); // cluster ID -> массив глифов
 
     for (let i = 0; i < run.glyphs.length; i++) {
       const glyph = run.glyphs[i];
-      const pos = run.positions[i];
+      const position = run.positions[i];
 
-      // У каждого глифа есть cluster - ЭТО КЛЮЧ!
-      // Все глифы с ОДИНАКОВЫМ cluster ID должны быть в одной группе
-      const clusterId = glyph.id; // или glyph.cluster если доступно
+      // У каждой позиции ЕСТЬ cluster - ЭТО КЛЮЧ!
+      // В fontkit позиции имеют .cluster
+      const clusterId = position.cluster;
 
-      if (i === 0 || clusterId !== run.glyphs[i-1].id) {
-        // Новый кластер
-        if (currentCluster.length > 0) {
-          clusters.push([...currentCluster]);
-          currentCluster = [];
-        }
+      if (!clusters.has(clusterId)) {
+        clusters.set(clusterId, []);
       }
 
-      currentCluster.push({ glyph, pos });
+      clusters.get(clusterId).push({ glyph, position });
     }
 
-    if (currentCluster.length > 0) {
-      clusters.push([...currentCluster]);
-    }
+    // Преобразуем Map в массив и сортируем по clusterId
+    const sortedClusters = Array.from(clusters.entries())
+      .sort(([idA], [idB]) => idA - idB)
+      .map(([_, glyphs]) => glyphs);
 
-    console.log(`Кластеров: ${clusters.length}`);
+    console.log(`Кластеров: ${sortedClusters.length}`);
 
     // Отрисовываем кластеры
     const glyphsData = [];
     let cursorX = 50;
 
-    clusters.forEach((cluster, idx) => {
+    sortedClusters.forEach((cluster, idx) => {
       // Собираем ВСЕ символы кластера
       let clusterChars = '';
       let hasConsonant = false;
       let hasVowel = false;
       let hasSubscript = false;
+      let hasDiacritic = false;
 
       cluster.forEach(({ glyph }) => {
         if (glyph.codePoints && glyph.codePoints.length > 0) {
-          const codePoint = glyph.codePoints[0];
-          const char = String.fromCodePoint(codePoint);
-          clusterChars += char;
+          // Берем ВСЕ codePoints глифа
+          for (const codePoint of glyph.codePoints) {
+            const char = String.fromCodePoint(codePoint);
+            clusterChars += char;
 
-          // Классификация
-          if (codePoint >= 0x1780 && codePoint <= 0x17A2) hasConsonant = true;
-          else if (codePoint >= 0x17B6 && codePoint <= 0x17C5) hasVowel = true;
-          else if (codePoint === 0x17D2) hasSubscript = true;
+            // Классификация
+            if (codePoint >= 0x1780 && codePoint <= 0x17A2) hasConsonant = true;
+            else if (codePoint >= 0x17B6 && codePoint <= 0x17C5) hasVowel = true;
+            else if (codePoint === 0x17D2) hasSubscript = true;
+            else if (codePoint >= 0x17C6 && codePoint <= 0x17D1) hasDiacritic = true;
+          }
         }
       });
 
       // Если символы не собрались, берем из исходного текста
       if (!clusterChars) {
-        clusterChars = text[idx] || '?';
+        clusterChars = text[cluster[0].position.cluster] || '?';
       }
 
-      // ВАЖНО: ВСЕ глифы кластера рисуются относительно ОДНОЙ точки!
+      // ✅ ВАЖНО: ВСЕ глифы кластера рисуются относительно ОДНОЙ точки!
       const paths = [];
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      let maxAdvance = 0;
 
-      cluster.forEach(({ glyph, pos }) => {
+      cluster.forEach(({ glyph, position }) => {
         const otGlyph = otFont.glyphs.get(glyph.id);
 
-        // Все смещения относительны ОДНОЙ базовой точки
-        const x = cursorX + (pos.xOffset || 0) * scale;
-        const y = 200 - (pos.yOffset || 0) * scale;
+        // Все глифы используют ОДИН cursorX!
+        const x = cursorX + (position.xOffset || 0) * scale;
+        const y = 200 - (position.yOffset || 0) * scale;
 
         const path = otGlyph.getPath(x, y, FONT_SIZE);
         paths.push(path.toPathData(3));
@@ -131,11 +132,9 @@ app.get("/api/shape", (req, res) => {
         minY = Math.min(minY, bb.y1);
         maxX = Math.max(maxX, bb.x2);
         maxY = Math.max(maxY, bb.y2);
-      });
 
-      // Ширина кластера - это xAdvance ПОСЛЕДНЕГО глифа
-      const lastPos = cluster[cluster.length - 1].pos;
-      const advanceX = lastPos.xAdvance * scale;
+        maxAdvance = Math.max(maxAdvance, position.xAdvance * scale);
+      });
 
       glyphsData.push({
         id: idx,
@@ -150,11 +149,12 @@ app.get("/api/shape", (req, res) => {
         isConsonant: hasConsonant,
         isVowel: hasVowel,
         isSubscript: hasSubscript,
+        isDiacritic: hasDiacritic,
         glyphCount: cluster.length
       });
 
       // Сдвигаем курсор на ширину ВСЕГО кластера
-      cursorX += advanceX || 50;
+      cursorX += maxAdvance || 50;
 
       console.log(`Кластер ${idx}: "${clusterChars}" (${cluster.length} глифов)`);
     });
