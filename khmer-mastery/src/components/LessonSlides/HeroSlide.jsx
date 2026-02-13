@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { RotateCcw } from "lucide-react";
 import LessonFrame from "../UI/LessonFrame";
+
 import VisualDecoder from "../VisualDecoder";
 import { getKhmerGlyphCategory } from "../../lib/khmerGlyphRenderer";
 import { getSoundFileForChar } from "../../data/audioMap";
@@ -35,6 +36,8 @@ export default function HeroSlide({
   const { playSequence } = useAudioPlayer();
 
   const word = normalizeKhmerText(data?.word || "");
+  console.log('📦 HeroSlide raw word:', data?.word);
+  console.log('📦 HeroSlide normalized word:', word);
   const targetChar = normalizeKhmerText(data?.target || data?.target_char || "");
   const charSplit = normalizeKhmerInStructure(data?.char_split || null);
   const title = data?.title || data?.name || "Find the Hero";
