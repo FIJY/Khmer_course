@@ -64,6 +64,78 @@ function getAllCharsFromGlyph(glyph) {
   return c ? [c] : [];
 }
 
+function glyphContainsChar(glyph, ch) {
+  if (!glyph || !ch) return false;
+  return getAllCharsFromGlyph(glyph).includes(ch);
+}
+
+/**
+ * If tapped glyph doesn't contain targetChar (split vowels),
+ * try neighbor glyphs first, then scan.
+ */
+function resolveMainTargetGlyphIndex(glyphs, tappedIdx, targetChar) {
+  if (!targetChar) return tappedIdx;
+  if (glyphContainsChar(glyphs[tappedIdx], targetChar)) return tappedIdx;
+
+  if (tappedIdx > 0 && glyphContainsChar(glyphs[tappedIdx - 1], targetChar)) return tappedIdx - 1;
+  if (tappedIdx < glyphs.length - 1 && glyphContainsChar(glyphs[tappedIdx + 1], targetChar))
+    return tappedIdx + 1;
+
+  const found = glyphs.findIndex((g) => glyphContainsChar(g, targetChar));
+  return found >= 0 ? found : tappedIdx;
+}
+
+/**
+ * Build selection group for a split vowel:
+ * - include glyphs that contain targetChar
+ * - include adjacent vowel_dep glyphs (like pre-vowel "េ") visually tied to main glyph
+ */
+function buildTargetSelectionGroup(glyphs, mainIdx, targetChar) {
+  const group = new Set();
+  if (!glyphs?.length) return group;
+
+  const main = glyphs[mainIdx];
+  if (!main) return group;
+
+  group.add(mainIdx);
+
+  if (!targetChar) return group;
+
+  glyphs.forEach((g, idx) => {
+    if (glyphContainsChar(g, targetChar)) group.add(idx);
+  });
+
+  const mainCluster = typeof main.cluster === "number" ? main.cluster : mainIdx;
+  const mainBB = main.bb;
+
+  const tryAddNeighbor = (idx) => {
+    if (idx < 0 || idx >= glyphs.length) return;
+    if (group.has(idx)) return;
+
+    const g = glyphs[idx];
+    const ch = getPrimaryCharFromGlyph(g);
+    const cat = getKhmerGlyphCategory(ch);
+
+    if (cat !== "vowel_dep") return;
+
+    const c = typeof g.cluster === "number" ? g.cluster : idx;
+    const clusterClose = Math.abs(c - mainCluster) <= 1;
+
+    // bbox: neighbor sits to the left of main glyph (tolerance)
+    const bboxClose =
+      mainBB && g.bb
+        ? g.bb.x2 <= mainBB.x1 + 60 // tweak tolerance if needed
+        : true;
+
+    if (clusterClose && bboxClose) group.add(idx);
+  };
+
+  tryAddNeighbor(mainIdx - 1);
+  tryAddNeighbor(mainIdx + 1);
+
+  return group;
+}
+
 function makeViewBoxFromGlyphs(glyphs, pad = 60) {
   if (!glyphs || glyphs.length === 0) return { minX: 0, minY: 0, w: 300, h: 300 };
 
@@ -334,10 +406,15 @@ export default function VisualDecoder(props) {
     const resolvedChar = getPrimaryCharFromGlyph(hit.g);
     const glyphChars = getAllCharsFromGlyph(hit.g);
 
-    // ✅ If the lesson has a targetChar (e.g. "ៅ") and it exists inside this glyph,
-    // show EXACTLY targetChar in the hint (no ◌)
-    const hintChar =
-      targetChar && glyphChars.includes(targetChar) ? targetChar : resolvedChar;
+    // --- NEW: split-vowel grouping ---
+    const mainIdx = resolveMainTargetGlyphIndex(glyphs, hit.idx, targetChar);
+    const groupIdxSet = buildTargetSelectionGroup(glyphs, mainIdx, targetChar);
+    const groupIdxs = Array.from(groupIdxSet);
+
+    const groupHasTarget =
+      !!targetChar && groupIdxs.some((gi) => glyphContainsChar(glyphs[gi], targetChar));
+
+    const hintChar = groupHasTarget ? targetChar : resolvedChar;
 
     if (onGlyphClick) {
       const glyphMeta = resolvedGlyphMeta?.[hit.idx] || {};
@@ -346,6 +423,7 @@ export default function VisualDecoder(props) {
         resolvedChar: hintChar,
         glyphChars,
         isSubscript: glyphMeta?.isSubscript ?? false,
+        groupIdxs,
       });
     }
 
@@ -384,13 +462,20 @@ export default function VisualDecoder(props) {
       });
     }
 
+    // Select the whole group (both parts of split vowel)
+    const groupGlyphIds = groupIdxs.map((gi) => (glyphs[gi]?.id ?? gi));
+
     if (selectionMode === "multi") {
-      setSelectedIds((prev) => (prev.includes(hitId) ? prev : [...prev, hitId]));
+      setSelectedIds((prev) => {
+        const set = new Set(prev);
+        groupGlyphIds.forEach((id) => set.add(id));
+        return Array.from(set);
+      });
     } else {
-      setSelectedId(hitId);
+      setSelectedId(groupGlyphIds[0] ?? hitId);
+      setSelectedIds(groupGlyphIds);
     }
 
-    // ✅ sound based on hintChar (so target "ៅ" can play its sound)
     let soundFile = glyphSoundMap[hit.idx];
     if (!soundFile) soundFile = getSoundFileForChar(hintChar);
 
@@ -436,7 +521,7 @@ export default function VisualDecoder(props) {
     const glyphId = glyph.id ?? idx;
     const resolvedIsSelected =
       isSelected ??
-      (selectionMode === "multi" ? selectedIds.includes(glyphId) : selectedId === glyphId);
+      (selectedIds.includes(glyphId) || selectedId === glyphId);
 
     if (typeof getGlyphFillColor === "function") {
       const override = getGlyphFillColor({
@@ -480,8 +565,9 @@ export default function VisualDecoder(props) {
       >
         {glyphs.map((glyph, i) => {
           const glyphId = glyph.id ?? i;
-          const isSelected =
-            selectionMode === "multi" ? selectedIds.includes(glyphId) : selectedId === glyphId;
+
+          // ✅ selected if either selectedId OR in selectedIds (so group works in single mode too)
+          const isSelected = selectedIds.includes(glyphId) || selectedId === glyphId;
 
           const fillColor = colorForGlyph(glyph, i, isSelected);
 
@@ -490,7 +576,6 @@ export default function VisualDecoder(props) {
 
           const isConsonant = isKhmerConsonant(primaryChar);
 
-          // ✅ target highlight across all codepoints of shaped glyph
           const isTarget = !!targetChar && glyphChars.includes(targetChar);
 
           const forceHeroOutline = heroHighlight === "green_outline" && isTarget;
@@ -511,6 +596,8 @@ export default function VisualDecoder(props) {
               else outlineColor = "#ef4444";
             }
           } else if (interactionMode === "find_consonant" && selectedId !== null) {
+            // Keep your existing behavior; if you want to remove the red outlines:
+            // change this block separately.
             outlineWidth = 4;
             if (isSelected) outlineColor = "#22c55e";
             else if (isSubscript) outlineColor = "#facc15";
