@@ -4,18 +4,17 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const opentype = require("opentype.js");
-const hbjs = require("harfbuzzjs");  // ← новая библиотека
+const hbjs = require("harfbuzzjs");  // ← Use the wrapper for importObject
 
 const app = express();
 app.use(cors());
 
 const PORT = Number(process.env.PORT) || 3001;
 const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
-const HB_WASM_PATH = path.join(__dirname, "hb.wasm");  // положи файл сюда
+const HB_WASM_PATH = path.join(__dirname, "hb.wasm");  // Ensure this file exists!
 const FONT_SIZE = 120;
 
-let hb = null;
-let hbFont = null;
+let hb = null;  // Will hold the HarfBuzz instance
 let otFont = null;
 let unitsPerEm = 1000;
 
@@ -23,19 +22,17 @@ async function init() {
   if (!fs.existsSync(FONT_PATH)) throw new Error(`Font not found: ${FONT_PATH}`);
   if (!fs.existsSync(HB_WASM_PATH)) throw new Error(`hb.wasm not found: ${HB_WASM_PATH}`);
 
-  // Загружаем HarfBuzz WASM
+  // Load WASM binary in Node.js
   const wasmBinary = fs.readFileSync(HB_WASM_PATH);
-  const hbInstance = await WebAssembly.instantiate(wasmBinary, {});
-  hb = hbjs(hbInstance.exports);
 
-  // Загружаем шрифт в HarfBuzz
-  const fontData = fs.readFileSync(FONT_PATH);
-  const blob = hb.createBlob(fontData);
-  const face = hb.createFace(blob, 0);
-  hbFont = hb.createFont(face);
-  hbFont.setScale(FONT_SIZE * 1000, FONT_SIZE * 1000);  // scale в 1/1000 em
+  // Compile and instantiate with importObject from hbjs to handle WASI
+  const wasmModule = await WebAssembly.compile(wasmBinary);
+  const instance = await WebAssembly.instantiate(wasmModule, hbjs.importObject || {});
 
-  // opentype.js для path и bounding box
+  // Create HarfBuzz instance from exports
+  hb = hbjs(instance.exports);
+
+  // Load OpenType font
   const fontBuffer = fs.readFileSync(FONT_PATH);
   otFont = opentype.parse(fontBuffer.buffer);
   unitsPerEm = otFont.unitsPerEm || 1000;
@@ -49,7 +46,7 @@ app.get("/health", (req, res) => res.send("OK"));
 app.get("/api/shape", async (req, res) => {
   const rawText = req.query.text;
   if (!rawText) return res.status(400).json({ error: "No text provided" });
-  if (!hb || !hbFont || !otFont) return res.status(503).json({ error: "Fonts not ready" });
+  if (!hb || !otFont) return res.status(503).json({ error: "Fonts not ready" });
 
   try {
     const decodedText = decodeURIComponent(rawText);
@@ -57,36 +54,42 @@ app.get("/api/shape", async (req, res) => {
 
     const scale = FONT_SIZE / unitsPerEm;
 
+    // Load font data into HarfBuzz blob
+    const fontData = fs.readFileSync(FONT_PATH);
+    const blob = hb.createBlob(fontData.buffer);
+    const face = hb.createFace(blob, 0);
+    const font = hb.createFont(face);
+    font.setScale(FONT_SIZE * unitsPerEm, FONT_SIZE * unitsPerEm);  // Correct scaling
+
     // HarfBuzz shaping
     const buffer = hb.createBuffer();
     buffer.addText(text);
-    buffer.guessSegmentProperties();  // автоопределение script/language/dir
-    // Или явно: buffer.setScript(hb.Script.KHMER); buffer.setLanguage("km"); buffer.setDirection("ltr");
+    buffer.guessSegmentProperties();  // Auto script/language/dir
 
-    hb.shape(hbFont, buffer, []);  // features: [] — default OpenType features
+    hb.shape(font, buffer, []);  // Default features
 
-    const hbOutput = buffer.json();  // [{g: glyphId, cl: cluster, ax, ay, dx, dy, ...}]
+    const hbOutput = buffer.json();  // Array of shaped glyphs
 
     const glyphsData = [];
-    let cursorX = 50;  // стартовая позиция
+    let cursorX = 50;  // Starting position
 
     for (let i = 0; i < hbOutput.length; i++) {
       const out = hbOutput[i];
       const glyphId = out.g;
 
-      // Позиция из HarfBuzz
-      const x = cursorX + (out.dx || 0) / 1000 * FONT_SIZE;
-      const y = 200 - (out.dy || 0) / 1000 * FONT_SIZE;  // baseline на 200
+      // Position from HarfBuzz (scaled)
+      const x = cursorX + (out.dx || 0) * scale;
+      const y = 200 - (out.dy || 0) * scale;  // Baseline adjustment
 
-      // Получаем path и bb из opentype.js
+      // Get path and bb from opentype.js
       const otGlyph = otFont.glyphs.get(glyphId);
       if (!otGlyph) continue;
 
-      const path = otGlyph.getPath(x, y, FONT_SIZE);
-      const d = path.toPathData(3);  // 3 decimal places
-      const bb = path.getBoundingBox();
+      const pathObj = otGlyph.getPath(x, y, FONT_SIZE);
+      const d = pathObj.toPathData(3);
+      const bb = pathObj.getBoundingBox();
 
-      // Cluster → определяем, какой кусок текста соответствует
+      // Cluster info
       const clusterStart = out.cl;
       const clusterEnd = i + 1 < hbOutput.length ? hbOutput[i + 1].cl : text.length;
       const clusterText = text.slice(clusterStart, clusterEnd);
@@ -102,11 +105,17 @@ app.get("/api/shape", async (req, res) => {
         cluster: clusterStart,
         d,
         bb: bb ? { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 } : null,
-        advance: (out.ax || 0) / 1000 * FONT_SIZE,  // x_advance
+        advance: (out.ax || 0) * scale,
       });
 
-      cursorX += (out.ax || 0) / 1000 * FONT_SIZE;
+      cursorX += (out.ax || 0) * scale;
     }
+
+    // Cleanup HarfBuzz resources
+    buffer.destroy();
+    font.destroy();
+    face.destroy();
+    blob.destroy();
 
     console.log(`→ Отправлено ${glyphsData.length} глифов для "${text}"`);
     res.json(glyphsData);
