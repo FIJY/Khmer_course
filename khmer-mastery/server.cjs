@@ -165,6 +165,17 @@ async function init() {
     throw new Error(`Font not found: ${FONT_PATH}`);
   }
 
+  // === Явная загрузка wasm-файла ===
+  const wasmPath = path.join(__dirname, 'hb.wasm');
+  if (!fs.existsSync(wasmPath)) {
+    throw new Error(
+      `WASM file not found at ${wasmPath}.\n` +
+      `Please ensure hb.wasm is in the project root (next to server.cjs).`
+    );
+  }
+  const wasmBinary = fs.readFileSync(wasmPath);
+  // =================================
+
   const { factory, attempts } = await loadHbFactory();
   if (!factory) {
     throw new Error(
@@ -172,14 +183,15 @@ async function init() {
     );
   }
 
-  hb = await factory();
+  // Передаём wasmBinary в фабрику
+  hb = await factory({ wasmBinary });
 
   const fontBuffer = fs.readFileSync(FONT_PATH);
   const fontBytes = toUint8ArrayExact(fontBuffer);
   otFont = opentype.parse(toArrayBufferExact(fontBytes));
   unitsPerEm = otFont.unitsPerEm || 1000;
 
-  console.log("✅ HarfBuzz + OpenType fonts loaded.");
+  console.log("✅ HarfBuzz + OpenType fonts loaded (with manual WASM).");
 }
 
 app.get("/", (req, res) => res.send("OK"));
