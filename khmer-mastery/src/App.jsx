@@ -6,7 +6,7 @@ import { supabase } from './supabaseClient';
 import Login from './pages/Login';
 import CourseMap from './pages/CourseMap';
 import LessonPreview from './pages/LessonPreview';
-import LessonPlayer from './pages/LessonPlayer';
+import TestShaper from './pages/TestShaper';
 import Vocab from './pages/Vocab';
 import Profile from './pages/Profile';
 import KhmerGlyphLab from './pages/KhmerGlyphLab';
@@ -53,7 +53,7 @@ export default function App() {
 
         {/* УРОКИ */}
         <Route path="/lesson/:id/preview" element={isAuthed ? <LessonPreview /> : <Navigate to="/login" />} />
-        <Route path="/lesson/:id" element={isAuthed ? <LessonPlayer /> : <Navigate to="/login" />} />
+        <Route path="/lesson/:id" element={isAuthed ? <TestShaper /> : <Navigate to="/login" />} />
 
         {/* 👇 НОВЫЕ МАРШРУТЫ ДЛЯ REVIEW (БЕЗ НИХ БУДЕТ ЧЕРНЫЙ ЭКРАН) */}
         <Route path="/review" element={isAuthed ? <ReviewHub /> : <Navigate to="/login" />} />
