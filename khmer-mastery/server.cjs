@@ -118,11 +118,15 @@ function toArrayBufferExact(uint8) {
 }
 
 /**
- * Robust harfbuzz loader for CJS/ESM differences on Render
+ * Load harfbuzzjs factory robustly, preferring concrete entrypoints.
  */
 async function loadHbFactory() {
   const attempts = [];
-  const specs = ["harfbuzzjs", "harfbuzzjs/hbjs", "harfbuzzjs/hbjs.js"];
+  const specs = [
+    "harfbuzzjs/hbjs.js", // most explicit
+    "harfbuzzjs/hbjs",
+    "harfbuzzjs",
+  ];
 
   function extractFactory(mod) {
     if (!mod) return null;
@@ -132,7 +136,7 @@ async function loadHbFactory() {
     return null;
   }
 
-  // 1) require(...)
+  // Try require first
   for (const spec of specs) {
     try {
       // eslint-disable-next-line import/no-dynamic-require, global-require
@@ -145,7 +149,7 @@ async function loadHbFactory() {
     }
   }
 
-  // 2) import(...)
+  // Fallback to dynamic import
   for (const spec of specs) {
     try {
       const mod = await import(spec);
@@ -165,16 +169,25 @@ async function init() {
     throw new Error(`Font not found: ${FONT_PATH}`);
   }
 
-  // === Явная загрузка wasm-файла ===
-  const wasmPath = path.join(__dirname, 'hb.wasm');
-  if (!fs.existsSync(wasmPath)) {
+  // Resolve wasm from installed package (node_modules), not project root.
+  let hbWasmPath;
+  let hbSubsetWasmPath;
+  try {
+    hbWasmPath = require.resolve("harfbuzzjs/hb.wasm");
+    hbSubsetWasmPath = require.resolve("harfbuzzjs/hb-subset.wasm");
+  } catch (e) {
     throw new Error(
-      `WASM file not found at ${wasmPath}.\n` +
-      `Please ensure hb.wasm is in the project root (next to server.cjs).`
+      `Failed to resolve harfbuzz wasm files from node_modules: ${e.message}`
     );
   }
-  const wasmBinary = fs.readFileSync(wasmPath);
-  // =================================
+
+  if (!fs.existsSync(hbWasmPath)) {
+    throw new Error(`hb.wasm not found at resolved path: ${hbWasmPath}`);
+  }
+
+  const wasmBinary = fs.readFileSync(hbWasmPath);
+  console.log("hb.wasm:", hbWasmPath);
+  console.log("hb-subset.wasm:", hbSubsetWasmPath);
 
   const { factory, attempts } = await loadHbFactory();
   if (!factory) {
@@ -183,7 +196,7 @@ async function init() {
     );
   }
 
-  // Передаём wasmBinary в фабрику
+  // Important: pass wasmBinary explicitly
   hb = await factory({ wasmBinary });
 
   const fontBuffer = fs.readFileSync(FONT_PATH);
@@ -191,7 +204,7 @@ async function init() {
   otFont = opentype.parse(toArrayBufferExact(fontBytes));
   unitsPerEm = otFont.unitsPerEm || 1000;
 
-  console.log("✅ HarfBuzz + OpenType fonts loaded (with manual WASM).");
+  console.log("✅ HarfBuzz + OpenType fonts loaded.");
 }
 
 app.get("/", (req, res) => res.send("OK"));
@@ -328,37 +341,13 @@ app.get("/api/shape", async (req, res) => {
   }
 });
 
-async function init() {
-  if (!fs.existsSync(FONT_PATH)) {
-    throw new Error(`Font not found: ${FONT_PATH}`);
-  }
-
-  // === Используем WASM-файл из node_modules (гарантирует совместимость) ===
-  let wasmPath;
-  try {
-    wasmPath = require.resolve('harfbuzzjs/hb.wasm');
-    console.log('Loading WASM from:', wasmPath);
-  } catch (e) {
-    throw new Error('Could not resolve harfbuzzjs/hb.wasm. Make sure harfbuzzjs is installed.');
-  }
-
-  const wasmBinary = fs.readFileSync(wasmPath);
-  // =====================================================================
-
-  const { factory, attempts } = await loadHbFactory();
-  if (!factory) {
-    throw new Error(
-      `harfbuzzjs factory not found.\nAttempts:\n- ${attempts.join("\n- ")}`
-    );
-  }
-
-  // Передаём wasmBinary в фабрику
-  hb = await factory({ wasmBinary });
-
-  const fontBuffer = fs.readFileSync(FONT_PATH);
-  const fontBytes = toUint8ArrayExact(fontBuffer);
-  otFont = opentype.parse(toArrayBufferExact(fontBytes));
-  unitsPerEm = otFont.unitsPerEm || 1000;
-
-  console.log("✅ HarfBuzz + OpenType fonts loaded (with WASM from node_modules).");
-}
+init()
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`✅ Server on port ${PORT}`);
+    });
+  })
+  .catch((e) => {
+    console.error("Init failed:", e);
+    process.exit(1);
+  });
