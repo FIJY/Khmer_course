@@ -3,14 +3,7 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const opentype = require("opentype.js");
-
-// harfbuzzjs can export in different formats depending on version/bundling
-const hbModule = require("harfbuzzjs");
-const hbFactory =
-  (typeof hbModule === "function" && hbModule) ||
-  (typeof hbModule?.default === "function" && hbModule.default) ||
-  (typeof hbModule?.hbjs === "function" && hbModule.hbjs) ||
-  null;
+const hbjs = require("harfbuzzjs");
 
 const app = express();
 app.use(cors());
@@ -32,21 +25,24 @@ const KHMER_DEP_VOWEL_START = 0x17b6;
 const KHMER_DEP_VOWEL_END = 0x17c5;
 const KHMER_COENG = 0x17d2;
 
+// Khmer signs/diacritics (covers common combining marks and signs in Khmer block)
+function isKhmerDiacriticOrSign(cp) {
+  // Vowel inherents / diacritics / signs / punctuation in Khmer block (pragmatic range)
+  // Includes 17C6..17D3 and 17DD plus Khmer symbols/punct often treated as signs.
+  return (
+    (cp >= 0x17c6 && cp <= 0x17d3) ||
+    cp === 0x17dd ||
+    (cp >= 0x17d4 && cp <= 0x17dc) ||
+    (cp >= 0x17e0 && cp <= 0x17e9)
+  );
+}
+
 function isBaseConsonant(cp) {
   return cp >= KHMER_BASE_CONS_START && cp <= KHMER_BASE_CONS_END;
 }
 
 function isDependentVowel(cp) {
   return cp >= KHMER_DEP_VOWEL_START && cp <= KHMER_DEP_VOWEL_END;
-}
-
-// Pragmatic Khmer diacritic/sign detection
-function isKhmerDiacriticOrSign(cp) {
-  return (
-    (cp >= 0x17c6 && cp <= 0x17d3) ||
-    cp === 0x17dd ||
-    (cp >= 0x17d4 && cp <= 0x17dc)
-  );
 }
 
 function pickPrimaryChar(chars) {
@@ -87,24 +83,29 @@ function detectClusterFlags(codePoints) {
   };
 }
 
-// Build robust cluster boundaries from ALL hb cluster offsets
+// Build robust cluster boundaries from ALL hb cluster offsets.
+// This avoids relying on "next glyph cl" only.
 function buildClusterRangesFromHb(text, hbOutput) {
   const offsets = new Set([0, text.length]);
 
   for (const g of hbOutput) {
     if (typeof g.cl === "number") {
+      // Clamp to valid range just in case
       const clamped = Math.max(0, Math.min(text.length, g.cl));
       offsets.add(clamped);
     }
   }
 
   const sorted = Array.from(offsets).sort((a, b) => a - b);
+
+  // ranges: [start, end)
   const ranges = [];
   for (let i = 0; i < sorted.length - 1; i += 1) {
     const start = sorted[i];
     const end = sorted[i + 1];
     if (end > start) ranges.push([start, end]);
   }
+
   return ranges;
 }
 
@@ -123,7 +124,6 @@ function getFontInfo(ot) {
       names.fullName?.en ||
       names.preferredFamily?.en ||
       null;
-
     const version =
       names.version?.en ||
       names.uniqueID?.en ||
@@ -143,32 +143,19 @@ function getFontInfo(ot) {
   }
 }
 
-function toUint8ArrayExact(buffer) {
-  // safe exact-byte view for Node Buffer
-  return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-}
-
-function toArrayBufferExact(uint8) {
-  return uint8.buffer.slice(uint8.byteOffset, uint8.byteOffset + uint8.byteLength);
-}
-
 async function init() {
-  if (!fs.existsSync(FONT_PATH)) {
-    throw new Error(`Font not found: ${FONT_PATH}`);
-  }
+  if (!fs.existsSync(FONT_PATH)) throw new Error(`Font not found: ${FONT_PATH}`);
 
-  if (!hbFactory) {
-    throw new Error(
-      `harfbuzzjs factory not found. typeof module=${typeof hbModule}, keys=${Object.keys(hbModule || {}).join(",")}`
-    );
-  }
-
-  hb = await hbFactory();
+  hb = await hbjs();
 
   const fontBuffer = fs.readFileSync(FONT_PATH);
-  const fontBytes = toUint8ArrayExact(fontBuffer);
-
-  otFont = opentype.parse(toArrayBufferExact(fontBytes));
+  // Keep robust buffer view for opentype parse
+  const arr = new Uint8Array(
+    fontBuffer.buffer,
+    fontBuffer.byteOffset,
+    fontBuffer.byteLength
+  );
+  otFont = opentype.parse(arr.buffer.slice(arr.byteOffset, arr.byteOffset + arr.byteLength));
   unitsPerEm = otFont.unitsPerEm || 1000;
 
   console.log("✅ HarfBuzz + OpenType fonts loaded.");
@@ -189,14 +176,10 @@ app.get("/api/shape", async (req, res) => {
     const text = decodedText.normalize("NFC");
     const scale = FONT_SIZE / unitsPerEm;
 
-    const fontBuffer = fs.readFileSync(FONT_PATH);
-    const fontBytes = toUint8ArrayExact(fontBuffer);
-
-    const blob = hb.createBlob(fontBytes);
+    const fontData = fs.readFileSync(FONT_PATH);
+    const blob = hb.createBlob(fontData.buffer);
     const face = hb.createFace(blob, 0);
     const font = hb.createFont(face);
-
-    // Keep your original scaling style for hb font coords
     font.setScale(FONT_SIZE * unitsPerEm, FONT_SIZE * unitsPerEm);
 
     const buffer = hb.createBuffer();
@@ -264,11 +247,11 @@ app.get("/api/shape", async (req, res) => {
         id: i,
         glyphIdx: i,
 
-        // backwards compatibility
+        // legacy-compatible fields
         char: primaryChar,
         cluster: clusterStart,
 
-        // new metadata
+        // requested metadata
         clusterStart,
         clusterEnd,
         clusterText,
@@ -299,7 +282,7 @@ app.get("/api/shape", async (req, res) => {
     face.destroy();
     blob.destroy();
 
-    console.log(`→ [${mode}] Sent ${glyphsData.length} glyphs for "${text}"`);
+    console.log(`→ [${mode}] Отправлено ${glyphsData.length} глифов для "${text}"`);
     res.json(glyphsData);
   } catch (err) {
     console.error("Shape error:", err);
@@ -309,9 +292,7 @@ app.get("/api/shape", async (req, res) => {
 
 init()
   .then(() =>
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`✅ Server on port ${PORT}`);
-    })
+    app.listen(PORT, "0.0.0.0", () => console.log(`✅ Server on port ${PORT}`))
   )
   .catch((e) => {
     console.error("Init failed:", e);
