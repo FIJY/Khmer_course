@@ -36,7 +36,7 @@ const FALLBACK = {
   SELECTED: GLYPH_COLORS?.SELECTED ?? "#22d3ee",
 };
 
-// Shadow debug mode:
+// Debug toggle:
 // - window.__EDU_DEBUG__ = true
 // - or VITE_EDU_DEBUG=1
 const EDU_DEBUG =
@@ -151,13 +151,11 @@ function splitTokenToEduAtoms(token, tokenIndex) {
 
 function normalizeCharSplitInput(text, charSplit) {
   if (Array.isArray(charSplit) && charSplit.length > 0) {
-    // keep only non-empty strings
     const cleaned = charSplit
       .map((x) => (typeof x === "string" ? x.trim() : ""))
       .filter(Boolean);
     if (cleaned.length > 0) return cleaned;
   }
-  // fallback: parse whole word as one token then atomize
   return [text];
 }
 
@@ -170,7 +168,6 @@ function buildEduUnits(text, charSplit) {
     const extra = COMPOUND_CHAR_MAP[token] || [];
     const atoms = splitTokenToEduAtoms(token, tokenIndex);
 
-    // Keep token-level metadata for override compatibility
     const tokenMeta = {
       token,
       tokenIndex,
@@ -199,8 +196,8 @@ function makeViewBoxFromBlocks(blocks, pad = 60) {
   }
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  blocks.forEach(block => {
-    block.glyphs.forEach(g => {
+  blocks.forEach((block) => {
+    block.glyphs.forEach((g) => {
       if (g.bb) {
         minX = Math.min(minX, g.bb.x1);
         minY = Math.min(minY, g.bb.y1);
@@ -209,6 +206,7 @@ function makeViewBoxFromBlocks(blocks, pad = 60) {
       }
     });
   });
+
   if (minX === Infinity) minX = 0;
   if (minY === Infinity) minY = 0;
   if (maxX === -Infinity) maxX = 100;
@@ -222,39 +220,108 @@ function makeViewBoxFromBlocks(blocks, pad = 60) {
   };
 }
 
-// map edu units to render glyph indices (no merge-by-overlap)
+/**
+ * NEW MAPPING LAYER (no merge-by-overlap)
+ * -------------------------------------------------------
+ * Input:
+ *   - glyphs from /api/shape (with clusterStart/clusterEnd/clusterText/codePoints/flags)
+ *   - eduUnits (atomic)
+ *
+ * Output:
+ *   - unitToGlyphs: Map<unitId, Set<glyphId>>
+ *   - glyphToUnits: Map<glyphId, unit[]>
+ *   - sharedGlyphIds: Set<glyphId> // glyph mapped to 2+ units
+ *
+ * Strategy:
+ *   1) score-based matching (codepoint overlap + cluster affinity + type hints)
+ *   2) accept only positive-score links
+ *   3) NEVER merge units together
+ */
 function mapEduUnitsToGlyphs(glyphs, eduUnits) {
-  const mapping = new Map(); // unitId -> Set(glyphId)
-  const glyphToUnits = new Map(); // glyphId -> [unit]
+  const unitToGlyphs = new Map();
+  const glyphToUnits = new Map();
+  const sharedGlyphIds = new Set();
 
-  eduUnits.forEach((u) => mapping.set(u.id, new Set()));
+  eduUnits.forEach((u) => unitToGlyphs.set(u.id, new Set()));
+
+  const cpSet = (arr) => new Set(Array.isArray(arr) ? arr : []);
+
+  function unitFitsGlyphByType(unit, glyph) {
+    const flags = {
+      hasCoeng: !!glyph?.hasCoeng,
+      hasSubscriptConsonant: !!glyph?.hasSubscriptConsonant,
+      hasDependentVowel: !!glyph?.hasDependentVowel,
+      hasDiacritic: !!glyph?.hasDiacritic,
+    };
+
+    if (unit.type === "subscript_consonant") return flags.hasSubscriptConsonant || flags.hasCoeng;
+    if (unit.type === "coeng") return flags.hasCoeng;
+    if (unit.type === "dependent_vowel") return flags.hasDependentVowel;
+    if (unit.type === "diacritic") return flags.hasDiacritic;
+    if (unit.type === "base_consonant") return true;
+    if (unit.type === "independent_vowel") return true;
+    return true;
+  }
+
+  function scoreUnitGlyph(unit, glyph) {
+    let score = 0;
+
+    const gCps = cpSet(glyph?.codePoints);
+    const uCps = cpSet(unit?.codePoints);
+
+    // 1) CP overlap (primary signal)
+    let overlap = 0;
+    uCps.forEach((cp) => {
+      if (gCps.has(cp)) overlap += 1;
+    });
+    if (overlap > 0) score += overlap * 10;
+
+    // 2) cluster text affinity
+    if (glyph?.clusterText && unit?.text && glyph.clusterText.includes(unit.text)) {
+      score += 4;
+    }
+
+    // 3) type/flag affinity
+    if (unitFitsGlyphByType(unit, glyph)) {
+      score += 3;
+    }
+
+    // 4) exact primaryChar bonus
+    const unitDisplay = unit?.text || "";
+    if (unitDisplay && glyph?.primaryChar && unitDisplay === glyph.primaryChar) {
+      score += 3;
+    }
+
+    // 5) penalty if nothing concrete matched
+    if (overlap === 0 && !(glyph?.clusterText && unit?.text && glyph.clusterText.includes(unit.text))) {
+      score -= 4;
+    }
+
+    return score;
+  }
 
   glyphs.forEach((g) => {
-    const gCps = Array.isArray(g.codePoints) ? g.codePoints : [];
-    const gSet = new Set(gCps);
+    const scored = eduUnits
+      .map((u) => ({ unit: u, score: scoreUnitGlyph(u, g) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score);
 
-    const matches = eduUnits.filter((u) => {
-      // 1) primary: strict intersection with unit cps
-      const hasOwn = u.codePoints.some((cp) => gSet.has(cp));
-      if (hasOwn) return true;
+    if (scored.length === 0) return;
 
-      // 2) fallback: clusterText contains unit text
-      if (g.clusterText && u.text) {
-        return g.clusterText.includes(u.text);
-      }
+    // Keep all positive mappings to preserve "shared glyph" cases.
+    const accepted = scored.map((x) => x.unit);
 
-      return false;
+    glyphToUnits.set(g.id, accepted);
+    accepted.forEach((u) => {
+      unitToGlyphs.get(u.id).add(g.id);
     });
 
-    if (matches.length > 0) {
-      glyphToUnits.set(g.id, matches);
-      matches.forEach((u) => {
-        mapping.get(u.id).add(g.id);
-      });
+    if (accepted.length > 1) {
+      sharedGlyphIds.add(g.id);
     }
   });
 
-  return { mapping, glyphToUnits };
+  return { unitToGlyphs, glyphToUnits, sharedGlyphIds };
 }
 
 function unitDisplayChar(unit) {
@@ -273,26 +340,20 @@ function preferredUnitFromSharedGlyph(hitPoint, glyph, units) {
   const w = Math.max(1, bb.x2 - bb.x1);
   const h = Math.max(1, bb.y2 - bb.y1);
 
-  const relX = (hitPoint.x - bb.x1) / w; // 0..1
-  const relY = (hitPoint.y - bb.y1) / h; // 0..1
+  const relX = (hitPoint.x - bb.x1) / w;
+  const relY = (hitPoint.y - bb.y1) / h;
 
   // 1) subscript prefers lower zone
   const subs = units.filter((u) => u.type === "subscript_consonant" || u.isSubscript);
-  if (subs.length && relY > 0.58) {
-    return subs[0];
-  }
+  if (subs.length && relY > 0.58) return subs[0];
 
-  // 2) dependent vowels often top/left/right zone
+  // 2) dependent vowels often top/side zones
   const dep = units.filter((u) => u.type === "dependent_vowel");
-  if (dep.length) {
-    if (relY < 0.38 || relX < 0.25 || relX > 0.75) return dep[0];
-  }
+  if (dep.length && (relY < 0.38 || relX < 0.25 || relX > 0.75)) return dep[0];
 
   // 3) base consonant prefers center
   const base = units.filter((u) => u.type === "base_consonant");
-  if (base.length && relY >= 0.32 && relY <= 0.78 && relX >= 0.2 && relX <= 0.8) {
-    return base[0];
-  }
+  if (base.length && relY >= 0.32 && relY <= 0.78 && relX >= 0.2 && relX <= 0.8) return base[0];
 
   // 4) highest priority fallback
   const sorted = [...units].sort((a, b) => (b.priority || 0) - (a.priority || 0));
@@ -335,11 +396,13 @@ export default function VisualDecoder(props) {
   const heroHighlight = data?.hero_highlight ?? data?.heroHighlight ?? null;
 
   const [glyphs, setGlyphs] = useState([]);
-  const [blocks, setBlocks] = useState([]); // render blocks = 1 glyph per block for atomic picking
+  const [blocks, setBlocks] = useState([]);
   const [eduUnits, setEduUnits] = useState([]);
   const [eduMap, setEduMap] = useState(new Map()); // unitId -> Set(glyphId)
   const [glyphToUnits, setGlyphToUnits] = useState(new Map()); // glyphId -> [units]
-  const [eduDebugSnapshot, setEduDebugSnapshot] = useState(null); // shadow mode debug
+  const [sharedGlyphIds, setSharedGlyphIds] = useState(new Set()); // glyph ids with 2+ units
+  const [eduDebugSnapshot, setEduDebugSnapshot] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -351,7 +414,7 @@ export default function VisualDecoder(props) {
   const svgRef = useRef(null);
   const hintRef = useRef(null);
 
-  // Сброс выбора
+  // Selection reset
   useEffect(() => {
     if (interactionMode !== "persistent_select") return;
     setSelectedIds([]);
@@ -376,7 +439,7 @@ export default function VisualDecoder(props) {
     }
   }, [lastTap, scrollTargetRef]);
 
-  // Загрузка глифов + build eduUnits + mapping
+  // Load glyphs + build eduUnits + mapping
   useEffect(() => {
     let active = true;
     if (!text) {
@@ -385,6 +448,7 @@ export default function VisualDecoder(props) {
       setEduUnits([]);
       setEduMap(new Map());
       setGlyphToUnits(new Map());
+      setSharedGlyphIds(new Set());
       setEduDebugSnapshot(null);
       setLoading(false);
       return;
@@ -404,70 +468,67 @@ export default function VisualDecoder(props) {
         const arr = Array.isArray(json) ? json : [];
         setGlyphs(arr);
 
-        // A) build atomic edu units (shadow mode - parallel)
+        // A) Build atomic edu units
         const units = buildEduUnits(text, data?.char_split);
         setEduUnits(units);
 
-        // B) map units -> glyph ids (NO merge-by-overlap)
-        const { mapping, glyphToUnits: g2u } = mapEduUnitsToGlyphs(arr, units);
-        setEduMap(mapping);
-        setGlyphToUnits(g2u);
+        // B) Map units -> glyph ids (NO merge-by-overlap)
+        const {
+          unitToGlyphs,
+          glyphToUnits: g2u,
+          sharedGlyphIds: sharedSet,
+        } = mapEduUnitsToGlyphs(arr, units);
 
-        // Shadow debug snapshot (UI unchanged)
+        setEduMap(unitToGlyphs);
+        setGlyphToUnits(g2u);
+        setSharedGlyphIds(sharedSet);
+
+        // Debug snapshot
         if (EDU_DEBUG) {
           const byType = units.reduce((acc, u) => {
             acc[u.type] = (acc[u.type] || 0) + 1;
             return acc;
           }, {});
 
-          const sample = units.map((u) => ({
+          const unitRows = units.map((u) => ({
             id: u.id,
             type: u.type,
             text: u.text,
-            cps: (u.codePoints || []).map((cp) => `U+${cp.toString(16).toUpperCase()}`),
             token: u.token,
-            tokenIndex: u.tokenIndex,
-            mappedGlyphIds: Array.from(mapping.get(u.id) || []),
+            cps: (u.codePoints || []).map((cp) => `U+${cp.toString(16).toUpperCase()}`).join(" "),
+            mappedGlyphIds: Array.from(unitToGlyphs.get(u.id) || []).join(","),
           }));
 
-          const sharedGlyphs = arr
+          const sharedRows = arr
+            .filter((g) => sharedSet.has(g.id))
             .map((g) => ({
               glyphId: g.id,
-              clusterText: g.clusterText,
-              units: (g2u.get(g.id) || []).map((u) => `${u.type}:${u.text}`),
-            }))
-            .filter((x) => x.units.length > 1);
+              clusterText: g.clusterText || "",
+              clusterStart: g.clusterStart,
+              clusterEnd: g.clusterEnd,
+              units: (g2u.get(g.id) || []).map((u) => `${u.type}:${u.text}`).join(" | "),
+            }));
 
           const snapshot = {
             text,
             charSplit: data?.char_split || null,
             unitsTotal: units.length,
             byType,
-            sharedGlyphsCount: sharedGlyphs.length,
-            sample,
-            sharedGlyphs,
+            sharedGlyphCount: sharedSet.size,
+            unitRows,
+            sharedRows,
           };
-
           setEduDebugSnapshot(snapshot);
 
-          // Console debug
           // eslint-disable-next-line no-console
-          console.groupCollapsed(`[EDU SHADOW] ${text}`);
+          console.groupCollapsed(`[EDU MAP SHADOW] ${text}`);
           // eslint-disable-next-line no-console
           console.log("byType:", byType);
           // eslint-disable-next-line no-console
-          console.table(
-            sample.map((x) => ({
-              id: x.id,
-              type: x.type,
-              text: x.text,
-              token: x.token,
-              glyphs: x.mappedGlyphIds.join(","),
-            }))
-          );
-          if (sharedGlyphs.length) {
+          console.table(unitRows);
+          if (sharedRows.length) {
             // eslint-disable-next-line no-console
-            console.log("sharedGlyphs:", sharedGlyphs);
+            console.table(sharedRows);
           }
           // eslint-disable-next-line no-console
           console.groupEnd();
@@ -475,12 +536,12 @@ export default function VisualDecoder(props) {
           setEduDebugSnapshot(null);
         }
 
-        // render blocks: 1 glyph = 1 block (atomic render target)
+        // Render blocks: 1 glyph = 1 block
         const renderBlocks = arr.map((g, idx) => {
           const related = g2u.get(g.id) || [];
           const primaryUnit =
             related.find((u) => u.type === "base_consonant") ||
-            related.sort((a, b) => (b.priority || 0) - (a.priority || 0))[0] ||
+            [...related].sort((a, b) => (b.priority || 0) - (a.priority || 0))[0] ||
             null;
 
           return {
@@ -490,7 +551,7 @@ export default function VisualDecoder(props) {
             codePoints: Array.isArray(g.codePoints) ? g.codePoints : [],
             primaryChar: primaryUnit ? unitDisplayChar(primaryUnit) : (g.primaryChar || g.char || "?"),
             relatedUnits: related,
-            hasSharedGlyph: related.length > 1,
+            sharedGlyph: sharedSet.has(g.id),
           };
         });
 
@@ -508,7 +569,7 @@ export default function VisualDecoder(props) {
     return () => { active = false; };
   }, [text, data?.char_split]);
 
-  // Звуки
+  // Sounds
   useEffect(() => {
     if (!glyphs.length) return;
 
@@ -539,15 +600,16 @@ export default function VisualDecoder(props) {
     [blocks, viewBoxPad]
   );
 
-  // Оповещаем о рендере (совместимый формат + debug payload)
+  // Notify render
   useEffect(() => {
     if (!onGlyphsRendered) return;
+
     const flatMeta = blocks.flatMap((block, blockIdx) =>
       block.glyphs.map((g, gIdx) => {
         const related = block.relatedUnits || [];
         const primary =
           related.find((u) => u.type === "base_consonant") ||
-          related.sort((a, b) => (b.priority || 0) - (a.priority || 0))[0] ||
+          [...related].sort((a, b) => (b.priority || 0) - (a.priority || 0))[0] ||
           null;
 
         return {
@@ -557,24 +619,23 @@ export default function VisualDecoder(props) {
           resolvedChar: primary ? unitDisplayChar(primary) : block.primaryChar,
           isSubscript: !!primary?.isSubscript,
           relatedUnits: related,
-          sharedGlyph: related.length > 1,
+          sharedGlyph: !!block.sharedGlyph,
         };
       })
     );
 
-    // Backward-compatible main payload
     onGlyphsRendered(flatMeta);
 
-    // Optional debug side-channel for parents
     if (EDU_DEBUG && typeof window !== "undefined") {
       window.__LAST_EDU_DEBUG__ = {
         eduUnits,
         eduMap,
         glyphToUnits,
+        sharedGlyphIds,
         eduDebugSnapshot,
       };
     }
-  }, [onGlyphsRendered, blocks, eduUnits, eduMap, glyphToUnits, eduDebugSnapshot]);
+  }, [onGlyphsRendered, blocks, eduUnits, eduMap, glyphToUnits, sharedGlyphIds, eduDebugSnapshot]);
 
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
@@ -593,12 +654,11 @@ export default function VisualDecoder(props) {
     for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
       const block = blocks[blockIdx];
       for (let gIdx = 0; gIdx < block.glyphs.length; gIdx++) {
-        const glyph = block.glyphs[gIdx];
         const pathEl = document.getElementById(`glyph-${blockIdx}-${gIdx}`);
         if (!pathEl) continue;
         try {
           if (pathEl.isPointInFill(p)) {
-            return { blockIdx, glyph, glyphIdx: gIdx, block };
+            return { blockIdx, glyph: block.glyphs[gIdx], glyphIdx: gIdx, block };
           }
         } catch {
           // ignore
@@ -617,7 +677,6 @@ export default function VisualDecoder(props) {
     const { blockIdx, glyph, block } = hit;
     const relatedUnits = block.relatedUnits || [];
 
-    // C) hit testing for shared glyphs
     let chosenUnit = null;
     if (relatedUnits.length > 1) {
       chosenUnit = preferredUnitFromSharedGlyph(p, glyph, relatedUnits);
@@ -712,7 +771,7 @@ export default function VisualDecoder(props) {
     if (onComplete) onComplete();
   };
 
-  // Оповещение о выборе
+  // Notify selection change
   useEffect(() => {
     if (!onSelectionChange) return;
     if (selectionMode === "multi") {
@@ -724,7 +783,7 @@ export default function VisualDecoder(props) {
     }
   }, [onSelectionChange, selectedId, selectedIds, selectionMode]);
 
-  // Сброс выбора
+  // Reset selection
   useEffect(() => {
     if (resetSelectionKey === undefined) return;
     setSelectedId(null);
@@ -748,6 +807,7 @@ export default function VisualDecoder(props) {
         isSelected: resolvedIsSelected,
         resolvedChar: primaryChar,
         relatedUnits: block.relatedUnits || [],
+        sharedGlyph: !!block.sharedGlyph,
       });
       if (override) return override;
     }
@@ -790,7 +850,7 @@ export default function VisualDecoder(props) {
               ? selectedIds.includes(blockIdx)
               : selectedId === blockIdx;
 
-          const isTarget = !!targetChar && block.codePoints.some(cp => cpToChar(cp) === targetChar);
+          const isTarget = !!targetChar && block.codePoints.some((cp) => cpToChar(cp) === targetChar);
           const forceHeroOutline = heroHighlight === "green_outline" && isTarget;
           const isConsonant = block.codePoints.some(isConsonantCp);
 
