@@ -289,23 +289,23 @@ app.get("/api/shape", async (req, res) => {
     buffer.addText(text);
     buffer.guessSegmentProperties();
 
-    let features = [];
+    let featureString = "";
     if (mode === "split") {
-      features = [
-        { tag: "liga", value: 0 },
-        { tag: "clig", value: 0 },
-        { tag: "ccmp", value: 0 },
-        { tag: "abvf", value: 0 },
-        { tag: "abvs", value: 0 },
-        { tag: "blwf", value: 0 },
-        { tag: "pstf", value: 0 },
-        { tag: "pref", value: 0 },
-        { tag: "pres", value: 0 },
-        { tag: "psts", value: 0 },
-      ];
+      featureString = [
+        "liga=0",
+        "clig=0",
+        "ccmp=0",
+        "abvf=0",
+        "abvs=0",
+        "blwf=0",
+        "pstf=0",
+        "pref=0",
+        "pres=0",
+        "psts=0",
+      ].join(",");
     }
 
-    hb.shape(font, buffer, features);
+    hb.shape(font, buffer, featureString);
     const hbOutput = buffer.json();
 
     if (!Array.isArray(hbOutput)) {
