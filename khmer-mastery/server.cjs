@@ -1,17 +1,15 @@
-// server.cjs
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const opentype = require("opentype.js");
-const hbjs = require("harfbuzzjs");
+const hbjs = require("harfbuzzjs"); // правильный пакет
 
 const app = express();
 app.use(cors());
 
 const PORT = Number(process.env.PORT) || 3001;
 const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
-const HB_WASM_PATH = path.join(__dirname, "hb.wasm");
 const FONT_SIZE = 120;
 
 let hb = null;
@@ -20,13 +18,11 @@ let unitsPerEm = 1000;
 
 async function init() {
   if (!fs.existsSync(FONT_PATH)) throw new Error(`Font not found: ${FONT_PATH}`);
-  if (!fs.existsSync(HB_WASM_PATH)) throw new Error(`hb.wasm not found: ${HB_WASM_PATH}`);
 
-  const wasmBinary = fs.readFileSync(HB_WASM_PATH);
-  const wasmModule = await WebAssembly.compile(wasmBinary);
-  const instance = await WebAssembly.instantiate(wasmModule, hbjs.importObject || {});
-  hb = hbjs(instance.exports);
+  // Инициализация HarfBuzz из пакета
+  hb = await hbjs();
 
+  // Загрузка OpenType шрифта
   const fontBuffer = fs.readFileSync(FONT_PATH);
   otFont = opentype.parse(fontBuffer.buffer);
   unitsPerEm = otFont.unitsPerEm || 1000;
@@ -39,7 +35,7 @@ app.get("/health", (req, res) => res.send("OK"));
 
 app.get("/api/shape", async (req, res) => {
   const rawText = req.query.text;
-  const mode = req.query.mode || 'normal'; // 'normal' или 'split'
+  const mode = req.query.mode || 'normal';
   if (!rawText) return res.status(400).json({ error: "No text provided" });
   if (!hb || !otFont) return res.status(503).json({ error: "Fonts not ready" });
 
@@ -110,7 +106,7 @@ app.get("/api/shape", async (req, res) => {
         d,
         bb: bb ? { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 } : null,
         advance: (out.ax || 0) * scale,
-        x, // сохраняем координаты для возможного использования на клиенте
+        x,
         y,
       });
 
