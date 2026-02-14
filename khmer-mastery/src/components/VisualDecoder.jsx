@@ -16,7 +16,6 @@ import {
 } from "../lib/glyphFeedback";
 import GlyphHintCard from "./UI/GlyphHintCard";
 import {
-  buildGlyphDisplayChar,
   getGlyphHintContent,
   truncateHint,
 } from "../lib/glyphHintUtils";
@@ -37,24 +36,32 @@ const FALLBACK = {
   SELECTED: GLYPH_COLORS?.SELECTED ?? "#22d3ee",
 };
 
-// --- Хелперы для работы с codePoints ---
-function getPrimaryCharFromGlyph(glyph) {
-  const cps = glyph?.codePoints;
-  if (Array.isArray(cps) && cps.length > 0) {
-    try { return String.fromCodePoint(cps[0]); } catch { /* ignore */ }
-  }
-  return glyph?.char || "";
+// --- Khmer classification helpers ---
+function isConsonantCp(cp) {
+  return cp >= 0x1780 && cp <= 0x17A2;
 }
-
-function getAllCharsFromGlyph(glyph) {
-  const cps = glyph?.codePoints;
-  if (Array.isArray(cps) && cps.length > 0) {
-    try { return cps.map((cp) => String.fromCodePoint(cp)); } catch { /* ignore */ }
-  }
-  const c = glyph?.char || "";
-  return c ? [c] : [];
+function isCoengCp(cp) {
+  return cp === COENG_CP;
 }
-
+function isVowelDepCp(cp) {
+  return cp >= 0x17B6 && cp <= 0x17C5;
+}
+function isVowelIndCp(cp) {
+  return cp >= 0x17A3 && cp <= 0x17B3;
+}
+function isDiacriticCp(cp) {
+  return cp >= 0x17C6 && cp <= 0x17D1 && cp !== COENG_CP;
+}
+function cpToChar(cp) {
+  try {
+    return String.fromCodePoint(cp);
+  } catch {
+    return "";
+  }
+}
+function charsToCodePoints(str = "") {
+  return Array.from(str).map((c) => c.codePointAt(0));
+}
 function isKhmerConsonant(ch) {
   if (!ch) return false;
   try {
@@ -66,24 +73,115 @@ function isKhmerConsonant(ch) {
   }
 }
 
-function isConsonantCp(cp) {
-  return cp >= 0x1780 && cp <= 0x17A2;
+function classifyCp(cp, prevCp) {
+  if (isCoengCp(cp)) return "coeng";
+  if (isConsonantCp(cp)) {
+    if (isCoengCp(prevCp)) return "subscript_consonant";
+    return "base_consonant";
+  }
+  if (isVowelDepCp(cp)) return "dependent_vowel";
+  if (isVowelIndCp(cp)) return "independent_vowel";
+  if (isDiacriticCp(cp)) return "diacritic";
+  return "other";
 }
 
-function isCoengCp(cp) {
-  return cp === COENG_CP;
+// split token into atomic edu units
+function splitTokenToEduAtoms(token, tokenIndex) {
+  const cps = charsToCodePoints(token);
+  const atoms = [];
+
+  for (let i = 0; i < cps.length; i += 1) {
+    const cp = cps[i];
+    const prevCp = i > 0 ? cps[i - 1] : undefined;
+
+    if (isCoengCp(cp)) {
+      const nextCp = cps[i + 1];
+      if (typeof nextCp === "number" && isConsonantCp(nextCp)) {
+        atoms.push({
+          id: `t${tokenIndex}-a${atoms.length}`,
+          type: "subscript_consonant",
+          text: COENG_CHAR + cpToChar(nextCp),
+          codePoints: [cp, nextCp],
+          tokenIndex,
+          priority: 4,
+          isSubscript: true,
+        });
+        i += 1;
+        continue;
+      }
+      atoms.push({
+        id: `t${tokenIndex}-a${atoms.length}`,
+        type: "coeng",
+        text: cpToChar(cp),
+        codePoints: [cp],
+        tokenIndex,
+        priority: 1,
+        isSubscript: false,
+      });
+      continue;
+    }
+
+    const type = classifyCp(cp, prevCp);
+    atoms.push({
+      id: `t${tokenIndex}-a${atoms.length}`,
+      type,
+      text: cpToChar(cp),
+      codePoints: [cp],
+      tokenIndex,
+      priority:
+        type === "base_consonant" ? 5 :
+        type === "subscript_consonant" ? 4 :
+        type === "dependent_vowel" ? 3 :
+        type === "diacritic" ? 2 : 1,
+      isSubscript: type === "subscript_consonant",
+    });
+  }
+
+  return atoms;
 }
 
-function isVowelDepCp(cp) {
-  return cp >= 0x17B6 && cp <= 0x17C5;
+function normalizeCharSplitInput(text, charSplit) {
+  if (Array.isArray(charSplit) && charSplit.length > 0) {
+    // keep only non-empty strings
+    const cleaned = charSplit
+      .map((x) => (typeof x === "string" ? x.trim() : ""))
+      .filter(Boolean);
+    if (cleaned.length > 0) return cleaned;
+  }
+  // fallback: parse whole word as one token then atomize
+  return [text];
 }
 
-function isVowelIndCp(cp) {
-  return cp >= 0x17A3 && cp <= 0x17B3;
-}
+function buildEduUnits(text, charSplit) {
+  const tokens = normalizeCharSplitInput(text, charSplit);
+  const units = [];
 
-function isDiacriticCp(cp) {
-  return cp >= 0x17C6 && cp <= 0x17D1 && cp !== COENG_CP;
+  tokens.forEach((token, tokenIndex) => {
+    const tokenCps = charsToCodePoints(token);
+    const extra = COMPOUND_CHAR_MAP[token] || [];
+    const atoms = splitTokenToEduAtoms(token, tokenIndex);
+
+    // Keep token-level metadata for override compatibility
+    const tokenMeta = {
+      token,
+      tokenIndex,
+      tokenCodePoints: tokenCps,
+      tokenExtraCodePoints: extra,
+    };
+
+    atoms.forEach((a, atomIndex) => {
+      units.push({
+        ...a,
+        id: `${a.id}-${atomIndex}`,
+        token: tokenMeta.token,
+        tokenIndex: tokenMeta.tokenIndex,
+        tokenCodePoints: tokenMeta.tokenCodePoints,
+        tokenExtraCodePoints: tokenMeta.tokenExtraCodePoints,
+      });
+    });
+  });
+
+  return units;
 }
 
 function makeViewBoxFromBlocks(blocks, pad = 60) {
@@ -115,6 +213,83 @@ function makeViewBoxFromBlocks(blocks, pad = 60) {
   };
 }
 
+// map edu units to render glyph indices (no merge-by-overlap)
+function mapEduUnitsToGlyphs(glyphs, eduUnits) {
+  const mapping = new Map(); // unitId -> Set(glyphId)
+  const glyphToUnits = new Map(); // glyphId -> [unit]
+
+  eduUnits.forEach((u) => mapping.set(u.id, new Set()));
+
+  glyphs.forEach((g) => {
+    const gCps = Array.isArray(g.codePoints) ? g.codePoints : [];
+    const gSet = new Set(gCps);
+
+    const matches = eduUnits.filter((u) => {
+      // strict intersection with unit cps
+      const hasOwn = u.codePoints.some((cp) => gSet.has(cp));
+      if (!hasOwn) return false;
+
+      // bonus fallback: if glyph has clusterText and unit text inside cluster
+      if (!hasOwn && g.clusterText && u.text) {
+        return g.clusterText.includes(u.text);
+      }
+      return hasOwn;
+    });
+
+    if (matches.length > 0) {
+      glyphToUnits.set(g.id, matches);
+      matches.forEach((u) => {
+        mapping.get(u.id).add(g.id);
+      });
+    }
+  });
+
+  return { mapping, glyphToUnits };
+}
+
+function unitDisplayChar(unit) {
+  if (!unit) return "";
+  if (unit.text) return unit.text;
+  if (Array.isArray(unit.codePoints) && unit.codePoints.length > 0) {
+    return unit.codePoints.map(cpToChar).join("");
+  }
+  return "";
+}
+
+function preferredUnitFromSharedGlyph(hitPoint, glyph, units) {
+  if (!glyph?.bb || !units?.length) return units?.[0] || null;
+
+  const bb = glyph.bb;
+  const w = Math.max(1, bb.x2 - bb.x1);
+  const h = Math.max(1, bb.y2 - bb.y1);
+
+  const relX = (hitPoint.x - bb.x1) / w; // 0..1
+  const relY = (hitPoint.y - bb.y1) / h; // 0..1 (y grows down in SVG space visually can vary; we use bbox space only)
+
+  // Priority rules:
+  // 1) subscript prefers lower zone
+  const subs = units.filter((u) => u.type === "subscript_consonant" || u.isSubscript);
+  if (subs.length && relY > 0.58) {
+    return subs[0];
+  }
+
+  // 2) dependent vowels often top/left/right zone
+  const dep = units.filter((u) => u.type === "dependent_vowel");
+  if (dep.length) {
+    if (relY < 0.38 || relX < 0.25 || relX > 0.75) return dep[0];
+  }
+
+  // 3) base consonant prefers center
+  const base = units.filter((u) => u.type === "base_consonant");
+  if (base.length && relY >= 0.32 && relY <= 0.78 && relX >= 0.2 && relX <= 0.8) {
+    return base[0];
+  }
+
+  // 4) highest priority fallback
+  const sorted = [...units].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+  return sorted[0] || units[0] || null;
+}
+
 export default function VisualDecoder(props) {
   const {
     data,
@@ -124,7 +299,6 @@ export default function VisualDecoder(props) {
     hideDefaultButton = true,
     highlightMode = HIGHLIGHT_MODES.OFF,
     revealOnSelect = false,
-    highlightSubscripts = false,
     interactionMode = "persistent_select",
     selectionMode = "multi",
     onSelectionChange,
@@ -152,7 +326,10 @@ export default function VisualDecoder(props) {
   const heroHighlight = data?.hero_highlight ?? data?.heroHighlight ?? null;
 
   const [glyphs, setGlyphs] = useState([]);
-  const [blocks, setBlocks] = useState([]);
+  const [blocks, setBlocks] = useState([]); // render blocks = 1 glyph per block for atomic picking
+  const [eduUnits, setEduUnits] = useState([]);
+  const [eduMap, setEduMap] = useState(new Map()); // unitId -> Set(glyphId)
+  const [glyphToUnits, setGlyphToUnits] = useState(new Map()); // glyphId -> [units]
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -189,12 +366,15 @@ export default function VisualDecoder(props) {
     }
   }, [lastTap, scrollTargetRef]);
 
-  // Загрузка глифов
+  // Загрузка глифов + build eduUnits + mapping
   useEffect(() => {
     let active = true;
     if (!text) {
       setGlyphs([]);
       setBlocks([]);
+      setEduUnits([]);
+      setEduMap(new Map());
+      setGlyphToUnits(new Map());
       setLoading(false);
       return;
     }
@@ -209,108 +389,39 @@ export default function VisualDecoder(props) {
       })
       .then((json) => {
         if (!active) return;
+
         const arr = Array.isArray(json) ? json : [];
         setGlyphs(arr);
 
-        // --- Группировка по char_split (если есть) ---
-        if (data?.char_split && Array.isArray(data.char_split) && data.char_split.length > 0) {
-          // Для каждого элемента split создаём запись с компонентами
-          const splitItems = data.char_split.map((part, idx) => {
-            const partCodePoints = Array.from(part).map(c => c.codePointAt(0));
-            // Если для этого символа есть составные части, добавляем их codePoints к списку
-            const extraCodePoints = COMPOUND_CHAR_MAP[part] || [];
-            return {
-              index: idx,
-              part,
-              codePoints: [...partCodePoints, ...extraCodePoints],
-            };
-          });
+        // A) build atomic edu units
+        const units = buildEduUnits(text, data?.char_split);
+        setEduUnits(units);
 
-          // Для каждого глифа определяем, к какому splitItem он относится
-          const glyphToSplit = arr.map(glyph => {
-            const glyphCPs = glyph.codePoints || [];
-            const matches = [];
-            splitItems.forEach(item => {
-              if (glyphCPs.some(cp => item.codePoints.includes(cp))) {
-                matches.push(item.index);
-              }
-            });
-            return matches;
-          });
+        // B) map units -> glyph ids (NO merge-by-overlap)
+        const { mapping, glyphToUnits: g2u } = mapEduUnitsToGlyphs(arr, units);
+        setEduMap(mapping);
+        setGlyphToUnits(g2u);
 
-          // Объединяем splitItem, которые имеют общие глифы
-          const splitGroups = [];
-          const visited = new Array(splitItems.length).fill(false);
+        // render blocks: 1 glyph = 1 block (atomic render target)
+        const renderBlocks = arr.map((g, idx) => {
+          const related = g2u.get(g.id) || [];
+          const primaryUnit =
+            related.find((u) => u.type === "base_consonant") ||
+            related.sort((a, b) => (b.priority || 0) - (a.priority || 0))[0] ||
+            null;
 
-          for (let i = 0; i < splitItems.length; i++) {
-            if (visited[i]) continue;
+          return {
+            blockId: idx,
+            glyphs: [g],
+            glyphId: g.id,
+            codePoints: Array.isArray(g.codePoints) ? g.codePoints : [],
+            primaryChar: primaryUnit ? unitDisplayChar(primaryUnit) : (g.primaryChar || g.char || "?"),
+            relatedUnits: related,
+            hasSharedGlyph: related.length > 1,
+          };
+        });
 
-            const groupIndices = new Set([i]);
-            const stack = [i];
-            while (stack.length) {
-              const current = stack.pop();
-              visited[current] = true;
-              for (let g = 0; g < arr.length; g++) {
-                if (glyphToSplit[g].includes(current)) {
-                  glyphToSplit[g].forEach(otherIdx => {
-                    if (!visited[otherIdx] && !groupIndices.has(otherIdx)) {
-                      groupIndices.add(otherIdx);
-                      stack.push(otherIdx);
-                    }
-                  });
-                }
-              }
-            }
-            splitGroups.push(Array.from(groupIndices).sort());
-          }
-
-          // Для каждой группы собираем глифы
-          const newBlocks = splitGroups.map((groupIndices, blockIdx) => {
-            const groupGlyphs = [];
-            const groupCPs = new Set();
-            groupIndices.forEach(idx => {
-              arr.forEach((glyph, gIdx) => {
-                if (glyphToSplit[gIdx].includes(idx)) {
-                  if (!groupGlyphs.includes(glyph)) {
-                    groupGlyphs.push(glyph);
-                    glyph.codePoints?.forEach(cp => groupCPs.add(cp));
-                  }
-                }
-              });
-            });
-
-            // Первый символ группы (для подсказки) — берём из первого splitItem
-            const primaryChar = splitItems[groupIndices[0]].part[0] || '?';
-
-            return {
-              glyphs: groupGlyphs,
-              codePoints: Array.from(groupCPs),
-              primaryChar,
-              splitIndices: groupIndices,
-            };
-          });
-
-          setBlocks(newBlocks);
-        } else {
-          // Если char_split нет, группируем по cluster
-          const map = new Map();
-          arr.forEach(g => {
-            const clusterId = g.cluster ?? 0;
-            if (!map.has(clusterId)) map.set(clusterId, []);
-            map.get(clusterId).push(g);
-          });
-          const sortedClusters = Array.from(map.entries())
-            .sort(([a], [b]) => a - b)
-            .map(([_, clusterGlyphs]) => clusterGlyphs);
-
-          const fallbackBlocks = sortedClusters.map(cluster => ({
-            glyphs: cluster,
-            codePoints: cluster.flatMap(g => g.codePoints || []),
-            primaryChar: cluster[0]?.char || '?',
-          }));
-          setBlocks(fallbackBlocks);
-        }
-
+        setBlocks(renderBlocks);
         setLoading(false);
       })
       .catch((err) => {
@@ -323,73 +434,62 @@ export default function VisualDecoder(props) {
     return () => { active = false; };
   }, [text, data?.char_split]);
 
-  // Звуки (без изменений)
+  // Звуки
   useEffect(() => {
-    if (!glyphs.length || !data?.char_split) return;
+    if (!glyphs.length) return;
 
-    const audioMap = data.char_audio_map || {};
-    const soundQueues = {};
-    const isConsonantRx = (char) => /[\u1780-\u17A2]/.test(char);
-
-    data.char_split.forEach((token) => {
-      const cleanToken = token ? token.trim() : "";
-      let groupSound = audioMap[token] || audioMap[cleanToken];
-      if (!groupSound) groupSound = getSoundFileForChar(cleanToken);
-      if (groupSound && groupSound.startsWith("sub_")) {
-        groupSound = groupSound.replace("sub_", "letter_");
-      }
-
-      for (const char of cleanToken) {
-        if (!soundQueues[char]) soundQueues[char] = [];
-        const isModifierSound =
-          groupSound &&
-          (groupSound.includes("sign_") ||
-            groupSound.includes("vowel_") ||
-            groupSound.includes("diacritic"));
-
-        if (isConsonantRx(char) && isModifierSound) {
-          const nativeSound = getSoundFileForChar(char);
-          soundQueues[char].push(nativeSound);
-        } else {
-          soundQueues[char].push(groupSound);
-        }
-      }
-    });
-
+    const audioMap = data?.char_audio_map || {};
     const newMap = {};
-    const queuesCopy = JSON.parse(JSON.stringify(soundQueues));
 
     glyphs.forEach((glyph, idx) => {
-      const char = glyph.char;
-      if (queuesCopy[char] && queuesCopy[char].length > 0) {
-        newMap[idx] = queuesCopy[char].shift();
+      const related = glyphToUnits.get(glyph.id) || [];
+      const preferred =
+        related.find((u) => u.type === "base_consonant") ||
+        related.find((u) => u.type === "dependent_vowel") ||
+        related[0];
+      const ch = preferred ? unitDisplayChar(preferred) : (glyph.primaryChar || glyph.char || "");
+      const clean = (ch || "").trim();
+      let sound = audioMap[clean] || getSoundFileForChar(clean);
+
+      if (sound && sound.startsWith("sub_")) {
+        sound = sound.replace("sub_", "letter_");
       }
+      newMap[idx] = sound;
     });
 
     setGlyphSoundMap(newMap);
-  }, [glyphs, data]);
+  }, [glyphs, data, glyphToUnits]);
 
   const vb = useMemo(
     () => makeViewBoxFromBlocks(blocks, viewBoxPad),
     [blocks, viewBoxPad]
   );
 
-  // Оповещаем о рендере
+  // Оповещаем о рендере (теперь пробрасываем unit meta)
   useEffect(() => {
     if (!onGlyphsRendered) return;
     const flatMeta = blocks.flatMap((block, blockIdx) =>
-      block.glyphs.map((g, gIdx) => ({
-        ...g,
-        blockIndex: blockIdx,
-        glyphIndexInBlock: gIdx,
-        resolvedChar: block.primaryChar,
-        isSubscript: false,
-      }))
+      block.glyphs.map((g, gIdx) => {
+        const related = block.relatedUnits || [];
+        const primary =
+          related.find((u) => u.type === "base_consonant") ||
+          related.sort((a, b) => (b.priority || 0) - (a.priority || 0))[0] ||
+          null;
+
+        return {
+          ...g,
+          blockIndex: blockIdx,
+          glyphIndexInBlock: gIdx,
+          resolvedChar: primary ? unitDisplayChar(primary) : block.primaryChar,
+          isSubscript: !!primary?.isSubscript,
+          relatedUnits: related,
+          sharedGlyph: related.length > 1,
+        };
+      })
     );
     onGlyphsRendered(flatMeta);
   }, [onGlyphsRendered, blocks]);
 
-  // ---- Логика выбора блока ----
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
     if (!svg) return null;
@@ -412,7 +512,7 @@ export default function VisualDecoder(props) {
         if (!pathEl) continue;
         try {
           if (pathEl.isPointInFill(p)) {
-            return { blockIdx, glyph, glyphIdx: gIdx };
+            return { blockIdx, glyph, glyphIdx: gIdx, block };
           }
         } catch {
           // ignore
@@ -428,38 +528,36 @@ export default function VisualDecoder(props) {
     const hit = pickBlockAtPoint(p);
     if (!hit) return;
 
-    const { blockIdx, glyph } = hit;
-    const block = blocks[blockIdx];
+    const { blockIdx, glyph, block } = hit;
+    const relatedUnits = block.relatedUnits || [];
 
-    let selectedChar = block.primaryChar;
-
-    // Если блок содержит несколько splitIndices, пытаемся разделить по горизонтали
-    if (block.splitIndices && block.splitIndices.length > 1 && block.glyphs[0]?.bb) {
-      const bbox = block.glyphs[0].bb;
-      const totalWidth = bbox.x2 - bbox.x1;
-      // Пропорции можно настроить под конкретный шрифт, пока 50/50
-      const partWidth = totalWidth / block.splitIndices.length;
-      const clickX = p.x - bbox.x1;
-      const partIndex = Math.floor(clickX / partWidth);
-      if (partIndex >= 0 && partIndex < block.splitIndices.length) {
-        const splitIdx = block.splitIndices[partIndex];
-        const splitPart = data.char_split[splitIdx];
-        selectedChar = splitPart[0] || selectedChar;
-      }
+    // C) hit testing for shared glyphs
+    let chosenUnit = null;
+    if (relatedUnits.length > 1) {
+      chosenUnit = preferredUnitFromSharedGlyph(p, glyph, relatedUnits);
+    } else {
+      chosenUnit = relatedUnits[0] || null;
     }
+
+    const selectedChar = chosenUnit
+      ? unitDisplayChar(chosenUnit)
+      : (block.primaryChar || glyph.primaryChar || glyph.char || "?");
+
+    const selectedIsSubscript = !!chosenUnit?.isSubscript;
 
     if (onGlyphClick) {
       onGlyphClick(selectedChar, {
         blockIdx,
         glyphs: block.glyphs,
         primaryChar: selectedChar,
-        allChars: block.codePoints.map(cp => String.fromCodePoint(cp)),
-        isSubscript: false,
+        allChars: (glyph.codePoints || []).map(cpToChar),
+        isSubscript: selectedIsSubscript,
+        unitType: chosenUnit?.type || null,
+        sharedGlyph: relatedUnits.length > 1,
       });
     }
 
     if (showTapHint) {
-      const isSubscriptConsonant = false;
       const { typeLabel, hint } = getGlyphHintContent({
         glyphChar: selectedChar,
         alphabetDb,
@@ -478,15 +576,16 @@ export default function VisualDecoder(props) {
           return map[cat] || "";
         },
       });
+
       const hintMaxChars = data?.hint_max_chars ?? data?.hintMaxChars;
       const truncatedHint = truncateHint(hint, hintMaxChars);
 
       setLastTap({
         char: selectedChar,
         displayChar: selectedChar,
-        typeLabel,
+        typeLabel: chosenUnit?.type || typeLabel,
         hint: truncatedHint,
-        isSubscript: false,
+        isSubscript: selectedIsSubscript,
       });
     }
 
@@ -506,9 +605,13 @@ export default function VisualDecoder(props) {
       const isSuccess = evaluateGlyphSuccess({
         rule: effectiveRule,
         glyphChar: selectedChar,
-        glyphMeta: { isSubscript: false },
+        glyphMeta: {
+          isSubscript: selectedIsSubscript,
+          unitType: chosenUnit?.type || null,
+        },
         targetChar,
       });
+
       const sounds = {
         ...DEFAULT_FEEDBACK_SOUNDS,
         ...(feedbackSounds || {}),
@@ -542,14 +645,15 @@ export default function VisualDecoder(props) {
     setSelectedIds([]);
   }, [resetSelectionKey]);
 
-  // Цвет заливки для глифа
   function colorForGlyph(glyph, blockIdx, gIdx, isSelected) {
     const block = blocks[blockIdx];
     const primaryChar = block.primaryChar;
     const base = getKhmerGlyphColor(primaryChar);
-    const resolvedIsSelected = isSelected ?? (selectionMode === "multi"
-      ? selectedIds.includes(blockIdx)
-      : selectedId === blockIdx);
+    const resolvedIsSelected = isSelected ?? (
+      selectionMode === "multi"
+        ? selectedIds.includes(blockIdx)
+        : selectedId === blockIdx
+    );
 
     if (typeof getGlyphFillColor === "function") {
       const override = getGlyphFillColor({
@@ -557,6 +661,7 @@ export default function VisualDecoder(props) {
         idx: blockIdx,
         isSelected: resolvedIsSelected,
         resolvedChar: primaryChar,
+        relatedUnits: block.relatedUnits || [],
       });
       if (override) return override;
     }
@@ -599,7 +704,7 @@ export default function VisualDecoder(props) {
               ? selectedIds.includes(blockIdx)
               : selectedId === blockIdx;
 
-          const isTarget = !!targetChar && block.codePoints.some(cp => String.fromCodePoint(cp) === targetChar);
+          const isTarget = !!targetChar && block.codePoints.some(cp => cpToChar(cp) === targetChar);
           const forceHeroOutline = heroHighlight === "green_outline" && isTarget;
           const isConsonant = block.codePoints.some(isConsonantCp);
 
@@ -614,11 +719,7 @@ export default function VisualDecoder(props) {
                 if (interactionMode === "persistent_select") {
                   if (isBlockSelected) {
                     outlineWidth = 4;
-                    if (isConsonant) {
-                      outlineColor = "#22c55e";
-                    } else {
-                      outlineColor = "#ef4444";
-                    }
+                    outlineColor = isConsonant ? "#22c55e" : "#ef4444";
                   }
                 } else if (interactionMode === "find_consonant" && selectedId !== null) {
                   if (isBlockSelected) {
