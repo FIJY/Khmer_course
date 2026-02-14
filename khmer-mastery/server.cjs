@@ -328,13 +328,37 @@ app.get("/api/shape", async (req, res) => {
   }
 });
 
-init()
-  .then(() => {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`✅ Server on port ${PORT}`);
-    });
-  })
-  .catch((e) => {
-    console.error("Init failed:", e);
-    process.exit(1);
-  });
+async function init() {
+  if (!fs.existsSync(FONT_PATH)) {
+    throw new Error(`Font not found: ${FONT_PATH}`);
+  }
+
+  // === Используем WASM-файл из node_modules (гарантирует совместимость) ===
+  let wasmPath;
+  try {
+    wasmPath = require.resolve('harfbuzzjs/hb.wasm');
+    console.log('Loading WASM from:', wasmPath);
+  } catch (e) {
+    throw new Error('Could not resolve harfbuzzjs/hb.wasm. Make sure harfbuzzjs is installed.');
+  }
+
+  const wasmBinary = fs.readFileSync(wasmPath);
+  // =====================================================================
+
+  const { factory, attempts } = await loadHbFactory();
+  if (!factory) {
+    throw new Error(
+      `harfbuzzjs factory not found.\nAttempts:\n- ${attempts.join("\n- ")}`
+    );
+  }
+
+  // Передаём wasmBinary в фабрику
+  hb = await factory({ wasmBinary });
+
+  const fontBuffer = fs.readFileSync(FONT_PATH);
+  const fontBytes = toUint8ArrayExact(fontBuffer);
+  otFont = opentype.parse(toArrayBufferExact(fontBytes));
+  unitsPerEm = otFont.unitsPerEm || 1000;
+
+  console.log("✅ HarfBuzz + OpenType fonts loaded (with WASM from node_modules).");
+}
