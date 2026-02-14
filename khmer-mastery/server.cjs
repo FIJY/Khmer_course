@@ -3,6 +3,7 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const opentype = require("opentype.js");
+const fontkit = require("fontkit");
 
 const app = express();
 app.use(cors());
@@ -11,9 +12,11 @@ const PORT = Number(process.env.PORT) || 3001;
 const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
 const FONT_SIZE = 120;
 
-let hb = null;
-let otFont = null;
+let hb = null;              // optional
+let otFont = null;          // required
+let fkFont = null;          // fallback
 let unitsPerEm = 1000;
+let shapingEngine = "unknown"; // "harfbuzz" | "fontkit"
 
 // -------------------------
 // Khmer helpers / ranges
@@ -40,7 +43,6 @@ function isKhmerDiacriticOrSign(cp) {
 
 function pickPrimaryChar(chars) {
   if (!chars || chars.length === 0) return "";
-  // base consonant first (U+1780..U+17A2), fallback to first char
   const base = chars.find((ch) => isBaseConsonant(ch.codePointAt(0)));
   return base || chars[0];
 }
@@ -67,55 +69,6 @@ function detectClusterFlags(codePoints) {
   return { hasCoeng, hasSubscriptConsonant, hasDependentVowel, hasDiacritic };
 }
 
-// Build real cluster ranges from unique hb cluster offsets
-function buildClusterRangesFromHb(text, hbOutput) {
-  const offsets = new Set([0, text.length]);
-
-  for (const g of hbOutput) {
-    if (typeof g.cl === "number") {
-      const clamped = Math.max(0, Math.min(text.length, g.cl));
-      offsets.add(clamped);
-    }
-  }
-
-  const sorted = Array.from(offsets).sort((a, b) => a - b);
-  const ranges = [];
-  for (let i = 0; i < sorted.length - 1; i += 1) {
-    const start = sorted[i];
-    const end = sorted[i + 1];
-    if (end > start) ranges.push([start, end]);
-  }
-
-  return ranges;
-}
-
-function findClusterEnd(clusterStart, clusterRanges, textLength) {
-  for (const [start, end] of clusterRanges) {
-    if (start === clusterStart) return end;
-  }
-  return textLength;
-}
-
-function getFontInfo(ot) {
-  try {
-    const names = ot?.names || {};
-    return {
-      fontName:
-        names.fontFamily?.en ||
-        names.fullName?.en ||
-        names.preferredFamily?.en ||
-        null,
-      fontVersion:
-        names.version?.en ||
-        names.uniqueID?.en ||
-        null,
-      unitsPerEm: ot?.unitsPerEm || null,
-    };
-  } catch {
-    return { fontName: null, fontVersion: null, unitsPerEm: ot?.unitsPerEm || null };
-  }
-}
-
 function toUint8ArrayExact(buffer) {
   return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 }
@@ -123,149 +76,127 @@ function toArrayBufferExact(uint8) {
   return uint8.buffer.slice(uint8.byteOffset, uint8.byteOffset + uint8.byteLength);
 }
 
+function getFontInfo(ot, fk) {
+  try {
+    const names = ot?.names || {};
+    return {
+      fontName:
+        names.fontFamily?.en ||
+        names.fullName?.en ||
+        fk?.familyName ||
+        null,
+      fontVersion:
+        names.version?.en ||
+        names.uniqueID?.en ||
+        null,
+      unitsPerEm: ot?.unitsPerEm || fk?.unitsPerEm || null,
+    };
+  } catch {
+    return {
+      fontName: fk?.familyName || null,
+      fontVersion: null,
+      unitsPerEm: ot?.unitsPerEm || fk?.unitsPerEm || null,
+    };
+  }
+}
+
+// -------------------------
+// HarfBuzz loading (best effort)
+// -------------------------
 function ensureHbApi(hbObj) {
-  const required = [
-    "createBlob",
-    "createFace",
-    "createFont",
-    "createBuffer",
-    "shape",
-  ];
+  const required = ["createBlob", "createFace", "createFont", "createBuffer", "shape"];
   const missing = required.filter((k) => typeof hbObj?.[k] !== "function");
   if (missing.length) {
     throw new Error(
-      `HB API incomplete. Missing methods: ${missing.join(", ")}. ` +
-      `Got keys: ${Object.keys(hbObj || {}).join(", ")}`
+      `HB API incomplete. Missing: ${missing.join(", ")}. Keys: ${Object.keys(hbObj || {}).join(",")}`
     );
   }
 }
 
-/**
- * Robust loader for harfbuzzjs across different package export styles.
- * We first try the package entrypoint (already initialized in some builds),
- * then fallback to hb.js + hbjs wrapper wiring.
- */
-async function loadHbInstance() {
-  // Path A: package entrypoint
+async function tryLoadHarfBuzz() {
+  // 1) package entrypoint
   try {
     // eslint-disable-next-line global-require
     const pkg = require("harfbuzzjs");
 
-    // some builds export Promise<HB>
     if (pkg && typeof pkg.then === "function") {
       const resolved = await pkg;
       ensureHbApi(resolved);
-      console.log("HB loaded via require('harfbuzzjs') -> Promise");
       return resolved;
     }
-
-    // some builds export HB object directly
     if (pkg && typeof pkg === "object") {
       ensureHbApi(pkg);
-      console.log("HB loaded via require('harfbuzzjs') -> object");
       return pkg;
     }
-
-    // some builds export factory function
     if (typeof pkg === "function") {
-      const maybe = await pkg();
-      ensureHbApi(maybe);
-      console.log("HB loaded via require('harfbuzzjs') -> factory()");
-      return maybe;
+      const v = await pkg();
+      ensureHbApi(v);
+      return v;
     }
   } catch (e) {
-    console.warn("HB entrypoint load failed:", e.message);
+    console.warn("[HB] entrypoint failed:", e.message);
   }
 
-  // Path B: manual wiring hb.js + hbjs(.js)
-  let createHbModule = null;
-  const hbCoreSpecs = ["harfbuzzjs/hb.js", "harfbuzzjs/hb"];
-  let hbCoreErr = null;
-  for (const spec of hbCoreSpecs) {
-    try {
-      // eslint-disable-next-line import/no-dynamic-require, global-require
-      createHbModule = require(spec);
-      if (typeof createHbModule === "function") break;
-      createHbModule = null;
-    } catch (e) {
-      hbCoreErr = e;
-    }
+  // 2) manual wiring
+  try {
+    // eslint-disable-next-line global-require
+    const createHbModule = require("harfbuzzjs/hb.js");
+    // eslint-disable-next-line global-require
+    const hbjsWrapMod = require("harfbuzzjs/hbjs.js");
+    const hbjsWrap =
+      typeof hbjsWrapMod === "function"
+        ? hbjsWrapMod
+        : typeof hbjsWrapMod?.default === "function"
+          ? hbjsWrapMod.default
+          : null;
+
+    if (!hbjsWrap) throw new Error("hbjs wrapper is not a function");
+
+    const mod = await createHbModule();
+    const obj = hbjsWrap(mod);
+    ensureHbApi(obj);
+    return obj;
+  } catch (e) {
+    console.warn("[HB] manual wiring failed:", e.message);
   }
 
-  if (!createHbModule) {
-    throw new Error(
-      `Failed to load HB core module (hb.js). Last error: ${hbCoreErr?.message || "unknown"}`
-    );
-  }
-
-  let hbjsWrapper = null;
-  const hbjsSpecs = ["harfbuzzjs/hbjs.js", "harfbuzzjs/hbjs"];
-  let hbjsErr = null;
-  for (const spec of hbjsSpecs) {
-    try {
-      // eslint-disable-next-line import/no-dynamic-require, global-require
-      const mod = require(spec);
-      if (typeof mod === "function") {
-        hbjsWrapper = mod;
-        break;
-      }
-      if (typeof mod?.default === "function") {
-        hbjsWrapper = mod.default;
-        break;
-      }
-    } catch (e) {
-      hbjsErr = e;
-    }
-  }
-
-  if (!hbjsWrapper) {
-    throw new Error(
-      `Failed to load hbjs wrapper. Last error: ${hbjsErr?.message || "unknown"}`
-    );
-  }
-
-  const moduleInstance = await createHbModule();
-  const hbObj = hbjsWrapper(moduleInstance);
-  ensureHbApi(hbObj);
-
-  console.log("HB loaded via manual wiring: hb.js + hbjs.js");
-  return hbObj;
+  return null;
 }
 
-async function init() {
-  if (!fs.existsSync(FONT_PATH)) {
-    throw new Error(`Font not found: ${FONT_PATH}`);
+// -------------------------
+// Cluster helpers for HB result
+// -------------------------
+function buildClusterRangesFromHb(text, hbOutput) {
+  const offsets = new Set([0, text.length]);
+  for (const g of hbOutput) {
+    if (typeof g.cl === "number") {
+      offsets.add(Math.max(0, Math.min(text.length, g.cl)));
+    }
   }
-
-  // Only diagnostics for wasm presence (no forced custom wasm injection).
-  try {
-    const hbWasmPath = require.resolve("harfbuzzjs/hb.wasm");
-    const hbSubsetWasmPath = require.resolve("harfbuzzjs/hb-subset.wasm");
-    console.log("hb.wasm:", hbWasmPath);
-    console.log("hb-subset.wasm:", hbSubsetWasmPath);
-  } catch (e) {
-    console.warn("Could not resolve harfbuzz wasm files:", e.message);
+  const sorted = Array.from(offsets).sort((a, b) => a - b);
+  const ranges = [];
+  for (let i = 0; i < sorted.length - 1; i += 1) {
+    const s = sorted[i];
+    const e = sorted[i + 1];
+    if (e > s) ranges.push([s, e]);
   }
+  return ranges;
+}
 
-  hb = await loadHbInstance();
+function findClusterEnd(clusterStart, clusterRanges, textLength) {
+  for (const [s, e] of clusterRanges) {
+    if (s === clusterStart) return e;
+  }
+  return textLength;
+}
 
+// -------------------------
+// Engine implementations
+// -------------------------
+function shapeWithHarfBuzz(text, mode) {
+  const scale = FONT_SIZE / unitsPerEm;
   const fontBuffer = fs.readFileSync(FONT_PATH);
   const fontBytes = toUint8ArrayExact(fontBuffer);
-  otFont = opentype.parse(toArrayBufferExact(fontBytes));
-  unitsPerEm = otFont.unitsPerEm || 1000;
-
-  console.log("✅ HarfBuzz + OpenType fonts loaded.");
-}
-
-app.get("/", (req, res) => res.send("OK"));
-app.get("/health", (req, res) => res.send("OK"));
-
-app.get("/api/shape", async (req, res) => {
-  const rawText = req.query.text;
-  const mode = req.query.mode || "normal";
-
-  if (!rawText) return res.status(400).json({ error: "No text provided" });
-  if (!hb || !otFont) return res.status(503).json({ error: "Fonts not ready" });
 
   let blob = null;
   let face = null;
@@ -273,13 +204,6 @@ app.get("/api/shape", async (req, res) => {
   let buffer = null;
 
   try {
-    const decodedText = decodeURIComponent(rawText);
-    const text = decodedText.normalize("NFC");
-    const scale = FONT_SIZE / unitsPerEm;
-
-    const fontBuffer = fs.readFileSync(FONT_PATH);
-    const fontBytes = toUint8ArrayExact(fontBuffer);
-
     blob = hb.createBlob(fontBytes);
     face = hb.createFace(blob, 0);
     font = hb.createFont(face);
@@ -289,129 +213,256 @@ app.get("/api/shape", async (req, res) => {
     buffer.addText(text);
     buffer.guessSegmentProperties();
 
-    let featureString = "";
+    let features = [];
     if (mode === "split") {
-      featureString = [
-        "liga=0",
-        "clig=0",
-        "ccmp=0",
-        "abvf=0",
-        "abvs=0",
-        "blwf=0",
-        "pstf=0",
-        "pref=0",
-        "pres=0",
-        "psts=0",
-      ].join(",");
+      features = [
+        { tag: "liga", value: 0 },
+        { tag: "clig", value: 0 },
+        { tag: "ccmp", value: 0 },
+        { tag: "abvf", value: 0 },
+        { tag: "abvs", value: 0 },
+        { tag: "blwf", value: 0 },
+        { tag: "pstf", value: 0 },
+        { tag: "pref", value: 0 },
+        { tag: "pres", value: 0 },
+        { tag: "psts", value: 0 },
+      ];
     }
 
-    hb.shape(font, buffer, featureString);
+    hb.shape(font, buffer, features);
     const hbOutput = buffer.json();
-
-    if (!Array.isArray(hbOutput)) {
-      throw new Error(`Invalid hb output type: ${typeof hbOutput}`);
-    }
+    if (!Array.isArray(hbOutput)) throw new Error("HB returned non-array json");
 
     const clusterRanges = buildClusterRangesFromHb(text, hbOutput);
-    const fontInfo = getFontInfo(otFont);
+    const fontInfo = getFontInfo(otFont, fkFont);
 
     const glyphsData = [];
     let cursorX = 50;
 
     for (let i = 0; i < hbOutput.length; i += 1) {
       const out = hbOutput[i];
+      const glyphId = out.g;
 
-      try {
-        const glyphId = out.g;
+      const x = cursorX + (out.dx || 0) * scale;
+      const y = 200 - (out.dy || 0) * scale;
+      const advance = (out.ax || 0) * scale;
 
-        const x = cursorX + (out.dx || 0) * scale;
-        const y = 200 - (out.dy || 0) * scale;
-
-        const otGlyph = otFont.glyphs.get(glyphId);
-        if (!otGlyph) {
-          cursorX += (out.ax || 0) * scale;
-          continue;
-        }
-
-        const pathObj = otGlyph.getPath(x, y, FONT_SIZE);
-        const d = pathObj.toPathData(3);
-        const bb = pathObj.getBoundingBox();
-
-        const clusterStart = typeof out.cl === "number" ? out.cl : 0;
-        const clusterEnd = findClusterEnd(clusterStart, clusterRanges, text.length);
-
-        const clusterText = text.slice(clusterStart, clusterEnd);
-        const chars = Array.from(clusterText);
-        const codePoints = chars.map((c) => c.codePointAt(0));
-        const primaryChar = pickPrimaryChar(chars);
-
-        const {
-          hasCoeng,
-          hasSubscriptConsonant,
-          hasDependentVowel,
-          hasDiacritic,
-        } = detectClusterFlags(codePoints);
-
-        glyphsData.push({
-          id: i,
-          glyphIdx: i,
-
-          // backward-compatible
-          char: primaryChar,
-          cluster: clusterStart,
-
-          // REQUIRED new metadata
-          clusterStart,
-          clusterEnd,
-          clusterText,
-          chars,
-          codePoints,
-          primaryChar,
-
-          hasCoeng,
-          hasSubscriptConsonant,
-          hasDependentVowel,
-          hasDiacritic,
-
-          // optional technical/meta
-          hbGlyphId: glyphId,
-          fontInfo, // includes fontName / fontVersion
-
-          d,
-          bb: bb ? { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 } : null,
-          advance: (out.ax || 0) * scale,
-          x,
-          y,
-        });
-
-        cursorX += (out.ax || 0) * scale;
-      } catch (glyphErr) {
-        // Skip broken glyph but continue shaping result.
-        console.error(`Glyph parse error at index ${i}:`, glyphErr);
-        cursorX += ((out?.ax || 0) * (FONT_SIZE / unitsPerEm));
+      const otGlyph = otFont.glyphs.get(glyphId);
+      if (!otGlyph) {
+        cursorX += advance;
+        continue;
       }
+
+      const pathObj = otGlyph.getPath(x, y, FONT_SIZE);
+      const d = pathObj.toPathData(3);
+      const bb = pathObj.getBoundingBox();
+
+      const clusterStart = typeof out.cl === "number" ? out.cl : 0;
+      const clusterEnd = findClusterEnd(clusterStart, clusterRanges, text.length);
+      const clusterText = text.slice(clusterStart, clusterEnd);
+      const chars = Array.from(clusterText);
+      const codePoints = chars.map((c) => c.codePointAt(0));
+      const primaryChar = pickPrimaryChar(chars);
+      const flags = detectClusterFlags(codePoints);
+
+      glyphsData.push({
+        id: i,
+        glyphIdx: i,
+
+        // backward compatibility
+        char: primaryChar,
+        cluster: clusterStart,
+
+        // enriched metadata
+        clusterStart,
+        clusterEnd,
+        clusterText,
+        chars,
+        codePoints,
+        primaryChar,
+
+        hasCoeng: flags.hasCoeng,
+        hasSubscriptConsonant: flags.hasSubscriptConsonant,
+        hasDependentVowel: flags.hasDependentVowel,
+        hasDiacritic: flags.hasDiacritic,
+
+        hbGlyphId: glyphId,
+        fontInfo,
+
+        d,
+        bb: bb ? { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 } : null,
+        advance,
+        x,
+        y,
+      });
+
+      cursorX += advance;
     }
 
-    console.log(`→ [${mode}] Sent ${glyphsData.length} glyphs for "${text}"`);
-    return res.json(glyphsData);
-  } catch (err) {
-    console.error("Shape error:", err);
-    return res.status(500).json({
-      error: "Shape failed",
-      message: err?.message || "Unknown error",
-      // оставляем немного диагностики для фронта/логов
-      details: {
-        hasHb: !!hb,
-        hasOtFont: !!otFont,
-        text: req.query.text || "",
-        mode: req.query.mode || "normal",
-      },
-    });
+    return glyphsData;
   } finally {
     try { buffer?.destroy?.(); } catch (_) {}
     try { font?.destroy?.(); } catch (_) {}
     try { face?.destroy?.(); } catch (_) {}
     try { blob?.destroy?.(); } catch (_) {}
+  }
+}
+
+function shapeWithFontkit(text) {
+  // fallback engine: no full HB cluster intelligence, but stable + no 500
+  const run = fkFont.layout(text);
+  const scale = FONT_SIZE / (fkFont.unitsPerEm || 1000);
+  const fontInfo = getFontInfo(otFont, fkFont);
+
+  const glyphsData = [];
+  let cursorX = 50;
+
+  // Use glyph i -> character i fallback cluster mapping
+  // not perfect for complex script, but keeps UI alive.
+  for (let i = 0; i < run.glyphs.length; i += 1) {
+    const g = run.glyphs[i];
+    const pos = run.positions[i] || { xAdvance: 0, xOffset: 0, yOffset: 0 };
+
+    const x = cursorX + (pos.xOffset || 0) * scale;
+    const y = 200 - (pos.yOffset || 0) * scale;
+    const advance = (pos.xAdvance || 0) * scale;
+
+    // Build path through opentype glyph id when possible
+    const glyphId = g.id;
+    const otGlyph = otFont.glyphs.get(glyphId);
+    if (!otGlyph) {
+      cursorX += advance;
+      continue;
+    }
+
+    const pathObj = otGlyph.getPath(x, y, FONT_SIZE);
+    const d = pathObj.toPathData(3);
+    const bb = pathObj.getBoundingBox();
+
+    const clusterStart = Math.min(i, text.length);
+    const clusterEnd = Math.min(i + 1, text.length);
+    const clusterText = text.slice(clusterStart, clusterEnd);
+    const chars = Array.from(clusterText);
+    const codePoints = chars.map((c) => c.codePointAt(0));
+    const primaryChar = pickPrimaryChar(chars);
+    const flags = detectClusterFlags(codePoints);
+
+    glyphsData.push({
+      id: i,
+      glyphIdx: i,
+
+      char: primaryChar,
+      cluster: clusterStart,
+
+      clusterStart,
+      clusterEnd,
+      clusterText,
+      chars,
+      codePoints,
+      primaryChar,
+
+      hasCoeng: flags.hasCoeng,
+      hasSubscriptConsonant: flags.hasSubscriptConsonant,
+      hasDependentVowel: flags.hasDependentVowel,
+      hasDiacritic: flags.hasDiacritic,
+
+      hbGlyphId: glyphId, // keep field for compatibility
+      fontInfo,
+
+      d,
+      bb: bb ? { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 } : null,
+      advance,
+      x,
+      y,
+    });
+
+    cursorX += advance;
+  }
+
+  return glyphsData;
+}
+
+// -------------------------
+// Init
+// -------------------------
+async function init() {
+  if (!fs.existsSync(FONT_PATH)) {
+    throw new Error(`Font not found: ${FONT_PATH}`);
+  }
+
+  const fontBuffer = fs.readFileSync(FONT_PATH);
+  const fontBytes = toUint8ArrayExact(fontBuffer);
+
+  otFont = opentype.parse(toArrayBufferExact(fontBytes));
+  fkFont = fontkit.openSync(FONT_PATH);
+  unitsPerEm = otFont.unitsPerEm || fkFont.unitsPerEm || 1000;
+
+  // Try HB, but do not die if it fails
+  hb = await tryLoadHarfBuzz();
+  if (hb) {
+    shapingEngine = "harfbuzz";
+    console.log("✅ Shaping engine: harfbuzz");
+  } else {
+    shapingEngine = "fontkit";
+    console.warn("⚠️ HarfBuzz unavailable, fallback shaping engine: fontkit");
+  }
+
+  console.log("✅ Fonts loaded.");
+}
+
+app.get("/", (req, res) => res.send("OK"));
+app.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    shapingEngine,
+    hasHb: !!hb,
+    hasOtFont: !!otFont,
+    hasFontkit: !!fkFont,
+  });
+});
+
+app.get("/api/shape", async (req, res) => {
+  const rawText = req.query.text;
+  const mode = req.query.mode || "normal";
+
+  if (!rawText) return res.status(400).json({ error: "No text provided" });
+  if (!otFont || !fkFont) return res.status(503).json({ error: "Fonts not ready" });
+
+  try {
+    const decodedText = decodeURIComponent(rawText);
+    const text = decodedText.normalize("NFC");
+
+    let glyphsData;
+    let engineUsed = shapingEngine;
+
+    if (hb) {
+      try {
+        glyphsData = shapeWithHarfBuzz(text, mode);
+        engineUsed = "harfbuzz";
+      } catch (hbErr) {
+        console.error("HB shape failed, fallback to fontkit:", hbErr);
+        glyphsData = shapeWithFontkit(text);
+        engineUsed = "fontkit";
+      }
+    } else {
+      glyphsData = shapeWithFontkit(text);
+      engineUsed = "fontkit";
+    }
+
+    res.setHeader("X-Shaping-Engine", engineUsed);
+    return res.json(glyphsData);
+  } catch (err) {
+    console.error("Shape fatal error:", err);
+    return res.status(500).json({
+      error: "Shape failed",
+      message: err?.message || "Unknown error",
+      details: {
+        hasHb: !!hb,
+        shapingEngine,
+        text: req.query.text || "",
+        mode: req.query.mode || "normal",
+      },
+    });
   }
 });
 
