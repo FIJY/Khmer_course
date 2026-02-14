@@ -164,6 +164,35 @@ async function loadHbFactory() {
   return { factory: null, attempts };
 }
 
+async function loadHbInstance() {
+  // Primary path: package entrypoint already returns an initialized hb object.
+  try {
+    // eslint-disable-next-line global-require
+    const hbPackage = require("harfbuzzjs");
+    if (hbPackage && typeof hbPackage.then === "function") {
+      return await hbPackage;
+    }
+    if (hbPackage && typeof hbPackage === "object") {
+      return hbPackage;
+    }
+  } catch (e) {
+    console.warn("harfbuzzjs package entrypoint failed:", e.message);
+  }
+
+  // Fallback: manually wire hb core module + hbjs wrapper.
+  // eslint-disable-next-line global-require
+  const createHbModule = require("harfbuzzjs/hb.js");
+  const { factory, attempts } = await loadHbFactory();
+  if (!factory) {
+    throw new Error(
+      `harfbuzzjs factory not found.\nAttempts:\n- ${attempts.join("\n- ")}`
+    );
+  }
+
+  const moduleInstance = await createHbModule();
+  return factory(moduleInstance);
+}
+
 async function init() {
   if (!fs.existsSync(FONT_PATH)) {
     throw new Error(`Font not found: ${FONT_PATH}`);
@@ -185,19 +214,10 @@ async function init() {
     throw new Error(`hb.wasm not found at resolved path: ${hbWasmPath}`);
   }
 
-  const wasmBinary = fs.readFileSync(hbWasmPath);
   console.log("hb.wasm:", hbWasmPath);
   console.log("hb-subset.wasm:", hbSubsetWasmPath);
 
-  const { factory, attempts } = await loadHbFactory();
-  if (!factory) {
-    throw new Error(
-      `harfbuzzjs factory not found.\nAttempts:\n- ${attempts.join("\n- ")}`
-    );
-  }
-
-  // Important: pass wasmBinary explicitly
-  hb = await factory({ wasmBinary });
+  hb = await loadHbInstance();
 
   const fontBuffer = fs.readFileSync(FONT_PATH);
   const fontBytes = toUint8ArrayExact(fontBuffer);
