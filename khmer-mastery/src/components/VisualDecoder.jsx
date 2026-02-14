@@ -36,6 +36,15 @@ const FALLBACK = {
   SELECTED: GLYPH_COLORS?.SELECTED ?? "#22d3ee",
 };
 
+// Shadow debug mode:
+// - window.__EDU_DEBUG__ = true
+// - or VITE_EDU_DEBUG=1
+const EDU_DEBUG =
+  (typeof window !== "undefined" && window.__EDU_DEBUG__ === true) ||
+  (typeof import.meta !== "undefined" &&
+    import.meta?.env &&
+    (import.meta.env.VITE_EDU_DEBUG === "1" || import.meta.env.VITE_EDU_DEBUG === "true"));
+
 // --- Khmer classification helpers ---
 function isConsonantCp(cp) {
   return cp >= 0x1780 && cp <= 0x17A2;
@@ -225,15 +234,16 @@ function mapEduUnitsToGlyphs(glyphs, eduUnits) {
     const gSet = new Set(gCps);
 
     const matches = eduUnits.filter((u) => {
-      // strict intersection with unit cps
+      // 1) primary: strict intersection with unit cps
       const hasOwn = u.codePoints.some((cp) => gSet.has(cp));
-      if (!hasOwn) return false;
+      if (hasOwn) return true;
 
-      // bonus fallback: if glyph has clusterText and unit text inside cluster
-      if (!hasOwn && g.clusterText && u.text) {
+      // 2) fallback: clusterText contains unit text
+      if (g.clusterText && u.text) {
         return g.clusterText.includes(u.text);
       }
-      return hasOwn;
+
+      return false;
     });
 
     if (matches.length > 0) {
@@ -264,9 +274,8 @@ function preferredUnitFromSharedGlyph(hitPoint, glyph, units) {
   const h = Math.max(1, bb.y2 - bb.y1);
 
   const relX = (hitPoint.x - bb.x1) / w; // 0..1
-  const relY = (hitPoint.y - bb.y1) / h; // 0..1 (y grows down in SVG space visually can vary; we use bbox space only)
+  const relY = (hitPoint.y - bb.y1) / h; // 0..1
 
-  // Priority rules:
   // 1) subscript prefers lower zone
   const subs = units.filter((u) => u.type === "subscript_consonant" || u.isSubscript);
   if (subs.length && relY > 0.58) {
@@ -330,6 +339,7 @@ export default function VisualDecoder(props) {
   const [eduUnits, setEduUnits] = useState([]);
   const [eduMap, setEduMap] = useState(new Map()); // unitId -> Set(glyphId)
   const [glyphToUnits, setGlyphToUnits] = useState(new Map()); // glyphId -> [units]
+  const [eduDebugSnapshot, setEduDebugSnapshot] = useState(null); // shadow mode debug
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -375,6 +385,7 @@ export default function VisualDecoder(props) {
       setEduUnits([]);
       setEduMap(new Map());
       setGlyphToUnits(new Map());
+      setEduDebugSnapshot(null);
       setLoading(false);
       return;
     }
@@ -393,7 +404,7 @@ export default function VisualDecoder(props) {
         const arr = Array.isArray(json) ? json : [];
         setGlyphs(arr);
 
-        // A) build atomic edu units
+        // A) build atomic edu units (shadow mode - parallel)
         const units = buildEduUnits(text, data?.char_split);
         setEduUnits(units);
 
@@ -401,6 +412,68 @@ export default function VisualDecoder(props) {
         const { mapping, glyphToUnits: g2u } = mapEduUnitsToGlyphs(arr, units);
         setEduMap(mapping);
         setGlyphToUnits(g2u);
+
+        // Shadow debug snapshot (UI unchanged)
+        if (EDU_DEBUG) {
+          const byType = units.reduce((acc, u) => {
+            acc[u.type] = (acc[u.type] || 0) + 1;
+            return acc;
+          }, {});
+
+          const sample = units.map((u) => ({
+            id: u.id,
+            type: u.type,
+            text: u.text,
+            cps: (u.codePoints || []).map((cp) => `U+${cp.toString(16).toUpperCase()}`),
+            token: u.token,
+            tokenIndex: u.tokenIndex,
+            mappedGlyphIds: Array.from(mapping.get(u.id) || []),
+          }));
+
+          const sharedGlyphs = arr
+            .map((g) => ({
+              glyphId: g.id,
+              clusterText: g.clusterText,
+              units: (g2u.get(g.id) || []).map((u) => `${u.type}:${u.text}`),
+            }))
+            .filter((x) => x.units.length > 1);
+
+          const snapshot = {
+            text,
+            charSplit: data?.char_split || null,
+            unitsTotal: units.length,
+            byType,
+            sharedGlyphsCount: sharedGlyphs.length,
+            sample,
+            sharedGlyphs,
+          };
+
+          setEduDebugSnapshot(snapshot);
+
+          // Console debug
+          // eslint-disable-next-line no-console
+          console.groupCollapsed(`[EDU SHADOW] ${text}`);
+          // eslint-disable-next-line no-console
+          console.log("byType:", byType);
+          // eslint-disable-next-line no-console
+          console.table(
+            sample.map((x) => ({
+              id: x.id,
+              type: x.type,
+              text: x.text,
+              token: x.token,
+              glyphs: x.mappedGlyphIds.join(","),
+            }))
+          );
+          if (sharedGlyphs.length) {
+            // eslint-disable-next-line no-console
+            console.log("sharedGlyphs:", sharedGlyphs);
+          }
+          // eslint-disable-next-line no-console
+          console.groupEnd();
+        } else {
+          setEduDebugSnapshot(null);
+        }
 
         // render blocks: 1 glyph = 1 block (atomic render target)
         const renderBlocks = arr.map((g, idx) => {
@@ -425,6 +498,7 @@ export default function VisualDecoder(props) {
         setLoading(false);
       })
       .catch((err) => {
+        // eslint-disable-next-line no-console
         console.error("Decoder error:", err);
         if (!active) return;
         setError(err.message || "Error");
@@ -465,7 +539,7 @@ export default function VisualDecoder(props) {
     [blocks, viewBoxPad]
   );
 
-  // Оповещаем о рендере (теперь пробрасываем unit meta)
+  // Оповещаем о рендере (совместимый формат + debug payload)
   useEffect(() => {
     if (!onGlyphsRendered) return;
     const flatMeta = blocks.flatMap((block, blockIdx) =>
@@ -487,8 +561,20 @@ export default function VisualDecoder(props) {
         };
       })
     );
+
+    // Backward-compatible main payload
     onGlyphsRendered(flatMeta);
-  }, [onGlyphsRendered, blocks]);
+
+    // Optional debug side-channel for parents
+    if (EDU_DEBUG && typeof window !== "undefined") {
+      window.__LAST_EDU_DEBUG__ = {
+        eduUnits,
+        eduMap,
+        glyphToUnits,
+        eduDebugSnapshot,
+      };
+    }
+  }, [onGlyphsRendered, blocks, eduUnits, eduMap, glyphToUnits, eduDebugSnapshot]);
 
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
