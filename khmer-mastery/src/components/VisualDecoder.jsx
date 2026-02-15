@@ -467,7 +467,10 @@ export default function VisualDecoder(props) {
     setLoading(true);
     setError(null);
 
-    fetch(`${buildShapeApiUrl("/api/shape")}?text=${encodeURIComponent(text)}`)
+    const apiUrl = `${buildShapeApiUrl("/api/shape")}?text=${encodeURIComponent(text)}&mode=split`;
+    console.log('[DEBUG API] Fetching:', apiUrl);
+
+    fetch(apiUrl)
       .then((res) => {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         return res.json();
@@ -476,6 +479,9 @@ export default function VisualDecoder(props) {
         if (!active) return;
 
         const arr = Array.isArray(json) ? json : [];
+        console.log('[DEBUG API] Response:', json);
+        console.log('[DEBUG API] Array length:', arr.length);
+        console.log('[DEBUG API] First glyph:', arr[0]);
         setGlyphs(arr);
 
         const units = buildEduUnits(text, data?.char_split, data?.font);
@@ -621,10 +627,12 @@ export default function VisualDecoder(props) {
     const elements = document.elementsFromPoint(e.clientX, e.clientY);
     const partElement = elements.find(el => el.hasAttribute('data-part-index'));
     if (partElement) {
-      const glyphId = partElement.dataset.glyphId;
-      const partIndex = partElement.dataset.partIndex;
+      const glyphId = Number(partElement.dataset.glyphId);
+      const partIndex = Number(partElement.dataset.partIndex);
+      console.log('[DEBUG] Looking for glyph:', glyphId, 'in glyphs:', glyphs.map(g => g.id));
       const glyph = glyphs.find(g => g.id === glyphId);
       const part = glyph?.parts?.[partIndex];
+      console.log('[DEBUG] Found glyph:', glyph, 'part:', part);
       if (part) {
         // Находим eduUnit, соответствующий этому part (по пересечению codePoints)
         const possibleUnits = eduUnits.filter(u =>
