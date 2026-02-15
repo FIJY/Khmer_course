@@ -7,6 +7,7 @@ import { markLessonCompleted } from '../data/progress';
 import { supabase } from '../supabaseClient';
 import useAudioPlayer from './useAudioPlayer';
 import { normalizeKhmerInStructure } from '../lib/khmerTextUtils';
+import { initOverrides } from '../lib/khmerCompoundChars'; // <-- новый импорт
 
 export default function useLessonPlayer() {
   const { id } = useParams();
@@ -122,6 +123,11 @@ export default function useLessonPlayer() {
       setLessonInfo(lessonData);
       const resolvedLessonId = lessonData?.lesson_id ?? lessonData?.id ?? resolvedIdentifier ?? id;
       setLessonId(resolvedLessonId);
+
+      // Инициализация overrides, если урок содержит правила
+      if (lessonData.overrides) {
+        initOverrides(lessonData.overrides.wordRules, lessonData.overrides.patternRules);
+      }
 
       let rawItems = rawItemsResponse;
 
@@ -278,13 +284,21 @@ export default function useLessonPlayer() {
 
   const goBack = () => setStep(s => s - 1);
 
+  // Формируем объект с дополнительными данными для VisualDecoder
+  const currentItemData = items[step]?.data || {};
+  // Если в уроке есть информация о шрифте, добавляем её в data
+  const enhancedData = {
+    ...currentItemData,
+    font: lessonInfo?.font || null, // предполагаем, что lessonInfo может содержать поле font
+  };
+
   return {
     id, navigate, lessonInfo, items, step, score, quizCount, canAdvance, isFlipped,
     loading, error, selectedOption, isFinished, lessonPassed, handleNext,
     playLocalAudio, handleVocabCardFlip, handleQuizAnswer, goBack, setCanAdvance,
     playSequence,
     alphabetDb,
-    current: items[step],
+    current: { ...items[step], data: enhancedData }, // обогащаем data шрифтом
     currentIndex: step,
     total: items.length,
     refresh: fetchLessonData

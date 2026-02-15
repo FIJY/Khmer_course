@@ -19,7 +19,13 @@ import {
   getGlyphHintContent,
   truncateHint,
 } from "../lib/glyphHintUtils";
-import { COMPOUND_CHAR_MAP } from "../lib/khmerCompoundChars";
+import { getOverrideForToken } from "../lib/khmerCompoundChars";
+
+// ===== FLAGS =====
+const USE_EDU_UNITS = true;
+const USE_HIT_ZONES = false;
+const USE_GLYPH_OVERRIDES = true;
+const DEBUG_GLYPHS = true;
 
 export const HIGHLIGHT_MODES = {
   ALL: "all",
@@ -85,8 +91,15 @@ function classifyCp(cp, prevCp) {
   return "other";
 }
 
-// split token into atomic edu units
-function splitTokenToEduAtoms(token, tokenIndex) {
+// split token into atomic edu units (с учётом overrides)
+function splitTokenToEduAtoms(token, tokenIndex, font = null) {
+  // сначала проверяем override для этого токена
+  const override = USE_GLYPH_OVERRIDES ? getOverrideForToken(token, font) : null;
+  if (override?.split) {
+    // если есть правило split, используем его (пока не реализовано)
+    console.log("Override split for", token, override.split);
+  }
+
   const cps = charsToCodePoints(token);
   const atoms = [];
 
@@ -152,20 +165,19 @@ function normalizeCharSplitInput(text, charSplit) {
   return [text];
 }
 
-function buildEduUnits(text, charSplit) {
+function buildEduUnits(text, charSplit, font = null) {
   const tokens = normalizeCharSplitInput(text, charSplit);
   const units = [];
 
   tokens.forEach((token, tokenIndex) => {
     const tokenCps = charsToCodePoints(token);
-    const extra = COMPOUND_CHAR_MAP[token] || [];
-    const atoms = splitTokenToEduAtoms(token, tokenIndex);
+    const atoms = splitTokenToEduAtoms(token, tokenIndex, font);
 
     const tokenMeta = {
       token,
       tokenIndex,
       tokenCodePoints: tokenCps,
-      tokenExtraCodePoints: extra,
+      tokenExtraCodePoints: [],
     };
 
     atoms.forEach((a, atomIndex) => {
@@ -217,7 +229,7 @@ function makeViewBoxFromBlocks(blocks, pad = 60) {
   };
 }
 
-// map edu units -> render glyph ids (without merge-by-overlap)
+// map edu units -> render glyph ids (без merge-by-overlap)
 function mapEduUnitsToGlyphs(glyphs, eduUnits) {
   const mapping = new Map();      // unitId -> Set(glyphId)
   const glyphToUnits = new Map(); // glyphId -> [unit]
@@ -301,24 +313,6 @@ function mapEduUnitsToGlyphs(glyphs, eduUnits) {
     }
   });
 
-  if (typeof window !== "undefined" && window.__EDU_DEBUG__) {
-    const unmatched = eduUnits
-      .filter((u) => !mapping.get(u.id) || mapping.get(u.id).size === 0)
-      .map((u) => ({
-        id: u.id,
-        text: u.text,
-        type: u.type,
-        cps: u.codePoints,
-        token: u.token,
-        tokenCps: u.tokenCodePoints,
-      }));
-
-    // eslint-disable-next-line no-console
-    console.log("[EDU DEBUG] unmatched units:", unmatched);
-    // eslint-disable-next-line no-console
-    console.log("[EDU DEBUG] glyphToUnits:", glyphToUnits);
-  }
-
   return { mapping, glyphToUnits };
 }
 
@@ -331,35 +325,52 @@ function unitDisplayChar(unit) {
   return "";
 }
 
+// Функция для выбора предпочтительного юнита в shared-глифе (с учётом hit zones)
 function preferredUnitFromSharedGlyph(hitPoint, glyph, units) {
-  if (!glyph?.bb || !units?.length) return units?.[0] || null;
-
-  const bb = glyph.bb;
-  const w = Math.max(1, bb.x2 - bb.x1);
-  const h = Math.max(1, bb.y2 - bb.y1);
-
-  const relX = (hitPoint.x - bb.x1) / w;
-  const relY = (hitPoint.y - bb.y1) / h;
-
-  // 1) subscript prefers lower zone
-  const subs = units.filter((u) => u.type === "subscript_consonant" || u.isSubscript);
-  if (subs.length && relY > 0.58) return subs[0];
-
-  // 2) dependent vowel often top/left/right
-  const dep = units.filter((u) => u.type === "dependent_vowel");
-  if (dep.length) {
-    if (relY < 0.38 || relX < 0.25 || relX > 0.75) return dep[0];
-  }
-
-  // 3) base consonant center
-  const base = units.filter((u) => u.type === "base_consonant");
-  if (base.length && relY >= 0.32 && relY <= 0.78 && relX >= 0.2 && relX <= 0.8) {
-    return base[0];
-  }
-
-  // 4) priority fallback
+  if (!units?.length) return null;
+  // Пока просто по приоритету
   const sorted = [...units].sort((a, b) => (b.priority || 0) - (a.priority || 0));
-  return sorted[0] || units[0] || null;
+  return sorted[0];
+}
+
+function buildSelectionPayload({
+  mode,
+  blockIdx,
+  glyph,
+  block,
+  chosenUnit,
+  selectedChar,
+  selectedIsSubscript,
+}) {
+  const relatedUnits = block?.relatedUnits || [];
+
+  if (mode === "edu") {
+    return {
+      mode: "edu",
+      blockIdx,
+      glyphId: glyph?.id ?? null,
+      primaryChar: selectedChar,
+      allChars: (glyph?.codePoints || []).map(cpToChar),
+      isSubscript: selectedIsSubscript,
+      unitType: chosenUnit?.type || null,
+      unitId: chosenUnit?.id || null,
+      unitText: chosenUnit?.text || selectedChar,
+      unitCodePoints: Array.isArray(chosenUnit?.codePoints) ? chosenUnit.codePoints : [],
+      token: chosenUnit?.token || null,
+      sharedGlyph: relatedUnits.length > 1,
+    };
+  }
+
+  return {
+    mode: "legacy",
+    blockIdx,
+    glyphs: block?.glyphs || [glyph],
+    primaryChar: selectedChar,
+    allChars: (glyph?.codePoints || []).map(cpToChar),
+    isSubscript: selectedIsSubscript,
+    unitType: chosenUnit?.type || null,
+    sharedGlyph: relatedUnits.length > 1,
+  };
 }
 
 export default function VisualDecoder(props) {
@@ -400,12 +411,13 @@ export default function VisualDecoder(props) {
   const [glyphs, setGlyphs] = useState([]);
   const [blocks, setBlocks] = useState([]);
   const [eduUnits, setEduUnits] = useState([]);
-  const [eduMap, setEduMap] = useState(new Map()); // kept for debug/shadow mode
+  const [eduMap, setEduMap] = useState(new Map());
   const [glyphToUnits, setGlyphToUnits] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedUnitId, setSelectedUnitId] = useState(null);
   const [lastTap, setLastTap] = useState(null);
   const [glyphSoundMap, setGlyphSoundMap] = useState({});
 
@@ -413,11 +425,11 @@ export default function VisualDecoder(props) {
   const svgRef = useRef(null);
   const hintRef = useRef(null);
 
-  // reset selection
+  // Reset selections when text, resetSelectionKey, or interactionMode changes
   useEffect(() => {
-    if (interactionMode !== "persistent_select") return;
     setSelectedIds([]);
     setSelectedId(null);
+    setSelectedUnitId(null);
   }, [interactionMode, resetSelectionKey, text]);
 
   useEffect(() => {
@@ -439,7 +451,6 @@ export default function VisualDecoder(props) {
     }
   }, [lastTap, scrollTargetRef]);
 
-  // load glyphs + eduUnits + mapping
   useEffect(() => {
     let active = true;
 
@@ -467,46 +478,51 @@ export default function VisualDecoder(props) {
         const arr = Array.isArray(json) ? json : [];
         setGlyphs(arr);
 
-        const units = buildEduUnits(text, data?.char_split);
+        const units = buildEduUnits(text, data?.char_split, data?.font);
         setEduUnits(units);
+
+        if (DEBUG_GLYPHS) {
+          console.log("[EDU DEBUG] Units:", units.map(u => ({
+            id: u.id,
+            type: u.type,
+            text: u.text,
+            codePoints: u.codePoints,
+            token: u.token
+          })));
+        }
 
         const { mapping, glyphToUnits: g2u } = mapEduUnitsToGlyphs(arr, units);
         setEduMap(mapping);
         setGlyphToUnits(g2u);
 
+        if (DEBUG_GLYPHS) {
+          console.log("[EDU DEBUG] glyphToUnits:",
+            Array.from(g2u.entries()).map(([gid, units]) => ({
+              glyphId: gid,
+              units: units.map(u => ({ id: u.id, type: u.type, text: u.text }))
+            }))
+          );
+        }
+
         const renderBlocks = arr.map((g, idx) => {
           const related = g2u.get(g.id) || [];
-          const primaryUnit =
-            related.find((u) => u.type === "base_consonant")
-            || [...related].sort((a, b) => (b.priority || 0) - (a.priority || 0))[0]
-            || null;
+          const primaryChar = g.primaryChar || g.char || "?";
 
           return {
             blockId: idx,
-            glyphs: [g], // one glyph = one block
+            glyphs: [g],
             glyphId: g.id,
             codePoints: Array.isArray(g.codePoints) ? g.codePoints : [],
-            primaryChar: primaryUnit ? unitDisplayChar(primaryUnit) : (g.primaryChar || g.char || "?"),
+            primaryChar,
             relatedUnits: related,
             hasSharedGlyph: related.length > 1,
           };
         });
 
         setBlocks(renderBlocks);
-
-        if (typeof window !== "undefined" && window.__EDU_DEBUG__) {
-          // eslint-disable-next-line no-console
-          console.log("[EDU DEBUG] units:", units);
-          // eslint-disable-next-line no-console
-          console.log("[EDU DEBUG] mapping:", mapping);
-          // eslint-disable-next-line no-console
-          console.log("[EDU DEBUG] shared blocks:", renderBlocks.filter((b) => b.hasSharedGlyph));
-        }
-
         setLoading(false);
       })
       .catch((err) => {
-        // eslint-disable-next-line no-console
         console.error("Decoder error:", err);
         if (!active) return;
         setError(err.message || "Error");
@@ -516,31 +532,17 @@ export default function VisualDecoder(props) {
     return () => {
       active = false;
     };
-  }, [text, data?.char_split]);
+  }, [text, data?.char_split, data?.font]);
 
-  // optional debug snapshot to avoid "unused state" warnings in some setups
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.__EDU_DEBUG__) {
-      window.__EDU_UNITS__ = eduUnits;
-      window.__EDU_MAP__ = eduMap;
-    }
-  }, [eduUnits, eduMap]);
-
-  // sounds
+  // prebuilt map (legacy)
   useEffect(() => {
     if (!glyphs.length) return;
 
     const audioMap = data?.char_audio_map || {};
     const newMap = {};
 
-    glyphs.forEach((glyph, idx) => {
-      const related = glyphToUnits.get(glyph.id) || [];
-      const preferred =
-        related.find((u) => u.type === "base_consonant")
-        || related.find((u) => u.type === "dependent_vowel")
-        || related[0];
-
-      const ch = preferred ? unitDisplayChar(preferred) : (glyph.primaryChar || glyph.char || "");
+    glyphs.forEach((glyph) => {
+      const ch = glyph.primaryChar || glyph.char || "";
       const clean = (ch || "").trim();
 
       let sound = audioMap[clean] || getSoundFileForChar(clean);
@@ -548,11 +550,11 @@ export default function VisualDecoder(props) {
         sound = sound.replace("sub_", "letter_");
       }
 
-      newMap[idx] = sound;
+      newMap[glyph.id] = sound;
     });
 
     setGlyphSoundMap(newMap);
-  }, [glyphs, data, glyphToUnits]);
+  }, [glyphs, data]);
 
   const vb = useMemo(
     () => makeViewBoxFromBlocks(blocks, viewBoxPad),
@@ -563,23 +565,14 @@ export default function VisualDecoder(props) {
     if (!onGlyphsRendered) return;
 
     const flatMeta = blocks.flatMap((block, blockIdx) =>
-      block.glyphs.map((g, gIdx) => {
-        const related = block.relatedUnits || [];
-        const primary =
-          related.find((u) => u.type === "base_consonant")
-          || [...related].sort((a, b) => (b.priority || 0) - (a.priority || 0))[0]
-          || null;
-
-        return {
-          ...g,
-          blockIndex: blockIdx,
-          glyphIndexInBlock: gIdx,
-          resolvedChar: primary ? unitDisplayChar(primary) : block.primaryChar,
-          isSubscript: !!primary?.isSubscript,
-          relatedUnits: related,
-          sharedGlyph: related.length > 1,
-        };
-      })
+      block.glyphs.map((g, gIdx) => ({
+        ...g,
+        blockIndex: blockIdx,
+        glyphIndexInBlock: gIdx,
+        resolvedChar: block.primaryChar,
+        relatedUnits: block.relatedUnits,
+        sharedGlyph: block.hasSharedGlyph,
+      }))
     );
 
     onGlyphsRendered(flatMeta);
@@ -605,13 +598,12 @@ export default function VisualDecoder(props) {
     for (let blockIdx = 0; blockIdx < blocks.length; blockIdx += 1) {
       const block = blocks[blockIdx];
       for (let gIdx = 0; gIdx < block.glyphs.length; gIdx += 1) {
-        const glyph = block.glyphs[gIdx];
         const pathEl = document.getElementById(`glyph-${blockIdx}-${gIdx}`);
         if (!pathEl) continue;
 
         try {
           if (pathEl.isPointInFill(p)) {
-            return { blockIdx, glyph, glyphIdx: gIdx, block };
+            return { blockIdx, glyph: block.glyphs[gIdx], glyphIdx: gIdx, block };
           }
         } catch {
           // ignore
@@ -630,35 +622,36 @@ export default function VisualDecoder(props) {
     if (!hit) return;
 
     const { blockIdx, glyph, block } = hit;
-    const relatedUnits = block.relatedUnits || [];
 
+    const units = glyphToUnits.get(glyph.id) || [];
     let chosenUnit = null;
-    if (relatedUnits.length > 1) {
-      chosenUnit = preferredUnitFromSharedGlyph(p, glyph, relatedUnits);
+    if (USE_EDU_UNITS && units.length > 0) {
+      chosenUnit = units.sort((a, b) => (b.priority || 0) - (a.priority || 0))[0];
+      setSelectedUnitId(chosenUnit.id);
     } else {
-      chosenUnit = relatedUnits[0] || null;
+      setSelectedUnitId(null);
     }
 
-    const selectedChar = chosenUnit
-      ? unitDisplayChar(chosenUnit)
-      : (block.primaryChar || glyph.primaryChar || glyph.char || "?");
+    const selectedChar = chosenUnit?.text || block.primaryChar || glyph.primaryChar || glyph.char || "?";
+    const selectedIsSubscript = chosenUnit?.isSubscript || false;
 
-    const selectedIsSubscript = !!chosenUnit?.isSubscript;
+    const payload = buildSelectionPayload({
+      mode: USE_EDU_UNITS ? "edu" : "legacy",
+      blockIdx,
+      glyph,
+      block,
+      chosenUnit,
+      selectedChar,
+      selectedIsSubscript,
+    });
 
-    if (onGlyphClick) {
-      onGlyphClick(selectedChar, {
-        blockIdx,
-        glyphs: block.glyphs,
-        primaryChar: selectedChar,
-        allChars: (glyph.codePoints || []).map(cpToChar),
-        isSubscript: selectedIsSubscript,
-        unitType: chosenUnit?.type || null,
-        sharedGlyph: relatedUnits.length > 1,
-      });
-    }
+    if (onGlyphClick) onGlyphClick(selectedChar, payload);
 
     if (showTapHint) {
+      const hintMode = USE_EDU_UNITS ? "edu" : "legacy";
       const { typeLabel, hint } = getGlyphHintContent({
+        mode: hintMode,
+        eduUnit: chosenUnit,
         glyphChar: selectedChar,
         alphabetDb,
         fallbackTypeLabel: (ch) => {
@@ -683,7 +676,7 @@ export default function VisualDecoder(props) {
       setLastTap({
         char: selectedChar,
         displayChar: selectedChar,
-        typeLabel: chosenUnit?.type || typeLabel,
+        typeLabel,
         hint: truncatedHint,
         isSubscript: selectedIsSubscript,
       });
@@ -695,20 +688,19 @@ export default function VisualDecoder(props) {
       setSelectedId(blockIdx);
     }
 
-    let soundFile = glyphSoundMap[glyph.id];
-    if (!soundFile) {
-      soundFile = getSoundFileForChar(selectedChar);
+    let soundFile = glyphSoundMap[glyph.id] || getSoundFileForChar(selectedChar);
+    if (soundFile && soundFile.startsWith("sub_")) {
+      soundFile = soundFile.replace("sub_", "letter_");
     }
 
     const effectiveRule = feedbackRule ?? data?.success_rule ?? data?.successRule;
     if (effectiveRule) {
       const isSuccess = evaluateGlyphSuccess({
+        mode: USE_EDU_UNITS ? "edu" : "legacy",
         rule: effectiveRule,
+        eduUnit: chosenUnit,
         glyphChar: selectedChar,
-        glyphMeta: {
-          isSubscript: selectedIsSubscript,
-          unitType: chosenUnit?.type || null,
-        },
+        glyphMeta: { isSubscript: selectedIsSubscript, unitType: chosenUnit?.type },
         targetChar,
       });
 
@@ -727,7 +719,6 @@ export default function VisualDecoder(props) {
     if (onComplete) onComplete();
   };
 
-  // notify selection
   useEffect(() => {
     if (!onSelectionChange) return;
 
@@ -740,17 +731,16 @@ export default function VisualDecoder(props) {
     }
   }, [onSelectionChange, selectedId, selectedIds, selectionMode]);
 
-  // reset selection by key
   useEffect(() => {
     if (resetSelectionKey === undefined) return;
     setSelectedId(null);
     setSelectedIds([]);
+    setSelectedUnitId(null);
   }, [resetSelectionKey]);
 
   function colorForGlyph(glyph, blockIdx, gIdx, isSelected) {
     const block = blocks[blockIdx];
-    const primaryChar = block.primaryChar;
-    const base = getKhmerGlyphColor(primaryChar);
+    const base = getKhmerGlyphColor(block.primaryChar);
 
     const resolvedIsSelected = isSelected ?? (
       selectionMode === "multi"
@@ -763,8 +753,9 @@ export default function VisualDecoder(props) {
         glyph,
         idx: blockIdx,
         isSelected: resolvedIsSelected,
-        resolvedChar: primaryChar,
+        resolvedChar: block.primaryChar,
         relatedUnits: block.relatedUnits || [],
+        selectedUnit: block.relatedUnits?.find(u => u.id === selectedUnitId) || null,
       });
       if (override) return override;
     }
@@ -773,7 +764,7 @@ export default function VisualDecoder(props) {
 
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
-      return isKhmerConsonant(primaryChar) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
+      return isKhmerConsonant(block.primaryChar) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
     }
 
     return FALLBACK.NEUTRAL;

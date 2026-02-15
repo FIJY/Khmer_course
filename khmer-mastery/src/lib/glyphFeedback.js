@@ -1,75 +1,64 @@
-import { getKhmerGlyphCategory } from './khmerGlyphRenderer';
-
-const normalizeChar = (value) =>
-  String(value || '')
-    .replace(/\u25CC/g, '')
-    .trim()
-    .normalize('NFC');
-
+// src/lib/glyphFeedback.js
 export const DEFAULT_FEEDBACK_SOUNDS = {
-  success: 'success.mp3',
-  error: 'error.mp3'
+  success: "success.mp3",
+  error: "error.mp3",
 };
 
-const normalizeRule = (rule) => String(rule || '').trim().toLowerCase();
+function normalize(s) {
+  return String(s || "").normalize("NFC");
+}
 
-export const evaluateGlyphSuccess = ({
+function isConsonantChar(ch) {
+  if (!ch) return false;
+  const cp = ch.codePointAt(0);
+  return cp >= 0x1780 && cp <= 0x17A2;
+}
+
+function isConsonantFromUnit(eduUnit, glyphChar) {
+  const t = eduUnit?.type;
+  if (t === "base_consonant" || t === "subscript_consonant") return true;
+  return isConsonantChar(glyphChar);
+}
+
+export function evaluateGlyphSuccess({
+  mode = "legacy",
   rule,
+  eduUnit,
   glyphChar,
   glyphMeta,
-  targetChar
-}) => {
-  if (!rule) return null;
-  const normalizedRule = normalizeRule(rule);
-  if (!normalizedRule) return null;
+  targetChar,
+}) {
+  const r = String(rule || "").toLowerCase().trim();
+  const charN = normalize(glyphChar);
+  const targetN = normalize(targetChar);
 
-  const normalizedChar = normalizeChar(glyphChar);
-  const normalizedTarget = normalizeChar(targetChar);
-  const isSubscript = glyphMeta?.isSubscript ?? false;
-  const category = getKhmerGlyphCategory(normalizedChar);
-
-  if (normalizedRule === 'any') return true;
-
-  if (normalizedRule === 'target' || normalizedRule === 'target_char') {
-    return Boolean(normalizedChar && normalizedTarget && normalizedChar === normalizedTarget);
+  // общие exact-rules
+  if (r === "exact_match" || r === "target" || r === "char_match") {
+    return !!targetN && charN === targetN;
   }
 
-  if (normalizedRule.startsWith('glyph:')) {
-    const glyphValue = normalizeChar(normalizedRule.replace('glyph:', ''));
-    return Boolean(glyphValue && normalizedChar === glyphValue);
+  // EDU path
+  if (mode === "edu") {
+    const t = eduUnit?.type || glyphMeta?.unitType || "";
+
+    if (r === "consonant") return t === "base_consonant" || t === "subscript_consonant";
+    if (r === "subscript") return t === "subscript_consonant" || !!eduUnit?.isSubscript;
+    if (r === "dependent_vowel" || r === "vowel_dep") return t === "dependent_vowel";
+    if (r === "independent_vowel" || r === "vowel_ind") return t === "independent_vowel";
+    if (r === "diacritic") return t === "diacritic";
+    if (r === "coeng") return t === "coeng";
+
+    // fallback
+    return !!targetN ? charN === targetN : false;
   }
 
-  if (normalizedRule === 'consonant') {
-    return category === 'consonant' && !isSubscript;
-  }
+  // LEGACY path
+  if (r === "consonant") return isConsonantChar(charN);
+  if (r === "subscript") return !!glyphMeta?.isSubscript;
+  if (r === "dependent_vowel" || r === "vowel_dep") return false;
+  if (r === "independent_vowel" || r === "vowel_ind") return false;
+  if (r === "diacritic") return false;
+  if (r === "coeng") return false;
 
-  if (normalizedRule === 'consonant_any') {
-    return category === 'consonant';
-  }
-
-  if (normalizedRule === 'subscript_consonant') {
-    return category === 'consonant' && isSubscript;
-  }
-
-  if (normalizedRule === 'vowel') {
-    return category === 'vowel_dep' || category === 'vowel_ind';
-  }
-
-  if (normalizedRule === 'vowel_dep' || normalizedRule === 'vowel_ind') {
-    return category === normalizedRule;
-  }
-
-  if (normalizedRule === 'diacritic' || normalizedRule === 'sign') {
-    return category === 'diacritic';
-  }
-
-  if (normalizedRule === 'numeral') {
-    return category === 'numeral';
-  }
-
-  if (normalizedRule === 'symbol') {
-    return category === 'symbol';
-  }
-
-  return false;
-};
+  return !!targetN ? charN === targetN : false;
+}
