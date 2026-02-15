@@ -12,14 +12,14 @@ const PORT = Number(process.env.PORT) || 3001;
 const FONT_PATH = path.join(__dirname, "public/fonts/KhmerOS_siemreap.ttf");
 const FONT_SIZE = 120;
 
-let hb = null;              // optional
-let otFont = null;          // required
-let fkFont = null;          // fallback
+let hb = null;
+let otFont = null;
+let fkFont = null;
 let unitsPerEm = 1000;
-let shapingEngine = "unknown"; // "harfbuzz" | "fontkit"
+let shapingEngine = "unknown";
 
 // -------------------------
-// Khmer helpers / ranges
+// Khmer helpers
 // -------------------------
 const KHMER_BASE_CONS_START = 0x1780;
 const KHMER_BASE_CONS_END = 0x17a2;
@@ -101,7 +101,7 @@ function getFontInfo(ot, fk) {
 }
 
 // -------------------------
-// HarfBuzz loading (best effort)
+// HarfBuzz loading
 // -------------------------
 function ensureHbApi(hbObj) {
   const required = ["createBlob", "createFace", "createFont", "createBuffer", "shape"];
@@ -114,9 +114,7 @@ function ensureHbApi(hbObj) {
 }
 
 async function tryLoadHarfBuzz() {
-  // 1) package entrypoint
   try {
-    // eslint-disable-next-line global-require
     const pkg = require("harfbuzzjs");
 
     if (pkg && typeof pkg.then === "function") {
@@ -137,11 +135,8 @@ async function tryLoadHarfBuzz() {
     console.warn("[HB] entrypoint failed:", e.message);
   }
 
-  // 2) manual wiring
   try {
-    // eslint-disable-next-line global-require
     const createHbModule = require("harfbuzzjs/hb.js");
-    // eslint-disable-next-line global-require
     const hbjsWrapMod = require("harfbuzzjs/hbjs.js");
     const hbjsWrap =
       typeof hbjsWrapMod === "function"
@@ -161,33 +156,6 @@ async function tryLoadHarfBuzz() {
   }
 
   return null;
-}
-
-// -------------------------
-// Cluster helpers for HB result
-// -------------------------
-function buildClusterRangesFromHb(text, hbOutput) {
-  const offsets = new Set([0, text.length]);
-  for (const g of hbOutput) {
-    if (typeof g.cl === "number") {
-      offsets.add(Math.max(0, Math.min(text.length, g.cl)));
-    }
-  }
-  const sorted = Array.from(offsets).sort((a, b) => a - b);
-  const ranges = [];
-  for (let i = 0; i < sorted.length - 1; i += 1) {
-    const s = sorted[i];
-    const e = sorted[i + 1];
-    if (e > s) ranges.push([s, e]);
-  }
-  return ranges;
-}
-
-function findClusterEnd(clusterStart, clusterRanges, textLength) {
-  for (const [s, e] of clusterRanges) {
-    if (s === clusterStart) return e;
-  }
-  return textLength;
 }
 
 // -------------------------
@@ -233,27 +201,24 @@ function shapeWithHarfBuzz(text, mode) {
     const hbOutput = buffer.json();
     if (!Array.isArray(hbOutput)) throw new Error("HB returned non-array json");
 
-    const clusterRanges = buildClusterRangesFromHb(text, hbOutput);
-    const fontInfo = getFontInfo(otFont, fkFont);
-
-    // Разбиваем текст на символы для извлечения codePoint по индексу
     const chars = Array.from(text);
     const codePointsArray = chars.map(c => c.codePointAt(0));
+    const fontInfo = getFontInfo(otFont, fkFont);
 
-    // Группируем глифы по кластеру (clusterStart)
-    const clusterMap = new Map(); // clusterStart -> { parts: [], totalAdvance: 0 }
-
-    let cursorX = 50; // начальная позиция по X
+    // ИЗМЕНЕНИЕ: Возвращаем каждый part как отдельный glyph
+    const glyphsData = [];
+    let cursorX = 50;
+    let glyphId = 0;
 
     for (const out of hbOutput) {
-      const glyphId = out.g;
+      const hbGlyphId = out.g;
       const clusterStart = out.cl;
 
       const x = cursorX + (out.dx || 0) * scale;
       const y = 200 - (out.dy || 0) * scale;
       const advance = (out.ax || 0) * scale;
 
-      const otGlyph = otFont.glyphs.get(glyphId);
+      const otGlyph = otFont.glyphs.get(hbGlyphId);
       if (!otGlyph) {
         cursorX += advance;
         continue;
@@ -261,77 +226,43 @@ function shapeWithHarfBuzz(text, mode) {
 
       const pathObj = otGlyph.getPath(x, y, FONT_SIZE);
       const d = pathObj.toPathData(3);
+      const bb = pathObj.getBoundingBox();
 
-      // Определяем codePoints для этого глифа (обычно один символ)
+      // Определяем char и codePoints
+      let char = "";
       let partCodePoints = [];
       if (clusterStart >= 0 && clusterStart < chars.length) {
+        char = chars[clusterStart];
         partCodePoints = [codePointsArray[clusterStart]];
       }
 
-      if (!clusterMap.has(clusterStart)) {
-        clusterMap.set(clusterStart, { parts: [], totalAdvance: 0 });
-      }
-      const clusterData = clusterMap.get(clusterStart);
-      clusterData.parts.push({
-        d,
-        codePoints: partCodePoints,
-      });
-      clusterData.totalAdvance += advance;
-
-      cursorX += advance;
-    }
-
-    // Формируем итоговый массив кластеров
-    const glyphsData = [];
-    let clusterIndex = 0;
-
-    // Сортируем по clusterStart для порядка
-    const sortedClusters = Array.from(clusterMap.entries()).sort((a, b) => a[0] - b[0]);
-
-    for (const [clusterStart, { parts, totalAdvance }] of sortedClusters) {
-      const clusterEnd = findClusterEnd(clusterStart, clusterRanges, text.length);
-      const clusterText = text.slice(clusterStart, clusterEnd);
-      const clusterChars = Array.from(clusterText);
-      const clusterCodePoints = clusterChars.map(c => c.codePointAt(0));
-      const primaryChar = pickPrimaryChar(clusterChars);
-      const flags = detectClusterFlags(clusterCodePoints);
-
-      // Для обратной совместимости создаём общий путь (объединяем пути частей)
-      // Просто склеиваем команды, но это может быть не совсем корректно.
-      // Вместо этого можно оставить d пустым или использовать путь первого part.
-      // Пока используем путь первого part для визуализации (клиент всё равно использует его для рендера).
-      const combinedD = parts.length > 0 ? parts[0].d : "";
-
-      // Примерные координаты (не используются для позиционирования, т.к. пути уже содержат абсолютные координаты)
-      const x = 50; // можно вычислить среднее, но не обязательно
-      const y = 200;
-
+      // Создаём отдельный glyph для этого part
       glyphsData.push({
-        id: clusterIndex,
-        glyphIdx: clusterIndex,
-        char: primaryChar,
+        id: glyphId++,
+        glyphIdx: hbGlyphId,
+        char,
         cluster: clusterStart,
         clusterStart,
-        clusterEnd,
-        clusterText,
-        chars: clusterChars,
-        codePoints: clusterCodePoints,
-        primaryChar,
-        hasCoeng: flags.hasCoeng,
-        hasSubscriptConsonant: flags.hasSubscriptConsonant,
-        hasDependentVowel: flags.hasDependentVowel,
-        hasDiacritic: flags.hasDiacritic,
-        hbGlyphId: null, // неактуально для кластера
+        clusterEnd: Math.min(clusterStart + 1, text.length),
+        clusterText: char,
+        chars: [char],
+        codePoints: partCodePoints,
+        primaryChar: char,
+        hasCoeng: false,
+        hasSubscriptConsonant: false,
+        hasDependentVowel: isDependentVowel(partCodePoints[0]),
+        hasDiacritic: isKhmerDiacriticOrSign(partCodePoints[0]),
+        hbGlyphId,
         fontInfo,
-        d: combinedD,
-        bb: null, // можно вычислить позже, пока опустим
-        advance: totalAdvance,
+        d,
+        bb: bb ? { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 } : null,
+        advance,
         x,
         y,
-        parts, // добавляем массив частей
+        parts: [{ d, codePoints: partCodePoints }], // Для совместимости
       });
 
-      clusterIndex++;
+      cursorX += advance;
     }
 
     return glyphsData;
@@ -344,7 +275,6 @@ function shapeWithHarfBuzz(text, mode) {
 }
 
 function shapeWithFontkit(text) {
-  // fallback engine: no full HB cluster intelligence, but stable + no 500
   const run = fkFont.layout(text);
   const scale = FONT_SIZE / (fkFont.unitsPerEm || 1000);
   const fontInfo = getFontInfo(otFont, fkFont);
@@ -376,32 +306,29 @@ function shapeWithFontkit(text) {
 
     const clusterStart = i;
     const clusterEnd = Math.min(i + 1, text.length);
-    const clusterText = text.slice(clusterStart, clusterEnd);
-    const clusterChars = Array.from(clusterText);
-    const clusterCodePoints = clusterChars.map(c => c.codePointAt(0));
-    const primaryChar = pickPrimaryChar(clusterChars);
-    const flags = detectClusterFlags(clusterCodePoints);
+    const char = chars[i] || "";
+    const cp = codePointsArray[i];
 
     const part = {
       d,
-      codePoints: [codePointsArray[i] ?? null].filter(Boolean),
+      codePoints: [cp].filter(Boolean),
     };
 
     glyphsData.push({
       id: i,
       glyphIdx: i,
-      char: primaryChar,
+      char,
       cluster: clusterStart,
       clusterStart,
       clusterEnd,
-      clusterText,
-      chars: clusterChars,
-      codePoints: clusterCodePoints,
-      primaryChar,
-      hasCoeng: flags.hasCoeng,
-      hasSubscriptConsonant: flags.hasSubscriptConsonant,
-      hasDependentVowel: flags.hasDependentVowel,
-      hasDiacritic: flags.hasDiacritic,
+      clusterText: char,
+      chars: [char],
+      codePoints: [cp],
+      primaryChar: char,
+      hasCoeng: false,
+      hasSubscriptConsonant: false,
+      hasDependentVowel: isDependentVowel(cp),
+      hasDiacritic: isKhmerDiacriticOrSign(cp),
       hbGlyphId: glyphId,
       fontInfo,
       d,
@@ -409,7 +336,7 @@ function shapeWithFontkit(text) {
       advance,
       x,
       y,
-      parts: [part], // один part
+      parts: [part],
     });
 
     cursorX += advance;
@@ -433,7 +360,6 @@ async function init() {
   fkFont = fontkit.openSync(FONT_PATH);
   unitsPerEm = otFont.unitsPerEm || fkFont.unitsPerEm || 1000;
 
-  // Try HB, but do not die if it fails
   hb = await tryLoadHarfBuzz();
   if (hb) {
     shapingEngine = "harfbuzz";
