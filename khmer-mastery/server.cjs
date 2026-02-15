@@ -162,6 +162,7 @@ async function tryLoadHarfBuzz() {
 // Engine implementations
 // -------------------------
 function shapeWithHarfBuzz(text, mode) {
+  console.log('[HB] Shaping with mode:', mode, 'text:', text);
   const scale = FONT_SIZE / unitsPerEm;
   const fontBuffer = fs.readFileSync(FONT_PATH);
   const fontBytes = toUint8ArrayExact(fontBuffer);
@@ -181,25 +182,14 @@ function shapeWithHarfBuzz(text, mode) {
     buffer.addText(text);
     buffer.guessSegmentProperties();
 
-    let features = [];
-    if (mode === "split") {
-      features = [
-        { tag: "liga", value: 0 },
-        { tag: "clig", value: 0 },
-        { tag: "ccmp", value: 0 },
-        { tag: "abvf", value: 0 },
-        { tag: "abvs", value: 0 },
-        { tag: "blwf", value: 0 },
-        { tag: "pstf", value: 0 },
-        { tag: "pref", value: 0 },
-        { tag: "pres", value: 0 },
-        { tag: "psts", value: 0 },
-      ];
-    }
-
-    hb.shape(font, buffer, features);
+    // Features для HarfBuzz
+    // harfbuzzjs не поддерживает отключение features через массив объектов
+    // Вместо этого просто возвращаем каждый HB output как отдельный glyph
+    hb.shape(font, buffer);
     const hbOutput = buffer.json();
     if (!Array.isArray(hbOutput)) throw new Error("HB returned non-array json");
+
+    console.log('[HB] Output glyphs count:', hbOutput.length, 'for text:', text);
 
     const chars = Array.from(text);
     const codePointsArray = chars.map(c => c.codePointAt(0));
