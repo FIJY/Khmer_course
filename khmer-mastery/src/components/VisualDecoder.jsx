@@ -23,7 +23,7 @@ import { getOverrideForToken } from "../lib/khmerCompoundChars";
 
 // ===== FLAGS =====
 const USE_EDU_UNITS = true;
-const USE_HIT_ZONES = false;
+const USE_HIT_ZONES = false; // теперь не используется, т.к. работаем через parts
 const USE_GLYPH_OVERRIDES = true;
 const DEBUG_GLYPHS = true;
 
@@ -325,10 +325,10 @@ function unitDisplayChar(unit) {
   return "";
 }
 
-// Функция для выбора предпочтительного юнита в shared-глифе (с учётом hit zones)
+// Функция для выбора предпочтительного юнита в shared-глифе (больше не используется, заменена на поиск по part)
+// Оставлена для обратной совместимости, если parts нет
 function preferredUnitFromSharedGlyph(hitPoint, glyph, units) {
   if (!units?.length) return null;
-  // Пока просто по приоритету
   const sorted = [...units].sort((a, b) => (b.priority || 0) - (a.priority || 0));
   return sorted[0];
 }
@@ -617,6 +617,115 @@ export default function VisualDecoder(props) {
   const handlePointerDown = (e) => {
     e.preventDefault();
 
+    // Сначала проверяем, не попали ли мы в какую-либо часть (part)
+    const elements = document.elementsFromPoint(e.clientX, e.clientY);
+    const partElement = elements.find(el => el.hasAttribute('data-part-index'));
+    if (partElement) {
+      const glyphId = partElement.dataset.glyphId;
+      const partIndex = partElement.dataset.partIndex;
+      const glyph = glyphs.find(g => g.id === glyphId);
+      const part = glyph?.parts?.[partIndex];
+      if (part) {
+        // Находим eduUnit, соответствующий этому part (по пересечению codePoints)
+        const possibleUnits = eduUnits.filter(u =>
+          u.codePoints.some(cp => part.codePoints.includes(cp))
+        );
+        // Сортируем по приоритету и выбираем первый
+        const chosenUnit = possibleUnits.sort((a, b) => (b.priority || 0) - (a.priority || 0))[0];
+        if (chosenUnit) {
+          setSelectedUnitId(chosenUnit.id);
+          const selectedChar = chosenUnit.text || part.d; // fallback
+          const selectedIsSubscript = chosenUnit.isSubscript || false;
+
+          // Находим block и glyph для payload
+          const block = blocks.find(b => b.glyphId === glyphId);
+          const blockIdx = blocks.findIndex(b => b.glyphId === glyphId);
+
+          const payload = buildSelectionPayload({
+            mode: "edu",
+            blockIdx,
+            glyph,
+            block,
+            chosenUnit,
+            selectedChar,
+            selectedIsSubscript,
+          });
+
+          if (onGlyphClick) onGlyphClick(selectedChar, payload);
+
+          if (showTapHint) {
+            const { typeLabel, hint } = getGlyphHintContent({
+              mode: "edu",
+              eduUnit: chosenUnit,
+              glyphChar: selectedChar,
+              alphabetDb,
+              fallbackTypeLabel: (ch) => {
+                const cat = getKhmerGlyphCategory(ch);
+                const map = {
+                  consonant: "consonant",
+                  vowel_dep: "vowel_dependent",
+                  vowel_ind: "vowel_independent",
+                  diacritic: "diacritic",
+                  numeral: "numeral",
+                  coeng: "coeng",
+                  space: "space",
+                  other: "other",
+                };
+                return map[cat] || "";
+              },
+            });
+            const hintMaxChars = data?.hint_max_chars ?? data?.hintMaxChars;
+            const truncatedHint = truncateHint(hint, hintMaxChars);
+            setLastTap({
+              char: selectedChar,
+              displayChar: selectedChar,
+              typeLabel,
+              hint: truncatedHint,
+              isSubscript: selectedIsSubscript,
+            });
+          }
+
+          if (selectionMode === "multi") {
+            setSelectedIds((prev) => (prev.includes(blockIdx) ? prev : [...prev, blockIdx]));
+          } else {
+            setSelectedId(blockIdx);
+          }
+
+          let soundFile = glyphSoundMap[glyph.id] || getSoundFileForChar(selectedChar);
+          if (soundFile && soundFile.startsWith("sub_")) {
+            soundFile = soundFile.replace("sub_", "letter_");
+          }
+
+          const effectiveRule = feedbackRule ?? data?.success_rule ?? data?.successRule;
+          if (effectiveRule) {
+            const isSuccess = evaluateGlyphSuccess({
+              mode: "edu",
+              rule: effectiveRule,
+              eduUnit: chosenUnit,
+              glyphChar: selectedChar,
+              glyphMeta: { isSubscript: selectedIsSubscript, unitType: chosenUnit.type },
+              targetChar,
+            });
+
+            const sounds = {
+              ...DEFAULT_FEEDBACK_SOUNDS,
+              ...(feedbackSounds || {}),
+            };
+
+            const feedbackSound = isSuccess ? sounds.success : sounds.error;
+            const sequence = soundFile ? [feedbackSound, soundFile] : [feedbackSound];
+            playSequence(sequence, { gapMs: feedbackGapMs });
+          } else if (onLetterClick) {
+            onLetterClick(soundFile);
+          }
+
+          if (onComplete) onComplete();
+          return;
+        }
+      }
+    }
+
+    // Если не нашли part, используем старую логику (по приоритету eduUnits)
     const p = svgPointFromEvent(e);
     const hit = pickBlockAtPoint(p);
     if (!hit) return;
@@ -835,24 +944,38 @@ export default function VisualDecoder(props) {
                 }
 
                 return (
-                  <path
-                    key={`${blockIdx}-${gIdx}`}
-                    id={`glyph-${blockIdx}-${gIdx}`}
-                    d={glyph.d}
-                    fill={fillColor}
-                    pointerEvents="none"
-                    className="transition-[fill,stroke,stroke-width] duration-200"
-                    style={{
-                      stroke: outlineColor,
-                      strokeWidth: outlineWidth,
-                      vectorEffect: "non-scaling-stroke",
-                      paintOrder: "stroke fill",
-                      filter: forceHeroOutline
-                        ? "drop-shadow(0 4px 6px rgba(0,0,0,0.5)) drop-shadow(0 0 10px rgba(34,197,94,0.85))"
-                        : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
-                      cursor: "pointer",
-                    }}
-                  />
+                  <React.Fragment key={`${blockIdx}-${gIdx}`}>
+                    {/* Видимый путь (основной) */}
+                    <path
+                      id={`glyph-${blockIdx}-${gIdx}`}
+                      d={glyph.d}
+                      fill={fillColor}
+                      pointerEvents="none"
+                      className="transition-[fill,stroke,stroke-width] duration-200"
+                      style={{
+                        stroke: outlineColor,
+                        strokeWidth: outlineWidth,
+                        vectorEffect: "non-scaling-stroke",
+                        paintOrder: "stroke fill",
+                        filter: forceHeroOutline
+                          ? "drop-shadow(0 4px 6px rgba(0,0,0,0.5)) drop-shadow(0 0 10px rgba(34,197,94,0.85))"
+                          : "drop-shadow(0 4px 6px rgba(0,0,0,0.5))",
+                        cursor: "pointer",
+                      }}
+                    />
+                    {/* Невидимые части для точного выделения */}
+                    {glyph.parts?.map((part, pIdx) => (
+                      <path
+                        key={`part-${blockIdx}-${gIdx}-${pIdx}`}
+                        d={part.d}
+                        fill="transparent"
+                        stroke="none"
+                        pointerEvents="fill"
+                        data-glyph-id={glyph.id}
+                        data-part-index={pIdx}
+                      />
+                    ))}
+                  </React.Fragment>
                 );
               })}
             </g>

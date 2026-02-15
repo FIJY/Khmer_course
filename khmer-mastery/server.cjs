@@ -236,12 +236,18 @@ function shapeWithHarfBuzz(text, mode) {
     const clusterRanges = buildClusterRangesFromHb(text, hbOutput);
     const fontInfo = getFontInfo(otFont, fkFont);
 
-    const glyphsData = [];
-    let cursorX = 50;
+    // Разбиваем текст на символы для извлечения codePoint по индексу
+    const chars = Array.from(text);
+    const codePointsArray = chars.map(c => c.codePointAt(0));
 
-    for (let i = 0; i < hbOutput.length; i += 1) {
-      const out = hbOutput[i];
+    // Группируем глифы по кластеру (clusterStart)
+    const clusterMap = new Map(); // clusterStart -> { parts: [], totalAdvance: 0 }
+
+    let cursorX = 50; // начальная позиция по X
+
+    for (const out of hbOutput) {
       const glyphId = out.g;
+      const clusterStart = out.cl;
 
       const x = cursorX + (out.dx || 0) * scale;
       const y = 200 - (out.dy || 0) * scale;
@@ -255,48 +261,77 @@ function shapeWithHarfBuzz(text, mode) {
 
       const pathObj = otGlyph.getPath(x, y, FONT_SIZE);
       const d = pathObj.toPathData(3);
-      const bb = pathObj.getBoundingBox();
 
-      const clusterStart = typeof out.cl === "number" ? out.cl : 0;
+      // Определяем codePoints для этого глифа (обычно один символ)
+      let partCodePoints = [];
+      if (clusterStart >= 0 && clusterStart < chars.length) {
+        partCodePoints = [codePointsArray[clusterStart]];
+      }
+
+      if (!clusterMap.has(clusterStart)) {
+        clusterMap.set(clusterStart, { parts: [], totalAdvance: 0 });
+      }
+      const clusterData = clusterMap.get(clusterStart);
+      clusterData.parts.push({
+        d,
+        codePoints: partCodePoints,
+      });
+      clusterData.totalAdvance += advance;
+
+      cursorX += advance;
+    }
+
+    // Формируем итоговый массив кластеров
+    const glyphsData = [];
+    let clusterIndex = 0;
+
+    // Сортируем по clusterStart для порядка
+    const sortedClusters = Array.from(clusterMap.entries()).sort((a, b) => a[0] - b[0]);
+
+    for (const [clusterStart, { parts, totalAdvance }] of sortedClusters) {
       const clusterEnd = findClusterEnd(clusterStart, clusterRanges, text.length);
       const clusterText = text.slice(clusterStart, clusterEnd);
-      const chars = Array.from(clusterText);
-      const codePoints = chars.map((c) => c.codePointAt(0));
-      const primaryChar = pickPrimaryChar(chars);
-      const flags = detectClusterFlags(codePoints);
+      const clusterChars = Array.from(clusterText);
+      const clusterCodePoints = clusterChars.map(c => c.codePointAt(0));
+      const primaryChar = pickPrimaryChar(clusterChars);
+      const flags = detectClusterFlags(clusterCodePoints);
+
+      // Для обратной совместимости создаём общий путь (объединяем пути частей)
+      // Просто склеиваем команды, но это может быть не совсем корректно.
+      // Вместо этого можно оставить d пустым или использовать путь первого part.
+      // Пока используем путь первого part для визуализации (клиент всё равно использует его для рендера).
+      const combinedD = parts.length > 0 ? parts[0].d : "";
+
+      // Примерные координаты (не используются для позиционирования, т.к. пути уже содержат абсолютные координаты)
+      const x = 50; // можно вычислить среднее, но не обязательно
+      const y = 200;
 
       glyphsData.push({
-        id: i,
-        glyphIdx: i,
-
-        // backward compatibility
+        id: clusterIndex,
+        glyphIdx: clusterIndex,
         char: primaryChar,
         cluster: clusterStart,
-
-        // enriched metadata
         clusterStart,
         clusterEnd,
         clusterText,
-        chars,
-        codePoints,
+        chars: clusterChars,
+        codePoints: clusterCodePoints,
         primaryChar,
-
         hasCoeng: flags.hasCoeng,
         hasSubscriptConsonant: flags.hasSubscriptConsonant,
         hasDependentVowel: flags.hasDependentVowel,
         hasDiacritic: flags.hasDiacritic,
-
-        hbGlyphId: glyphId,
+        hbGlyphId: null, // неактуально для кластера
         fontInfo,
-
-        d,
-        bb: bb ? { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 } : null,
-        advance,
+        d: combinedD,
+        bb: null, // можно вычислить позже, пока опустим
+        advance: totalAdvance,
         x,
         y,
+        parts, // добавляем массив частей
       });
 
-      cursorX += advance;
+      clusterIndex++;
     }
 
     return glyphsData;
@@ -314,11 +349,12 @@ function shapeWithFontkit(text) {
   const scale = FONT_SIZE / (fkFont.unitsPerEm || 1000);
   const fontInfo = getFontInfo(otFont, fkFont);
 
+  const chars = Array.from(text);
+  const codePointsArray = chars.map(c => c.codePointAt(0));
+
   const glyphsData = [];
   let cursorX = 50;
 
-  // Use glyph i -> character i fallback cluster mapping
-  // not perfect for complex script, but keeps UI alive.
   for (let i = 0; i < run.glyphs.length; i += 1) {
     const g = run.glyphs[i];
     const pos = run.positions[i] || { xAdvance: 0, xOffset: 0, yOffset: 0 };
@@ -327,7 +363,6 @@ function shapeWithFontkit(text) {
     const y = 200 - (pos.yOffset || 0) * scale;
     const advance = (pos.xAdvance || 0) * scale;
 
-    // Build path through opentype glyph id when possible
     const glyphId = g.id;
     const otGlyph = otFont.glyphs.get(glyphId);
     if (!otGlyph) {
@@ -339,41 +374,42 @@ function shapeWithFontkit(text) {
     const d = pathObj.toPathData(3);
     const bb = pathObj.getBoundingBox();
 
-    const clusterStart = Math.min(i, text.length);
+    const clusterStart = i;
     const clusterEnd = Math.min(i + 1, text.length);
     const clusterText = text.slice(clusterStart, clusterEnd);
-    const chars = Array.from(clusterText);
-    const codePoints = chars.map((c) => c.codePointAt(0));
-    const primaryChar = pickPrimaryChar(chars);
-    const flags = detectClusterFlags(codePoints);
+    const clusterChars = Array.from(clusterText);
+    const clusterCodePoints = clusterChars.map(c => c.codePointAt(0));
+    const primaryChar = pickPrimaryChar(clusterChars);
+    const flags = detectClusterFlags(clusterCodePoints);
+
+    const part = {
+      d,
+      codePoints: [codePointsArray[i] ?? null].filter(Boolean),
+    };
 
     glyphsData.push({
       id: i,
       glyphIdx: i,
-
       char: primaryChar,
       cluster: clusterStart,
-
       clusterStart,
       clusterEnd,
       clusterText,
-      chars,
-      codePoints,
+      chars: clusterChars,
+      codePoints: clusterCodePoints,
       primaryChar,
-
       hasCoeng: flags.hasCoeng,
       hasSubscriptConsonant: flags.hasSubscriptConsonant,
       hasDependentVowel: flags.hasDependentVowel,
       hasDiacritic: flags.hasDiacritic,
-
-      hbGlyphId: glyphId, // keep field for compatibility
+      hbGlyphId: glyphId,
       fontInfo,
-
       d,
       bb: bb ? { x1: bb.x1, y1: bb.y1, x2: bb.x2, y2: bb.y2 } : null,
       advance,
       x,
       y,
+      parts: [part], // один part
     });
 
     cursorX += advance;
