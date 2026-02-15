@@ -12,7 +12,7 @@ import { normalizeKhmerText } from "../lib/khmerTextUtils";
 import useAudioPlayer from "../hooks/useAudioPlayer";
 import {
   DEFAULT_FEEDBACK_SOUNDS,
-  evaluateGlyphSuccess
+  evaluateGlyphSuccess,
 } from "../lib/glyphFeedback";
 import GlyphHintCard from "./UI/GlyphHintCard";
 import {
@@ -35,15 +35,6 @@ const FALLBACK = {
   NEUTRAL: "rgba(255,255,255,0.92)",
   SELECTED: GLYPH_COLORS?.SELECTED ?? "#22d3ee",
 };
-
-// Debug toggle:
-// - window.__EDU_DEBUG__ = true
-// - or VITE_EDU_DEBUG=1
-const EDU_DEBUG =
-  (typeof window !== "undefined" && window.__EDU_DEBUG__ === true) ||
-  (typeof import.meta !== "undefined" &&
-    import.meta?.env &&
-    (import.meta.env.VITE_EDU_DEBUG === "1" || import.meta.env.VITE_EDU_DEBUG === "true"));
 
 // --- Khmer classification helpers ---
 function isConsonantCp(cp) {
@@ -76,7 +67,7 @@ function isKhmerConsonant(ch) {
   try {
     return typeof isKhmerConsonantChar === "function"
       ? isKhmerConsonantChar(ch)
-      : ch.codePointAt(0) >= 0x1780 && ch.codePointAt(0) <= 0x17a2;
+      : ch.codePointAt(0) >= 0x1780 && ch.codePointAt(0) <= 0x17A2;
   } catch {
     return false;
   }
@@ -118,6 +109,7 @@ function splitTokenToEduAtoms(token, tokenIndex) {
         i += 1;
         continue;
       }
+
       atoms.push({
         id: `t${tokenIndex}-a${atoms.length}`,
         type: "coeng",
@@ -138,10 +130,11 @@ function splitTokenToEduAtoms(token, tokenIndex) {
       codePoints: [cp],
       tokenIndex,
       priority:
-        type === "base_consonant" ? 5 :
-        type === "subscript_consonant" ? 4 :
-        type === "dependent_vowel" ? 3 :
-        type === "diacritic" ? 2 : 1,
+        type === "base_consonant" ? 5
+          : type === "subscript_consonant" ? 4
+            : type === "dependent_vowel" ? 3
+              : type === "diacritic" ? 2
+                : 1,
       isSubscript: type === "subscript_consonant",
     });
   }
@@ -195,7 +188,11 @@ function makeViewBoxFromBlocks(blocks, pad = 60) {
     return { minX: 0, minY: 0, w: 300, h: 300 };
   }
 
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
   blocks.forEach((block) => {
     block.glyphs.forEach((g) => {
       if (g.bb) {
@@ -220,37 +217,16 @@ function makeViewBoxFromBlocks(blocks, pad = 60) {
   };
 }
 
-/**
- * NEW MAPPING LAYER (no merge-by-overlap)
- * -------------------------------------------------------
- * Input:
- *   - glyphs from /api/shape (with clusterStart/clusterEnd/clusterText/codePoints/flags)
- *   - eduUnits (atomic)
- *
- * Output:
- *   - unitToGlyphs: Map<unitId, Set<glyphId>>
- *   - glyphToUnits: Map<glyphId, unit[]>
- *   - sharedGlyphIds: Set<glyphId> // glyph mapped to 2+ units
- *
- * Strategy:
- *   1) score-based matching (codepoint overlap + cluster affinity + type hints)
- *   2) accept only positive-score links
- *   3) NEVER merge units together
- */
-// REPLACE in VisualDecoder.jsx
+// map edu units -> render glyph ids (without merge-by-overlap)
 function mapEduUnitsToGlyphs(glyphs, eduUnits) {
-  const unitToGlyphIds = new Map(); // unitId -> Set(glyphId)
-  const glyphToUnits = new Map();   // glyphId -> unit[]
-  const debug = {
-    unmatchedUnits: [],
-    glyphMatches: [],
-  };
+  const mapping = new Map();      // unitId -> Set(glyphId)
+  const glyphToUnits = new Map(); // glyphId -> [unit]
 
-  // init
-  eduUnits.forEach((u) => unitToGlyphIds.set(u.id, new Set()));
+  eduUnits.forEach((u) => mapping.set(u.id, new Set()));
 
   const normalize = (s) => String(s || "").normalize("NFC");
-  const arrEq = (a, b) => {
+
+  const arrayEquals = (a, b) => {
     if (!Array.isArray(a) || !Array.isArray(b)) return false;
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i += 1) {
@@ -259,177 +235,91 @@ function mapEduUnitsToGlyphs(glyphs, eduUnits) {
     return true;
   };
 
-  // helper: score match unit<->glyph
-  function scoreMatch(u, g) {
-    const gCps = Array.isArray(g.codePoints) ? g.codePoints : [];
-    const uCps = Array.isArray(u.codePoints) ? u.codePoints : [];
-    const uTokenCps = Array.isArray(u.tokenCodePoints) ? u.tokenCodePoints : [];
-
+  function scoreMatch(unit, glyph) {
+    const gCps = Array.isArray(glyph.codePoints) ? glyph.codePoints : [];
+    const uCps = Array.isArray(unit.codePoints) ? unit.codePoints : [];
+    const tokenCps = Array.isArray(unit.tokenCodePoints) ? unit.tokenCodePoints : [];
     const gSet = new Set(gCps);
 
-    // 1) direct cp intersection (strongest)
-    const directCpHit = uCps.some((cp) => gSet.has(cp));
-    if (directCpHit) return { ok: true, score: 100, reason: "direct-cp" };
+    // 1) direct cp intersection
+    if (uCps.some((cp) => gSet.has(cp))) {
+      return { ok: true, score: 100, reason: "direct-cp" };
+    }
 
-    // 2) full token cp equality/intersection (for precomposed cluster mismatches)
-    const tokenEq = arrEq(uTokenCps, gCps);
-    if (tokenEq) return { ok: true, score: 80, reason: "token-cp-eq" };
+    // 2) token-level cp fallback
+    if (arrayEquals(tokenCps, gCps)) {
+      return { ok: true, score: 80, reason: "token-cp-eq" };
+    }
 
-    const tokenIntersect =
-      uTokenCps.length > 0 && gCps.some((cp) => uTokenCps.includes(cp));
-    if (tokenIntersect) return { ok: true, score: 70, reason: "token-cp-intersect" };
+    if (tokenCps.length > 0 && gCps.some((cp) => tokenCps.includes(cp))) {
+      return { ok: true, score: 70, reason: "token-cp-intersect" };
+    }
 
-    // 3) text-based fallback from cluster metadata
-    const gClusterText = normalize(g.clusterText || "");
-    const gCharsText = normalize(Array.isArray(g.chars) ? g.chars.join("") : "");
-    const gText = gClusterText || gCharsText;
-
-    const uText = normalize(u.text || "");
-    const uTokenText = normalize(u.token || "");
+    // 3) text fallback by cluster metadata
+    const gText = normalize(
+      glyph.clusterText ||
+      (Array.isArray(glyph.chars) ? glyph.chars.join("") : "")
+    );
+    const uText = normalize(unit.text || "");
+    const tokenText = normalize(unit.token || "");
 
     if (uText && gText && (gText === uText || gText.includes(uText))) {
       return { ok: true, score: 60, reason: "text-unit-in-cluster" };
     }
 
-    if (uTokenText && gText && (gText === uTokenText || gText.includes(uTokenText))) {
+    if (tokenText && gText && (gText === tokenText || gText.includes(tokenText))) {
       return { ok: true, score: 50, reason: "text-token-in-cluster" };
     }
 
     return { ok: false, score: 0, reason: "no-match" };
   }
 
-  // per glyph choose all matched units with positive score
   glyphs.forEach((g) => {
-    const candidates = [];
+    const matches = [];
 
     eduUnits.forEach((u) => {
-      const r = scoreMatch(u, g);
-      if (r.ok) {
-        candidates.push({
-          unit: u,
-          score: r.score,
-          reason: r.reason,
-        });
+      const res = scoreMatch(u, g);
+      if (res.ok) {
+        matches.push({ unit: u, score: res.score, reason: res.reason });
       }
     });
 
-    // sort best-first, then by priority
-    candidates.sort((a, b) => {
+    matches.sort((a, b) => {
       const byScore = b.score - a.score;
       if (byScore !== 0) return byScore;
       return (b.unit.priority || 0) - (a.unit.priority || 0);
     });
 
-    if (candidates.length > 0) {
-      const units = candidates.map((c) => c.unit);
+    if (matches.length > 0) {
+      const units = matches.map((m) => m.unit);
       glyphToUnits.set(g.id, units);
 
       units.forEach((u) => {
-        unitToGlyphIds.get(u.id)?.add(g.id);
-      });
-
-      debug.glyphMatches.push({
-        glyphId: g.id,
-        hbGlyphId: g.hbGlyphId,
-        clusterText: g.clusterText,
-        codePoints: g.codePoints,
-        matches: candidates.map((c) => ({
-          unitId: c.unit.id,
-          unitText: c.unit.text,
-          unitType: c.unit.type,
-          score: c.score,
-          reason: c.reason,
-        })),
-        sharedGlyph: units.length > 1,
+        const set = mapping.get(u.id);
+        if (set) set.add(g.id);
       });
     }
   });
 
-  // find unmatched units (useful for debug)
-  eduUnits.forEach((u) => {
-    const mapped = unitToGlyphIds.get(u.id);
-    if (!mapped || mapped.size === 0) {
-      debug.unmatchedUnits.push({
-        unitId: u.id,
-        unitText: u.text,
-        unitType: u.type,
-        codePoints: u.codePoints,
-        token: u.token,
-        tokenCodePoints: u.tokenCodePoints,
-      });
-    }
-  });
-
-  // optional debug exposure
   if (typeof window !== "undefined" && window.__EDU_DEBUG__) {
-    window.__EDU_MAP_DEBUG__ = debug;
+    const unmatched = eduUnits
+      .filter((u) => !mapping.get(u.id) || mapping.get(u.id).size === 0)
+      .map((u) => ({
+        id: u.id,
+        text: u.text,
+        type: u.type,
+        cps: u.codePoints,
+        token: u.token,
+        tokenCps: u.tokenCodePoints,
+      }));
+
     // eslint-disable-next-line no-console
-    console.log("[EDU map] debug", debug);
+    console.log("[EDU DEBUG] unmatched units:", unmatched);
+    // eslint-disable-next-line no-console
+    console.log("[EDU DEBUG] glyphToUnits:", glyphToUnits);
   }
 
-  return { mapping: unitToGlyphIds, glyphToUnits };
-}
-
-
-  function scoreUnitGlyph(unit, glyph) {
-    let score = 0;
-
-    const gCps = cpSet(glyph?.codePoints);
-    const uCps = cpSet(unit?.codePoints);
-
-    // 1) CP overlap (primary signal)
-    let overlap = 0;
-    uCps.forEach((cp) => {
-      if (gCps.has(cp)) overlap += 1;
-    });
-    if (overlap > 0) score += overlap * 10;
-
-    // 2) cluster text affinity
-    if (glyph?.clusterText && unit?.text && glyph.clusterText.includes(unit.text)) {
-      score += 4;
-    }
-
-    // 3) type/flag affinity
-    if (unitFitsGlyphByType(unit, glyph)) {
-      score += 3;
-    }
-
-    // 4) exact primaryChar bonus
-    const unitDisplay = unit?.text || "";
-    if (unitDisplay && glyph?.primaryChar && unitDisplay === glyph.primaryChar) {
-      score += 3;
-    }
-
-    // 5) penalty if nothing concrete matched
-    if (overlap === 0 && !(glyph?.clusterText && unit?.text && glyph.clusterText.includes(unit.text))) {
-      score -= 4;
-    }
-
-    return score;
-  }
-
-  glyphs.forEach((g) => {
-    const scored = eduUnits
-      .map((u) => ({ unit: u, score: scoreUnitGlyph(u, g) }))
-      .filter((x) => x.score > 0)
-      .sort((a, b) => b.score - a.score);
-
-    if (scored.length === 0) return;
-
-    // Keep all positive mappings to preserve "shared glyph" cases.
-    const accepted = scored.map((x) => x.unit);
-
-    glyphToUnits.set(g.id, accepted);
-    accepted.forEach((u) => {
-      unitToGlyphs.get(u.id).add(g.id);
-    });
-
-    if (accepted.length > 1) {
-      sharedGlyphIds.add(g.id);
-    }
-  });
-
-  return { unitToGlyphs, glyphToUnits, sharedGlyphIds };
+  return { mapping, glyphToUnits };
 }
 
 function unitDisplayChar(unit) {
@@ -455,15 +345,19 @@ function preferredUnitFromSharedGlyph(hitPoint, glyph, units) {
   const subs = units.filter((u) => u.type === "subscript_consonant" || u.isSubscript);
   if (subs.length && relY > 0.58) return subs[0];
 
-  // 2) dependent vowels often top/side zones
+  // 2) dependent vowel often top/left/right
   const dep = units.filter((u) => u.type === "dependent_vowel");
-  if (dep.length && (relY < 0.38 || relX < 0.25 || relX > 0.75)) return dep[0];
+  if (dep.length) {
+    if (relY < 0.38 || relX < 0.25 || relX > 0.75) return dep[0];
+  }
 
-  // 3) base consonant prefers center
+  // 3) base consonant center
   const base = units.filter((u) => u.type === "base_consonant");
-  if (base.length && relY >= 0.32 && relY <= 0.78 && relX >= 0.2 && relX <= 0.8) return base[0];
+  if (base.length && relY >= 0.32 && relY <= 0.78 && relX >= 0.2 && relX <= 0.8) {
+    return base[0];
+  }
 
-  // 4) highest priority fallback
+  // 4) priority fallback
   const sorted = [...units].sort((a, b) => (b.priority || 0) - (a.priority || 0));
   return sorted[0] || units[0] || null;
 }
@@ -506,11 +400,8 @@ export default function VisualDecoder(props) {
   const [glyphs, setGlyphs] = useState([]);
   const [blocks, setBlocks] = useState([]);
   const [eduUnits, setEduUnits] = useState([]);
-  const [eduMap, setEduMap] = useState(new Map()); // unitId -> Set(glyphId)
-  const [glyphToUnits, setGlyphToUnits] = useState(new Map()); // glyphId -> [units]
-  const [sharedGlyphIds, setSharedGlyphIds] = useState(new Set()); // glyph ids with 2+ units
-  const [eduDebugSnapshot, setEduDebugSnapshot] = useState(null);
-
+  const [eduMap, setEduMap] = useState(new Map()); // kept for debug/shadow mode
+  const [glyphToUnits, setGlyphToUnits] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -522,7 +413,7 @@ export default function VisualDecoder(props) {
   const svgRef = useRef(null);
   const hintRef = useRef(null);
 
-  // Selection reset
+  // reset selection
   useEffect(() => {
     if (interactionMode !== "persistent_select") return;
     setSelectedIds([]);
@@ -538,6 +429,7 @@ export default function VisualDecoder(props) {
     const target = scrollTargetRef?.current || hintRef.current;
     if (!target) return;
     target.scrollIntoView({ behavior: "smooth", block: "end" });
+
     const parent = target.closest?.("[data-scroll-container='true']");
     if (parent) {
       requestAnimationFrame(() => {
@@ -547,19 +439,18 @@ export default function VisualDecoder(props) {
     }
   }, [lastTap, scrollTargetRef]);
 
-  // Load glyphs + build eduUnits + mapping
+  // load glyphs + eduUnits + mapping
   useEffect(() => {
     let active = true;
+
     if (!text) {
       setGlyphs([]);
       setBlocks([]);
       setEduUnits([]);
       setEduMap(new Map());
       setGlyphToUnits(new Map());
-      setSharedGlyphIds(new Set());
-      setEduDebugSnapshot(null);
       setLoading(false);
-      return;
+      return () => {};
     }
 
     setLoading(true);
@@ -576,94 +467,42 @@ export default function VisualDecoder(props) {
         const arr = Array.isArray(json) ? json : [];
         setGlyphs(arr);
 
-        // A) Build atomic edu units
         const units = buildEduUnits(text, data?.char_split);
         setEduUnits(units);
 
-        // B) Map units -> glyph ids (NO merge-by-overlap)
-        const {
-          unitToGlyphs,
-          glyphToUnits: g2u,
-          sharedGlyphIds: sharedSet,
-        } = mapEduUnitsToGlyphs(arr, units);
-
-        setEduMap(unitToGlyphs);
+        const { mapping, glyphToUnits: g2u } = mapEduUnitsToGlyphs(arr, units);
+        setEduMap(mapping);
         setGlyphToUnits(g2u);
-        setSharedGlyphIds(sharedSet);
 
-        // Debug snapshot
-        if (EDU_DEBUG) {
-          const byType = units.reduce((acc, u) => {
-            acc[u.type] = (acc[u.type] || 0) + 1;
-            return acc;
-          }, {});
-
-          const unitRows = units.map((u) => ({
-            id: u.id,
-            type: u.type,
-            text: u.text,
-            token: u.token,
-            cps: (u.codePoints || []).map((cp) => `U+${cp.toString(16).toUpperCase()}`).join(" "),
-            mappedGlyphIds: Array.from(unitToGlyphs.get(u.id) || []).join(","),
-          }));
-
-          const sharedRows = arr
-            .filter((g) => sharedSet.has(g.id))
-            .map((g) => ({
-              glyphId: g.id,
-              clusterText: g.clusterText || "",
-              clusterStart: g.clusterStart,
-              clusterEnd: g.clusterEnd,
-              units: (g2u.get(g.id) || []).map((u) => `${u.type}:${u.text}`).join(" | "),
-            }));
-
-          const snapshot = {
-            text,
-            charSplit: data?.char_split || null,
-            unitsTotal: units.length,
-            byType,
-            sharedGlyphCount: sharedSet.size,
-            unitRows,
-            sharedRows,
-          };
-          setEduDebugSnapshot(snapshot);
-
-          // eslint-disable-next-line no-console
-          console.groupCollapsed(`[EDU MAP SHADOW] ${text}`);
-          // eslint-disable-next-line no-console
-          console.log("byType:", byType);
-          // eslint-disable-next-line no-console
-          console.table(unitRows);
-          if (sharedRows.length) {
-            // eslint-disable-next-line no-console
-            console.table(sharedRows);
-          }
-          // eslint-disable-next-line no-console
-          console.groupEnd();
-        } else {
-          setEduDebugSnapshot(null);
-        }
-
-        // Render blocks: 1 glyph = 1 block
         const renderBlocks = arr.map((g, idx) => {
           const related = g2u.get(g.id) || [];
           const primaryUnit =
-            related.find((u) => u.type === "base_consonant") ||
-            [...related].sort((a, b) => (b.priority || 0) - (a.priority || 0))[0] ||
-            null;
+            related.find((u) => u.type === "base_consonant")
+            || [...related].sort((a, b) => (b.priority || 0) - (a.priority || 0))[0]
+            || null;
 
           return {
             blockId: idx,
-            glyphs: [g],
+            glyphs: [g], // one glyph = one block
             glyphId: g.id,
             codePoints: Array.isArray(g.codePoints) ? g.codePoints : [],
             primaryChar: primaryUnit ? unitDisplayChar(primaryUnit) : (g.primaryChar || g.char || "?"),
             relatedUnits: related,
-            sharedGlyph: sharedSet.has(g.id),
+            hasSharedGlyph: related.length > 1,
           };
         });
 
         setBlocks(renderBlocks);
+
+        if (typeof window !== "undefined" && window.__EDU_DEBUG__) {
+          // eslint-disable-next-line no-console
+          console.log("[EDU DEBUG] units:", units);
+          // eslint-disable-next-line no-console
+          console.log("[EDU DEBUG] mapping:", mapping);
+          // eslint-disable-next-line no-console
+          console.log("[EDU DEBUG] shared blocks:", renderBlocks.filter((b) => b.hasSharedGlyph));
+        }
+
         setLoading(false);
       })
       .catch((err) => {
@@ -674,10 +513,20 @@ export default function VisualDecoder(props) {
         setLoading(false);
       });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [text, data?.char_split]);
 
-  // Sounds
+  // optional debug snapshot to avoid "unused state" warnings in some setups
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.__EDU_DEBUG__) {
+      window.__EDU_UNITS__ = eduUnits;
+      window.__EDU_MAP__ = eduMap;
+    }
+  }, [eduUnits, eduMap]);
+
+  // sounds
   useEffect(() => {
     if (!glyphs.length) return;
 
@@ -687,16 +536,18 @@ export default function VisualDecoder(props) {
     glyphs.forEach((glyph, idx) => {
       const related = glyphToUnits.get(glyph.id) || [];
       const preferred =
-        related.find((u) => u.type === "base_consonant") ||
-        related.find((u) => u.type === "dependent_vowel") ||
-        related[0];
+        related.find((u) => u.type === "base_consonant")
+        || related.find((u) => u.type === "dependent_vowel")
+        || related[0];
+
       const ch = preferred ? unitDisplayChar(preferred) : (glyph.primaryChar || glyph.char || "");
       const clean = (ch || "").trim();
-      let sound = audioMap[clean] || getSoundFileForChar(clean);
 
+      let sound = audioMap[clean] || getSoundFileForChar(clean);
       if (sound && sound.startsWith("sub_")) {
         sound = sound.replace("sub_", "letter_");
       }
+
       newMap[idx] = sound;
     });
 
@@ -708,7 +559,6 @@ export default function VisualDecoder(props) {
     [blocks, viewBoxPad]
   );
 
-  // Notify render
   useEffect(() => {
     if (!onGlyphsRendered) return;
 
@@ -716,9 +566,9 @@ export default function VisualDecoder(props) {
       block.glyphs.map((g, gIdx) => {
         const related = block.relatedUnits || [];
         const primary =
-          related.find((u) => u.type === "base_consonant") ||
-          [...related].sort((a, b) => (b.priority || 0) - (a.priority || 0))[0] ||
-          null;
+          related.find((u) => u.type === "base_consonant")
+          || [...related].sort((a, b) => (b.priority || 0) - (a.priority || 0))[0]
+          || null;
 
         return {
           ...g,
@@ -727,57 +577,54 @@ export default function VisualDecoder(props) {
           resolvedChar: primary ? unitDisplayChar(primary) : block.primaryChar,
           isSubscript: !!primary?.isSubscript,
           relatedUnits: related,
-          sharedGlyph: !!block.sharedGlyph,
+          sharedGlyph: related.length > 1,
         };
       })
     );
 
     onGlyphsRendered(flatMeta);
-
-    if (EDU_DEBUG && typeof window !== "undefined") {
-      window.__LAST_EDU_DEBUG__ = {
-        eduUnits,
-        eduMap,
-        glyphToUnits,
-        sharedGlyphIds,
-        eduDebugSnapshot,
-      };
-    }
-  }, [onGlyphsRendered, blocks, eduUnits, eduMap, glyphToUnits, sharedGlyphIds, eduDebugSnapshot]);
+  }, [onGlyphsRendered, blocks]);
 
   function svgPointFromEvent(evt) {
     const svg = svgRef.current;
     if (!svg) return null;
+
     const pt = svg.createSVGPoint();
     pt.x = evt.clientX;
     pt.y = evt.clientY;
+
     const ctm = svg.getScreenCTM();
     if (!ctm) return null;
+
     return pt.matrixTransform(ctm.inverse());
   }
 
   function pickBlockAtPoint(p) {
     if (!p || !blocks.length) return null;
 
-    for (let blockIdx = 0; blockIdx < blocks.length; blockIdx++) {
+    for (let blockIdx = 0; blockIdx < blocks.length; blockIdx += 1) {
       const block = blocks[blockIdx];
-      for (let gIdx = 0; gIdx < block.glyphs.length; gIdx++) {
+      for (let gIdx = 0; gIdx < block.glyphs.length; gIdx += 1) {
+        const glyph = block.glyphs[gIdx];
         const pathEl = document.getElementById(`glyph-${blockIdx}-${gIdx}`);
         if (!pathEl) continue;
+
         try {
           if (pathEl.isPointInFill(p)) {
-            return { blockIdx, glyph: block.glyphs[gIdx], glyphIdx: gIdx, block };
+            return { blockIdx, glyph, glyphIdx: gIdx, block };
           }
         } catch {
           // ignore
         }
       }
     }
+
     return null;
   }
 
   const handlePointerDown = (e) => {
     e.preventDefault();
+
     const p = svgPointFromEvent(e);
     const hit = pickBlockAtPoint(p);
     if (!hit) return;
@@ -869,6 +716,7 @@ export default function VisualDecoder(props) {
         ...DEFAULT_FEEDBACK_SOUNDS,
         ...(feedbackSounds || {}),
       };
+
       const feedbackSound = isSuccess ? sounds.success : sounds.error;
       const sequence = soundFile ? [feedbackSound, soundFile] : [feedbackSound];
       playSequence(sequence, { gapMs: feedbackGapMs });
@@ -879,9 +727,10 @@ export default function VisualDecoder(props) {
     if (onComplete) onComplete();
   };
 
-  // Notify selection change
+  // notify selection
   useEffect(() => {
     if (!onSelectionChange) return;
+
     if (selectionMode === "multi") {
       onSelectionChange(selectedIds);
     } else if (selectedId !== null) {
@@ -891,7 +740,7 @@ export default function VisualDecoder(props) {
     }
   }, [onSelectionChange, selectedId, selectedIds, selectionMode]);
 
-  // Reset selection
+  // reset selection by key
   useEffect(() => {
     if (resetSelectionKey === undefined) return;
     setSelectedId(null);
@@ -902,6 +751,7 @@ export default function VisualDecoder(props) {
     const block = blocks[blockIdx];
     const primaryChar = block.primaryChar;
     const base = getKhmerGlyphColor(primaryChar);
+
     const resolvedIsSelected = isSelected ?? (
       selectionMode === "multi"
         ? selectedIds.includes(blockIdx)
@@ -915,19 +765,17 @@ export default function VisualDecoder(props) {
         isSelected: resolvedIsSelected,
         resolvedChar: primaryChar,
         relatedUnits: block.relatedUnits || [],
-        sharedGlyph: !!block.sharedGlyph,
       });
       if (override) return override;
     }
 
-    if (revealOnSelect && !resolvedIsSelected) {
-      return FALLBACK.MUTED;
-    }
+    if (revealOnSelect && !resolvedIsSelected) return FALLBACK.MUTED;
 
     if (highlightMode === HIGHLIGHT_MODES.ALL) return base;
     if (highlightMode === HIGHLIGHT_MODES.CONSONANTS) {
       return isKhmerConsonant(primaryChar) ? FALLBACK.NEUTRAL : FALLBACK.MUTED;
     }
+
     return FALLBACK.NEUTRAL;
   }
 
@@ -963,7 +811,7 @@ export default function VisualDecoder(props) {
           const isConsonant = block.codePoints.some(isConsonantCp);
 
           return (
-            <g key={blockIdx}>
+            <g key={block.blockId ?? blockIdx}>
               {block.glyphs.map((glyph, gIdx) => {
                 const fillColor = colorForGlyph(glyph, blockIdx, gIdx, isBlockSelected);
 
