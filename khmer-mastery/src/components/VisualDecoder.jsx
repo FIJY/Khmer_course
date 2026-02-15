@@ -237,31 +237,139 @@ function makeViewBoxFromBlocks(blocks, pad = 60) {
  *   2) accept only positive-score links
  *   3) NEVER merge units together
  */
+// REPLACE in VisualDecoder.jsx
 function mapEduUnitsToGlyphs(glyphs, eduUnits) {
-  const unitToGlyphs = new Map();
-  const glyphToUnits = new Map();
-  const sharedGlyphIds = new Set();
+  const unitToGlyphIds = new Map(); // unitId -> Set(glyphId)
+  const glyphToUnits = new Map();   // glyphId -> unit[]
+  const debug = {
+    unmatchedUnits: [],
+    glyphMatches: [],
+  };
 
-  eduUnits.forEach((u) => unitToGlyphs.set(u.id, new Set()));
+  // init
+  eduUnits.forEach((u) => unitToGlyphIds.set(u.id, new Set()));
 
-  const cpSet = (arr) => new Set(Array.isArray(arr) ? arr : []);
-
-  function unitFitsGlyphByType(unit, glyph) {
-    const flags = {
-      hasCoeng: !!glyph?.hasCoeng,
-      hasSubscriptConsonant: !!glyph?.hasSubscriptConsonant,
-      hasDependentVowel: !!glyph?.hasDependentVowel,
-      hasDiacritic: !!glyph?.hasDiacritic,
-    };
-
-    if (unit.type === "subscript_consonant") return flags.hasSubscriptConsonant || flags.hasCoeng;
-    if (unit.type === "coeng") return flags.hasCoeng;
-    if (unit.type === "dependent_vowel") return flags.hasDependentVowel;
-    if (unit.type === "diacritic") return flags.hasDiacritic;
-    if (unit.type === "base_consonant") return true;
-    if (unit.type === "independent_vowel") return true;
+  const normalize = (s) => String(s || "").normalize("NFC");
+  const arrEq = (a, b) => {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i += 1) {
+      if (Number(a[i]) !== Number(b[i])) return false;
+    }
     return true;
+  };
+
+  // helper: score match unit<->glyph
+  function scoreMatch(u, g) {
+    const gCps = Array.isArray(g.codePoints) ? g.codePoints : [];
+    const uCps = Array.isArray(u.codePoints) ? u.codePoints : [];
+    const uTokenCps = Array.isArray(u.tokenCodePoints) ? u.tokenCodePoints : [];
+
+    const gSet = new Set(gCps);
+
+    // 1) direct cp intersection (strongest)
+    const directCpHit = uCps.some((cp) => gSet.has(cp));
+    if (directCpHit) return { ok: true, score: 100, reason: "direct-cp" };
+
+    // 2) full token cp equality/intersection (for precomposed cluster mismatches)
+    const tokenEq = arrEq(uTokenCps, gCps);
+    if (tokenEq) return { ok: true, score: 80, reason: "token-cp-eq" };
+
+    const tokenIntersect =
+      uTokenCps.length > 0 && gCps.some((cp) => uTokenCps.includes(cp));
+    if (tokenIntersect) return { ok: true, score: 70, reason: "token-cp-intersect" };
+
+    // 3) text-based fallback from cluster metadata
+    const gClusterText = normalize(g.clusterText || "");
+    const gCharsText = normalize(Array.isArray(g.chars) ? g.chars.join("") : "");
+    const gText = gClusterText || gCharsText;
+
+    const uText = normalize(u.text || "");
+    const uTokenText = normalize(u.token || "");
+
+    if (uText && gText && (gText === uText || gText.includes(uText))) {
+      return { ok: true, score: 60, reason: "text-unit-in-cluster" };
+    }
+
+    if (uTokenText && gText && (gText === uTokenText || gText.includes(uTokenText))) {
+      return { ok: true, score: 50, reason: "text-token-in-cluster" };
+    }
+
+    return { ok: false, score: 0, reason: "no-match" };
   }
+
+  // per glyph choose all matched units with positive score
+  glyphs.forEach((g) => {
+    const candidates = [];
+
+    eduUnits.forEach((u) => {
+      const r = scoreMatch(u, g);
+      if (r.ok) {
+        candidates.push({
+          unit: u,
+          score: r.score,
+          reason: r.reason,
+        });
+      }
+    });
+
+    // sort best-first, then by priority
+    candidates.sort((a, b) => {
+      const byScore = b.score - a.score;
+      if (byScore !== 0) return byScore;
+      return (b.unit.priority || 0) - (a.unit.priority || 0);
+    });
+
+    if (candidates.length > 0) {
+      const units = candidates.map((c) => c.unit);
+      glyphToUnits.set(g.id, units);
+
+      units.forEach((u) => {
+        unitToGlyphIds.get(u.id)?.add(g.id);
+      });
+
+      debug.glyphMatches.push({
+        glyphId: g.id,
+        hbGlyphId: g.hbGlyphId,
+        clusterText: g.clusterText,
+        codePoints: g.codePoints,
+        matches: candidates.map((c) => ({
+          unitId: c.unit.id,
+          unitText: c.unit.text,
+          unitType: c.unit.type,
+          score: c.score,
+          reason: c.reason,
+        })),
+        sharedGlyph: units.length > 1,
+      });
+    }
+  });
+
+  // find unmatched units (useful for debug)
+  eduUnits.forEach((u) => {
+    const mapped = unitToGlyphIds.get(u.id);
+    if (!mapped || mapped.size === 0) {
+      debug.unmatchedUnits.push({
+        unitId: u.id,
+        unitText: u.text,
+        unitType: u.type,
+        codePoints: u.codePoints,
+        token: u.token,
+        tokenCodePoints: u.tokenCodePoints,
+      });
+    }
+  });
+
+  // optional debug exposure
+  if (typeof window !== "undefined" && window.__EDU_DEBUG__) {
+    window.__EDU_MAP_DEBUG__ = debug;
+    // eslint-disable-next-line no-console
+    console.log("[EDU map] debug", debug);
+  }
+
+  return { mapping: unitToGlyphIds, glyphToUnits };
+}
+
 
   function scoreUnitGlyph(unit, glyph) {
     let score = 0;
