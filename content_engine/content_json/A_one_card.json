@@ -17,7 +17,7 @@
         "word": "កៅ",
         "target": "ក",
         "success_rule": "consonant",
-        "char_split": [
+        "char_split":
           "កៅ"
         ]
       }
